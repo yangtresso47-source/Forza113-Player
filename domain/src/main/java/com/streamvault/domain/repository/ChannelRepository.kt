@@ -16,6 +16,6 @@ interface ChannelRepository {
     fun getChannelsByIds(ids: List<Long>): Flow<List<Channel>>
 
     companion object {
-        const val ALL_CHANNELS_ID = -1L
+        const val ALL_CHANNELS_ID = -1_000_000L
     }
 }

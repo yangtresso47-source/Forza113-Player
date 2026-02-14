@@ -15,7 +15,7 @@ import com.streamvault.app.ui.screens.series.SeriesScreen
 import com.streamvault.app.ui.screens.settings.SettingsScreen
 
 object Routes {
-    const val PROVIDER_SETUP = "provider_setup"
+    const val PROVIDER_SETUP = "provider_setup?providerId={providerId}"
     const val HOME = "home"
     const val MOVIES = "movies"
     const val SERIES = "series"
@@ -24,6 +24,8 @@ object Routes {
     const val PLAYER = "player/{streamUrl}?title={title}&channelId={channelId}&internalId={internalId}&categoryId={categoryId}&providerId={providerId}&isVirtual={isVirtual}"
     const val SEARCH = "search"
     const val SERIES_DETAIL = "series_detail/{seriesId}"
+
+    fun providerSetup(providerId: Long? = null) = "provider_setup?providerId=${providerId ?: -1L}"
 
     fun player(streamUrl: String, title: String = "", channelId: String? = null, internalId: Long = -1L, categoryId: Long? = null, providerId: Long? = null, isVirtual: Boolean = false) =
         "player/${java.net.URLEncoder.encode(streamUrl, "UTF-8")}?title=${java.net.URLEncoder.encode(title, "UTF-8")}&channelId=${channelId ?: ""}&internalId=$internalId&categoryId=${categoryId ?: -1}&providerId=${providerId ?: -1}&isVirtual=$isVirtual"
@@ -39,8 +41,16 @@ fun AppNavigation() {
         navController = navController,
         startDestination = Routes.PROVIDER_SETUP
     ) {
-        composable(Routes.PROVIDER_SETUP) {
+        composable(
+            route = Routes.PROVIDER_SETUP,
+            arguments = listOf(
+                navArgument("providerId") { type = NavType.LongType; defaultValue = -1L }
+            )
+        ) { backStackEntry ->
+            val providerId = backStackEntry.arguments?.getLong("providerId")?.takeIf { it != -1L }
+            
             ProviderSetupScreen(
+                editProviderId = providerId,
                 onProviderAdded = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.PROVIDER_SETUP) { inclusive = true }
@@ -141,7 +151,10 @@ fun AppNavigation() {
                     }
                 },
                 onAddProvider = {
-                    navController.navigate(Routes.PROVIDER_SETUP)
+                    navController.navigate(Routes.providerSetup(null))
+                },
+                onEditProvider = { provider ->
+                    navController.navigate(Routes.providerSetup(provider.id))
                 },
                 currentRoute = Routes.SETTINGS
             )

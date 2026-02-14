@@ -127,8 +127,11 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private var categoriesJob: Job? = null
+
     private fun loadCategoriesAndChannels(providerId: Long) {
-        viewModelScope.launch {
+        categoriesJob?.cancel()
+        categoriesJob = viewModelScope.launch {
             // Combine provider categories with custom categories
             combine(
                 channelRepository.getCategories(providerId),

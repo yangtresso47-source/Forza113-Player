@@ -12,7 +12,7 @@ interface ProviderRepository {
     suspend fun updateProvider(provider: Provider): Result<Unit>
     suspend fun deleteProvider(id: Long): Result<Unit>
     suspend fun setActiveProvider(id: Long): Result<Unit>
-    suspend fun loginXtream(serverUrl: String, username: String, password: String): Result<Provider>
-    suspend fun validateM3u(url: String): Result<Provider>
-    suspend fun refreshProviderData(providerId: Long): Result<Unit>
+    suspend fun loginXtream(serverUrl: String, username: String, password: String, name: String, onProgress: ((String) -> Unit)? = null): Result<Provider>
+    suspend fun validateM3u(url: String, name: String, onProgress: ((String) -> Unit)? = null): Result<Provider>
+    suspend fun refreshProviderData(providerId: Long, onProgress: ((String) -> Unit)? = null): Result<Unit>
 }

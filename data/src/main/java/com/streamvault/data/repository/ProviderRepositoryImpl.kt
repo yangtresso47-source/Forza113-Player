@@ -113,22 +113,25 @@ class ProviderRepositoryImpl @Inject constructor(
                 
                 val id = providerData.id
                 
+
                 try {
                     providerDao.deactivateAll()
                     providerDao.activate(id)
                     
-                    // Auto-refresh: fetch all channels, movies, series immediately
-                    refreshXtreamData(providerData, onProgress)
-                    providerDao.updateSyncTime(id, System.currentTimeMillis())
+                    val refreshResult = refreshProviderData(id, onProgress)
                     
-                    Result.success(providerData)
-                } catch (e: Exception) {
-                    // If it was a NEW provider and failed, delete it.
-                    // If it was EXISTING, maybe don't delete?
-                    if (existingProvider == null) {
-                        providerDao.delete(id)
+                    if (refreshResult is Result.Success) {
+                        Result.success(providerData)
+                    } else if (refreshResult is Result.Error) {
+                        // Allow saving even if sync fails
+                        android.util.Log.e("ProviderRepo", "Initial Xtream sync failed: ${refreshResult.message}")
+                        Result.success(providerData)
+                    } else {
+                        Result.success(providerData)
                     }
-                    Result.error("Sync failed: ${e.message}", e)
+                } catch (e: Exception) {
+                    android.util.Log.e("ProviderRepo", "Xtream Sync crashed: ${e.message}")
+                    Result.success(providerData)
                 }
             }
             is Result.Error -> Result.error(authResult.message, authResult.exception)
@@ -170,15 +173,28 @@ class ProviderRepositoryImpl @Inject constructor(
             providerDao.deactivateAll()
             providerDao.activate(id)
             
-            refreshM3uData(providerData, onProgress)
-            providerDao.updateSyncTime(id, System.currentTimeMillis())
+            // Use the public refresh method to ensure consistency with manual refresh
+            val refreshResult = refreshProviderData(id, onProgress)
             
-            Result.success(providerData)
-        } catch (e: Exception) {
-             if (existingProvider == null) {
-                providerDao.delete(id)
+            if (refreshResult is Result.Success) {
+                Result.success(providerData)
+            } else if (refreshResult is Result.Error) {
+                // Return success but with the provider data, so the UI considers it "added"
+                // The sync error will be logged and the user might see empty content, but they can edit it later.
+                // We could potentially wrap this in a custom result or just rely on the fact that 
+                // providerData is returned. 
+                // Ideally we'd return Result.Success(providerData) but maybe trigger a toast.
+                // For now, let's treat it as success so navigation proceeds, but log the error.
+                android.util.Log.e("ProviderRepo", "Initial M3U sync failed: ${refreshResult.message}")
+                Result.success(providerData)
+            } else {
+                 Result.success(providerData)
             }
-            throw e 
+        } catch (e: Exception) {
+            // Even if exception occurs (unlikely due to refreshProviderData having its own try/catch),
+            // we keep the provider so user can edit it.
+            android.util.Log.e("ProviderRepo", "M3U Validation/Sync crashed: ${e.message}")
+            Result.success(providerData) 
         }
     } catch (e: Exception) {
         Result.error("Failed to add M3U provider: ${e.message}", e)
@@ -209,9 +225,13 @@ class ProviderRepositoryImpl @Inject constructor(
         // Refresh live categories & channels
         onProgress?.invoke("Downloading Live TV...")
         val liveCatsResult = xtreamProvider.getLiveCategories()
-        if (liveCatsResult is Result.Error) throw Exception("Failed to fetch Live Categories: ${liveCatsResult.message}")
+        if (liveCatsResult is Result.Error) {
+             android.util.Log.e("ProviderRepo", "Failed to fetch Live Categories: ${liveCatsResult.message}")
+             throw Exception("Failed to fetch Live Categories: ${liveCatsResult.message}")
+        }
         
         liveCatsResult.getOrNull()?.let { categories ->
+            android.util.Log.d("ProviderRepo", "Saving ${categories.size} live categories")
             categoryDao.replaceAll(
                 provider.id, "LIVE",
                 categories.map { it.toEntity(provider.id) }
@@ -219,20 +239,22 @@ class ProviderRepositoryImpl @Inject constructor(
         }
         
         val liveStreamsResult = xtreamProvider.getLiveStreams()
-        if (liveStreamsResult is Result.Error) throw Exception("Failed to fetch Live Streams: ${liveStreamsResult.message}")
+        if (liveStreamsResult is Result.Error) {
+            android.util.Log.e("ProviderRepo", "Failed to fetch Live Streams: ${liveStreamsResult.message}")
+            throw Exception("Failed to fetch Live Streams: ${liveStreamsResult.message}")
+        }
         
         liveStreamsResult.getOrNull()?.let { channels ->
+            android.util.Log.d("ProviderRepo", "Saving ${channels.size} live channels")
             channelDao.replaceAll(provider.id, channels.map { it.toEntity() })
         }
 
         // Refresh VOD categories & movies
         onProgress?.invoke("Downloading Movies...")
         val vodCatsResult = xtreamProvider.getVodCategories()
-        // Don't fail entire sync if VOD fails, but maybe log it? For now, let's keep it strict or lenient?
-        // User complaint was "nothing loads". If connection works for auth, it should work for data.
-        // Let's be semi-strict: If Live works, we're good. If VOD fails, just log.
         
         vodCatsResult.getOrNull()?.let { categories ->
+             android.util.Log.d("ProviderRepo", "Saving ${categories.size} VOD categories")
             categoryDao.replaceAll(
                 provider.id, "MOVIE",
                 categories.map { it.toEntity(provider.id) }
@@ -240,18 +262,21 @@ class ProviderRepositoryImpl @Inject constructor(
         }
         
         xtreamProvider.getVodStreams().getOrNull()?.let { movies ->
+             android.util.Log.d("ProviderRepo", "Saving ${movies.size} movies")
             movieDao.replaceAll(provider.id, movies.map { it.toEntity() })
         }
 
         // Refresh series categories & series
         onProgress?.invoke("Downloading Series...")
         xtreamProvider.getSeriesCategories().getOrNull()?.let { categories ->
+            android.util.Log.d("ProviderRepo", "Saving ${categories.size} series categories")
             categoryDao.replaceAll(
                 provider.id, "SERIES",
                 categories.map { it.toEntity(provider.id) }
             )
         }
         xtreamProvider.getSeriesList().getOrNull()?.let { seriesList ->
+             android.util.Log.d("ProviderRepo", "Saving ${seriesList.size} series")
             seriesDao.replaceAll(provider.id, seriesList.map { it.toEntity() })
         }
 
@@ -263,16 +288,19 @@ class ProviderRepositoryImpl @Inject constructor(
             epgRepository.refreshEpg(provider.id, xmltvUrl)
         } catch (e: Exception) {
             e.printStackTrace()
+             android.util.Log.e("ProviderRepo", "EPG Sync failed: ${e.message}")
         }
     }
 
     private suspend fun refreshM3uData(provider: Provider, onProgress: ((String) -> Unit)? = null) = withContext(Dispatchers.IO) {
+        android.util.Log.d("ProviderRepo", "Starting M3U refresh for ${provider.name}")
         onProgress?.invoke("Downloading Playlist...")
         val m3uUrl = provider.m3uUrl.ifBlank { provider.serverUrl }
         val request = Request.Builder().url(m3uUrl).build()
         val response = okHttpClient.newCall(request).execute()
 
         if (!response.isSuccessful) {
+            android.util.Log.e("ProviderRepo", "Failed to download M3U: ${response.code}")
             throw Exception("Failed to download M3U: HTTP ${response.code}")
         }
 
@@ -282,6 +310,7 @@ class ProviderRepositoryImpl @Inject constructor(
         val entries = body.byteStream().use { inputStream ->
             m3uParser.parse(inputStream)
         }
+        android.util.Log.d("ProviderRepo", "Parsed ${entries.size} entries")
 
         // Separate live channels vs VOD (movies)
         val liveEntries = entries.filter { !isVodEntry(it) }
@@ -302,6 +331,7 @@ class ProviderRepositoryImpl @Inject constructor(
                 providerId = provider.id
             )
         }
+        android.util.Log.d("ProviderRepo", "Saving ${liveCategories.size} live categories")
         categoryDao.replaceAll(provider.id, "LIVE", liveCategories)
 
         // Insert VOD categories
@@ -315,6 +345,7 @@ class ProviderRepositoryImpl @Inject constructor(
                 providerId = provider.id
             )
         }
+        android.util.Log.d("ProviderRepo", "Saving ${vodCategories.size} VOD categories")
         categoryDao.replaceAll(provider.id, "MOVIE", vodCategories)
 
         // Build category lookup maps
@@ -337,6 +368,7 @@ class ProviderRepositoryImpl @Inject constructor(
                 providerId = provider.id
             ).toEntity()
         }
+        android.util.Log.d("ProviderRepo", "Saving ${channels.size} channels")
         channelDao.replaceAll(provider.id, channels)
 
         // Insert movies
@@ -351,7 +383,10 @@ class ProviderRepositoryImpl @Inject constructor(
                 providerId = provider.id
             ).toEntity()
         }
+        android.util.Log.d("ProviderRepo", "Saving ${movies.size} movies")
         movieDao.replaceAll(provider.id, movies)
+        
+        android.util.Log.d("ProviderRepo", "M3U refresh complete")
     }
 
     private fun isVodEntry(entry: M3uParser.M3uEntry): Boolean {

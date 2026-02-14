@@ -45,7 +45,12 @@
 > Task :app:processDebugResources UP-TO-DATE
 > Task :data:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :data:kspDebugKotlin UP-TO-DATE
+> Task :data:compileDebugKotlin UP-TO-DATE
 > Task :data:javaPreCompileDebug UP-TO-DATE
+> Task :data:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:copyRoomSchemas NO-SOURCE
+> Task :data:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :player:checkKotlinGradlePluginConfigurationErrors SKIPPED
 > Task :player:kspDebugKotlin UP-TO-DATE
 > Task :player:compileDebugKotlin UP-TO-DATE
@@ -53,6 +58,7 @@
 > Task :player:compileDebugJavaWithJavac UP-TO-DATE
 > Task :player:transformDebugClassesWithAsm UP-TO-DATE
 > Task :player:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
 > Task :app:javaPreCompileDebug UP-TO-DATE
 > Task :app:mergeDebugShaders UP-TO-DATE
 > Task :app:compileDebugShaders NO-SOURCE
@@ -67,13 +73,17 @@
 > Task :player:packageDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets UP-TO-DATE
 > Task :app:compressDebugAssets UP-TO-DATE
+> Task :data:bundleLibRuntimeToJarDebug UP-TO-DATE
 > Task :player:bundleLibRuntimeToJarDebug UP-TO-DATE
 > Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :data:processDebugJavaRes UP-TO-DATE
 > Task :player:processDebugJavaRes UP-TO-DATE
 > Task :app:checkDebugDuplicateClasses UP-TO-DATE
 > Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :data:bundleLibRuntimeToDirDebug UP-TO-DATE
 > Task :player:bundleLibRuntimeToDirDebug UP-TO-DATE
 > Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
 > Task :data:mergeDebugJniLibFolders UP-TO-DATE
 > Task :data:mergeDebugNativeLibs NO-SOURCE
 > Task :data:copyDebugJniLibsProjectOnly UP-TO-DATE
@@ -87,9 +97,16 @@
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
 > Task :data:stripDebugDebugSymbols NO-SOURCE
 > Task :data:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :data:extractDebugAnnotations UP-TO-DATE
 > Task :data:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :data:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :data:mergeDebugConsumerProguardFiles UP-TO-DATE
 > Task :data:prepareDebugArtProfile UP-TO-DATE
 > Task :data:prepareLintJarForPublish UP-TO-DATE
+> Task :data:mergeDebugJavaResource UP-TO-DATE
+> Task :data:syncDebugLibJars UP-TO-DATE
+> Task :data:bundleDebugAar UP-TO-DATE
+> Task :data:assembleDebug UP-TO-DATE
 > Task :player:stripDebugDebugSymbols NO-SOURCE
 > Task :player:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
 > Task :player:extractDebugAnnotations UP-TO-DATE
@@ -103,16 +120,19 @@
 > Task :player:bundleDebugAar UP-TO-DATE
 > Task :player:assembleDebug UP-TO-DATE
 
-> Task :data:compileDebugKotlin FAILED
-e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/data/src/main/java/com/streamvault/data/repository/ProviderRepositoryImpl.kt:132:95 Unresolved reference 'message'.
-e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/data/src/main/java/com/streamvault/data/repository/ProviderRepositoryImpl.kt:132:120 Unresolved reference 'exception'.
-
-> Task :data:copyRoomSchemas NO-SOURCE
+> Task :app:compileDebugKotlin FAILED
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:81:29 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:81:40 Unresolved reference 'SnackbarHostState'.
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:85:31 Unresolved reference 'showSnackbar'.
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:200:5 Unresolved reference 'SnackbarHost'.
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:218:33 Unresolved reference 'Color'.
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:219:22 Unresolved reference 'clickable'.
+e: file:///C:/Users/david/.gemini/antigravity/scratch/iptv-player/app/src/main/java/com/streamvault/app/ui/screens/settings/SettingsScreen.kt:227:21 Unresolved reference 'CircularProgressIndicator'.
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':data:compileDebugKotlin'.
+Execution failed for task ':app:compileDebugKotlin'.
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
    > Compilation error. See log for more details
 
@@ -122,7 +142,7 @@ Execution failed for task ':data:compileDebugKotlin'.
 > Get more help at https://help.gradle.org.
 
 * Exception is:
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':data:compileDebugKotlin'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
@@ -311,5 +331,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 3s
-80 actionable tasks: 1 executed, 79 up-to-date
+BUILD FAILED in 5s
+95 actionable tasks: 1 executed, 94 up-to-date

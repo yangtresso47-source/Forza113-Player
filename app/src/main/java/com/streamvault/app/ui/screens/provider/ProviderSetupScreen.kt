@@ -52,6 +52,26 @@ class ProviderSetupViewModel @Inject constructor(
         }
     }
 
+    fun loadProvider(id: Long) {
+        viewModelScope.launch {
+            val provider = providerRepository.getProvider(id)
+            if (provider != null) {
+                _uiState.update { 
+                    it.copy(
+                        isEditing = true, 
+                        existingProviderId = id,
+                        name = provider.name,
+                        serverUrl = provider.serverUrl,
+                        username = provider.username,
+                        password = provider.password,
+                        m3uUrl = provider.m3uUrl,
+                        selectedTab = if (provider.type == com.streamvault.domain.model.ProviderType.M3U) 1 else 0
+                    ) 
+                }
+            }
+        }
+    }
+
     fun loginXtream(serverUrl: String, username: String, password: String, name: String) {
         // Clear previous errors
         _uiState.update { it.copy(validationError = null, error = null) }
@@ -118,7 +138,7 @@ class ProviderSetupViewModel @Inject constructor(
                 }
                 is Result.Error -> {
                     _uiState.update {
-                        it.copy(isLoading = false, error = "Could not validate playlist URL — please check the URL: ${result.message}", syncProgress = null)
+                        it.copy(isLoading = false, error = "Could not validate playlist URL: ${result.message}", syncProgress = null)
                     }
                 }
                 is Result.Loading -> { /* no-op */ }
@@ -133,7 +153,16 @@ data class ProviderSetupState(
     val hasExistingProvider: Boolean = false,
     val error: String? = null,
     val validationError: String? = null,
-    val syncProgress: String? = null
+    val syncProgress: String? = null,
+    val isEditing: Boolean = false,
+    val existingProviderId: Long? = null,
+    // Pre-fill data
+    val selectedTab: Int = 0,
+    val name: String = "",
+    val serverUrl: String = "",
+    val username: String = "",
+    val password: String = "",
+    val m3uUrl: String = ""
 )
 
 // ── Screen ─────────────────────────────────────────────────────────
@@ -141,6 +170,7 @@ data class ProviderSetupState(
 @Composable
 fun ProviderSetupScreen(
     onProviderAdded: () -> Unit,
+    editProviderId: Long? = null,
     viewModel: ProviderSetupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -150,10 +180,10 @@ fun ProviderSetupScreen(
         if (uiState.loginSuccess) onProviderAdded()
     }
 
-    // Auto-skip if already configured
-    LaunchedEffect(uiState.hasExistingProvider) {
-        if (uiState.hasExistingProvider) onProviderAdded()
-    }
+    // Auto-skip logic moved to MainActivity/Splash - preventing redirect loop here
+    // LaunchedEffect(uiState.hasExistingProvider) {
+    //    if (uiState.hasExistingProvider) onProviderAdded()
+    // }
 
     var selectedTab by remember { mutableStateOf(0) } // 0 = Xtream, 1 = M3U
     var name by remember { mutableStateOf("") }
@@ -161,6 +191,29 @@ fun ProviderSetupScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var m3uUrl by remember { mutableStateOf("") }
+
+    // Initialize state from ViewModel if editing
+    LaunchedEffect(editProviderId) {
+        if (editProviderId != null) {
+            viewModel.loadProvider(editProviderId)
+        }
+    }
+
+    // Reflect ViewModel state in local state once loaded
+    LaunchedEffect(uiState.isEditing, uiState.existingProviderId) {
+        if (uiState.isEditing) {
+            selectedTab = uiState.selectedTab
+            name = uiState.name
+            serverUrl = uiState.serverUrl
+            username = uiState.username
+            password = uiState.password
+            m3uUrl = uiState.m3uUrl
+        }
+    }
+
+    // Keep local state for editing
+    // var selectedTab by remember { mutableStateOf(0) } - moved below to use state driven init? No, we need local state for editing.
+    // We already have the vars defined above. 
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -175,22 +228,27 @@ fun ProviderSetupScreen(
         ) {
             // Title
             Text(
-                text = "StreamVault",
+                text = if (uiState.isEditing) "Edit Provider" else "StreamVault",
                 style = MaterialTheme.typography.displaySmall,
                 color = Primary
             )
             Text(
-                text = "Add your IPTV provider",
+                text = if (uiState.isEditing) "Update your IPTV provider details" else "Add your IPTV provider",
                 style = MaterialTheme.typography.bodyLarge,
                 color = OnSurface
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tab selector
+            // Tab selector - Disable changing type during edit
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TabButton("Xtream Codes", selectedTab == 0) { selectedTab = 0 }
-                TabButton("M3U Playlist", selectedTab == 1) { selectedTab = 1 }
+                
+                if (!uiState.isEditing || uiState.selectedTab == 0) {
+                     TabButton("Xtream Codes", selectedTab == 0) { if (!uiState.isEditing) selectedTab = 0 }
+                }
+                if (!uiState.isEditing || uiState.selectedTab == 1) {
+                     TabButton("M3U Playlist", selectedTab == 1) { if (!uiState.isEditing) selectedTab = 1 }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -209,7 +267,7 @@ fun ProviderSetupScreen(
                     TvTextField(value = password, onValueChange = { password = it }, label = "Password")
 
                     ActionButton(
-                        text = if (uiState.isLoading) "Connecting..." else "Login",
+                        text = if (uiState.isLoading) "Connecting..." else if (uiState.isEditing) "Save Changes" else "Login",
                         enabled = !uiState.isLoading,
                         onClick = {
                             viewModel.loginXtream(serverUrl, username, password, name)
@@ -220,7 +278,7 @@ fun ProviderSetupScreen(
                     TvTextField(value = m3uUrl, onValueChange = { m3uUrl = it }, label = "M3U URL")
 
                     ActionButton(
-                        text = if (uiState.isLoading) "Adding..." else "Add Playlist",
+                        text = if (uiState.isLoading) "Validating..." else if (uiState.isEditing) "Save Changes" else "Add Playlist",
                         enabled = !uiState.isLoading,
                         onClick = { viewModel.addM3u(m3uUrl, name) }
                     )

@@ -66,7 +66,7 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE id IN (:ids)")
     fun getByIds(ids: List<Long>): Flow<List<ChannelEntity>>
 
-    @Query("SELECT category_id, COUNT(*) as item_count FROM channels WHERE provider_id = :providerId GROUP BY category_id")
+    @Query("SELECT category_id, COUNT(*) as item_count FROM channels WHERE provider_id = :providerId AND category_id IS NOT NULL GROUP BY category_id")
     fun getCategoryCounts(providerId: Long): Flow<List<CategoryCount>>
 
     @Query("SELECT COUNT(*) FROM channels WHERE provider_id = :providerId")
@@ -108,7 +108,7 @@ interface MovieDao {
         insertAll(movies)
     }
 
-    @Query("SELECT category_id, COUNT(*) as item_count FROM movies WHERE provider_id = :providerId GROUP BY category_id")
+    @Query("SELECT category_id, COUNT(*) as item_count FROM movies WHERE provider_id = :providerId AND category_id IS NOT NULL GROUP BY category_id")
     fun getCategoryCounts(providerId: Long): Flow<List<CategoryCount>>
 
     @Query("SELECT COUNT(*) FROM movies WHERE provider_id = :providerId")
@@ -141,7 +141,7 @@ interface SeriesDao {
         insertAll(series)
     }
 
-    @Query("SELECT category_id, COUNT(*) as item_count FROM series WHERE provider_id = :providerId GROUP BY category_id")
+    @Query("SELECT category_id, COUNT(*) as item_count FROM series WHERE provider_id = :providerId AND category_id IS NOT NULL GROUP BY category_id")
     fun getCategoryCounts(providerId: Long): Flow<List<CategoryCount>>
 
     @Query("SELECT COUNT(*) FROM series WHERE provider_id = :providerId")

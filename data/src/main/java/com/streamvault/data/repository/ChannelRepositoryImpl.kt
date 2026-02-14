@@ -37,6 +37,7 @@ class ChannelRepositoryImpl @Inject constructor(
             channelDao.getCategoryCounts(providerId),
             channelDao.getCount(providerId)
         ) { categories, counts, totalCount ->
+            android.util.Log.d("ChannelRepo", "getCategories: ${categories.size} cats, ${counts.size} counts, total: $totalCount")
             val countMap = counts.associate { it.categoryId to it.item_count }
             
             val allChannelsCategory = Category(

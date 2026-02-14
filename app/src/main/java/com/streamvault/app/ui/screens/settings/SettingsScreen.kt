@@ -13,6 +13,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.tv.material3.*
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
 import com.streamvault.app.ui.components.TopNavBar
 import com.streamvault.app.ui.theme.*
 import com.streamvault.domain.model.Provider
@@ -41,8 +46,15 @@ class SettingsViewModel @Inject constructor(
     fun refreshProvider(providerId: Long) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true) }
-            providerRepository.refreshProviderData(providerId)
-            _uiState.update { it.copy(isSyncing = false) }
+            val result = providerRepository.refreshProviderData(providerId)
+            _uiState.update { state -> 
+                state.copy(
+                    isSyncing = false,
+                    userMessage = if (result is com.streamvault.domain.model.Result.Error) 
+                        "Refresh failed: ${result.message}" 
+                    else "Provider refreshed successfully"
+                )
+            }
         }
     }
 
@@ -51,35 +63,51 @@ class SettingsViewModel @Inject constructor(
             providerRepository.deleteProvider(providerId)
         }
     }
+    
+    fun userMessageShown() {
+        _uiState.update { it.copy(userMessage = null) }
+    }
 }
 
 data class SettingsUiState(
     val providers: List<Provider> = emptyList(),
-    val isSyncing: Boolean = false
+    val isSyncing: Boolean = false,
+    val userMessage: String? = null
 )
 
 @Composable
 fun SettingsScreen(
     onNavigate: (String) -> Unit,
     onAddProvider: () -> Unit = {},
+    onEditProvider: (Provider) -> Unit = {},
     currentRoute: String,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        TopNavBar(
-            currentRoute = currentRoute,
-            onNavigate = onNavigate
-        )
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.userMessageShown()
+        }
+    }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
+            TopNavBar(
+                currentRoute = currentRoute,
+                onNavigate = { if (!uiState.isSyncing) onNavigate(it) } // Block nav
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                userScrollEnabled = !uiState.isSyncing // Block scroll
+            ) {
             item {
                 Text(
                     text = "Settings",
@@ -114,7 +142,8 @@ fun SettingsScreen(
                         provider = provider,
                         isSyncing = uiState.isSyncing,
                         onRefresh = { viewModel.refreshProvider(provider.id) },
-                        onDelete = { viewModel.deleteProvider(provider.id) }
+                        onDelete = { viewModel.deleteProvider(provider.id) },
+                        onEdit = { onEditProvider(provider) }
                     )
                 }
             }
@@ -174,6 +203,44 @@ fun SettingsScreen(
             }
         }
     }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 16.dp)
+    )
+
+        // Blocking Loading Overlay
+        if (uiState.isSyncing) {
+            // Block Back Press
+            androidx.activity.compose.BackHandler(enabled = true) {
+                // Do nothing, effectively blocking back
+            }
+            
+            // Overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable(enabled = true, onClick = {}) // Consume clicks
+                    .align(Alignment.Center),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = Primary)
+                    Text(
+                        text = "Syncing data, please wait...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = OnSurface
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -181,8 +248,8 @@ private fun ProviderSettingsCard(
     provider: Provider,
     isSyncing: Boolean,
     onRefresh: () -> Unit,
-    onDelete: () -> Unit
-) {
+    onDelete: () -> Unit,
+    onEdit: () -> Unit) {
     // Use Column layout - provider info + buttons below as separate focusable items
     Column(
         modifier = Modifier
@@ -220,6 +287,22 @@ private fun ProviderSettingsCard(
                     text = if (isSyncing) "⟳ Syncing..." else "⟳ Refresh",
                     style = MaterialTheme.typography.labelMedium,
                     color = Primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                )
+            }
+
+            Surface(
+                onClick = onEdit,
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(6.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = Secondary.copy(alpha = 0.2f),
+                    focusedContainerColor = Secondary.copy(alpha = 0.5f)
+                )
+            ) {
+                Text(
+                    text = "✎ Edit",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Secondary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                 )
             }
