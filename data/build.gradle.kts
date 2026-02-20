@@ -23,6 +23,10 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     room {
         schemaDirectory("$projectDir/schemas")
     }
@@ -56,4 +60,14 @@ dependencies {
 
     // Core
     implementation(libs.core.ktx)
+
+    // Unit tests
+    testImplementation(libs.junit)
+    testImplementation(libs.truth)
+    testImplementation(libs.coroutines.test)
+    // kxml2: JVM XmlPullParser implementation needed for XmltvParser unit tests
+    // (Android platform provides its own impl; the JVM test runner needs an explicit one)
+    testImplementation(libs.kxml2)
+    // Mocking for SyncManagerTest
+    testImplementation(libs.mockito.kotlin)
 }

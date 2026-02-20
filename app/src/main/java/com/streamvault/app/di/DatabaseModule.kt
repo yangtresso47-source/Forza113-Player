@@ -24,7 +24,8 @@ object DatabaseModule {
             "streamvault.db"
         )
             .addMigrations(StreamVaultDatabase.MIGRATION_2_3)
-            .fallbackToDestructiveMigration()
+            // NOTE: fallbackToDestructiveMigration() intentionally removed.
+            // All future schema changes MUST add a corresponding Migration in StreamVaultDatabase.
             .build()
 
     @Provides fun provideProviderDao(db: StreamVaultDatabase): ProviderDao = db.providerDao()

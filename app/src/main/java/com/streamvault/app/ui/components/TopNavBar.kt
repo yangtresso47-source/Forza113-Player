@@ -25,8 +25,8 @@ fun TopNavBar(
         NavTab("Live TV", Routes.HOME, "📺"),
         NavTab("Movies", Routes.MOVIES, "🎬"),
         NavTab("Series", Routes.SERIES, "📺"),
-        NavTab("Search", Routes.SEARCH, "🔍"),
-        NavTab("Favorites", Routes.FAVORITES, "⭐"),
+        // Search and Favorites are accessible from within the Live TV screen;
+        // they don't need top-level nav slots.
         NavTab("Settings", Routes.SETTINGS, "⚙️")
     )
 
