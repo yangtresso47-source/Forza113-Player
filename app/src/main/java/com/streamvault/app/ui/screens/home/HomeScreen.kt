@@ -33,6 +33,8 @@ import com.streamvault.app.ui.components.ChannelCard
 import com.streamvault.app.ui.components.dialogs.CategoryOptionsDialog
 import com.streamvault.app.ui.components.dialogs.PinDialog
 import com.streamvault.app.ui.components.TopNavBar
+import com.streamvault.app.ui.components.SkeletonCard
+import com.streamvault.app.ui.components.shimmerEffect
 import com.streamvault.app.ui.theme.*
 import com.streamvault.domain.model.Category
 import com.streamvault.domain.model.Channel
@@ -154,15 +156,46 @@ fun HomeScreen(
             }
 
             if (uiState.isLoading && uiState.categories.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_loading_channels),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = OnSurface
-                    )
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // Sidebar skeleton
+                    Column(
+                        modifier = Modifier
+                            .width(280.dp)
+                            .fillMaxHeight()
+                            .background(SurfaceElevated)
+                            .padding(vertical = 16.dp, horizontal = 16.dp)
+                    ) {
+                        repeat(10) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .padding(vertical = 4.dp)
+                                    .background(Color.DarkGray, RoundedCornerShape(8.dp))
+                                    .shimmerEffect()
+                            )
+                        }
+                    }
+                    // Content skeleton
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(24.dp)
+                    ) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 180.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(20) {
+                                SkeletonCard(
+                                    modifier = Modifier.aspectRatio(16f/9f)
+                                )
+                            }
+                        }
+                    }
                 }
             } else {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -249,15 +282,18 @@ fun HomeScreen(
                         }
                         
                         if (uiState.isLoading) {
-                            Box(
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 180.dp),
                                 modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 32.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Text(
-                                    text = stringResource(R.string.home_loading),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = OnSurface
-                                )
+                                items(20) {
+                                    SkeletonCard(
+                                        modifier = Modifier.aspectRatio(16f/9f)
+                                    )
+                                }
                             }
                         } else if (!uiState.hasChannels) {
                             Box(

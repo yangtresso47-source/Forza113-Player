@@ -12,6 +12,7 @@ import androidx.tv.material3.*
 import com.streamvault.app.ui.components.CategoryRow
 import com.streamvault.app.ui.components.ContinueWatchingRow
 import com.streamvault.app.ui.components.SeriesCard
+import com.streamvault.app.ui.components.SkeletonRow
 import com.streamvault.app.ui.components.TopNavBar
 import com.streamvault.app.ui.theme.*
 import kotlinx.coroutines.launch
@@ -59,8 +60,15 @@ fun SeriesScreen(
         TopNavBar(currentRoute = currentRoute, onNavigate = onNavigate)
 
         if (uiState.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.series_loading), style = MaterialTheme.typography.bodyLarge, color = OnSurface)
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(3) {
+                    SkeletonRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        cardWidth = 140,
+                        cardHeight = 210,
+                        itemsCount = 10
+                    )
+                }
             }
         } else if (uiState.seriesByCategory.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
