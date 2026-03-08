@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -21,10 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.streamvault.domain.model.Channel
 import com.streamvault.domain.model.Category
-
 import androidx.compose.ui.res.stringResource
 import com.streamvault.app.R
-
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.shape.CircleShape
@@ -32,11 +29,15 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.delay
+import com.streamvault.app.ui.screens.multiview.MultiViewPlannerDialog
+import com.streamvault.app.ui.screens.multiview.MultiViewViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun AddToGroupDialog(
     contentTitle: String,
-    groups: List<Category>, // Only custom groups
+    channel: Channel? = null,          // the channel being managed (for split screen)
+    groups: List<Category>,
     isFavorite: Boolean,
     memberOfGroups: List<Long>,
     onDismiss: () -> Unit,
@@ -44,24 +45,40 @@ fun AddToGroupDialog(
     onAddToGroup: (Category) -> Unit,
     onRemoveFromGroup: (Category) -> Unit,
     onCreateGroup: (String) -> Unit,
-    onAddToSplitScreen: (() -> Unit)? = null,
-    isSplitScreenQueued: Boolean = false
+    onNavigateToSplitScreen: (() -> Unit)? = null  // navigate to MultiViewScreen when launched
 ) {
     var showCreateGroup by remember { mutableStateOf(false) }
     var newGroupName by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    
-    // Fix for ghost clicks: Debounce interaction for 500ms to ignore long-press release
-    var canInteract by remember { mutableStateOf(false) }
 
+    // Ghost-click debounce
+    var canInteract by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
         delay(500)
         canInteract = true
     }
-    
-    val safeDismiss = {
-        if (canInteract) onDismiss()
+
+    val safeDismiss = { if (canInteract) onDismiss() }
+
+    // Split screen state
+    val multiViewViewModel: MultiViewViewModel = hiltViewModel()
+    val slots by multiViewViewModel.slotsFlow.collectAsState()
+    val isQueued = channel != null && multiViewViewModel.isQueued(channel.id)
+    var showSlotPicker by remember { mutableStateOf(false) }
+
+    // Show slot-picker dialog when user taps the split screen button
+    if (showSlotPicker && channel != null) {
+        MultiViewPlannerDialog(
+            pendingChannel = channel,
+            onDismiss = { showSlotPicker = false },
+            onLaunch = {
+                showSlotPicker = false
+                onDismiss()
+                onNavigateToSplitScreen?.invoke()
+            },
+            viewModel = multiViewViewModel
+        )
     }
 
     Dialog(onDismissRequest = safeDismiss) {
@@ -73,6 +90,7 @@ fun AddToGroupDialog(
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -127,13 +145,12 @@ fun AddToGroupDialog(
                         }
                     }
                 } else {
-                    // Content in a scrollable container to prevent cut-off
                     LazyColumn(
                         modifier = Modifier.weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // ── Favorites ────────────────────────────────
                         item {
-                            // Favorites Toggle
                             var isFocused by remember { mutableStateOf(false) }
                             Button(
                                 onClick = onToggleFavorite,
@@ -156,21 +173,19 @@ fun AddToGroupDialog(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (isFavorite) stringResource(R.string.add_group_remove_favorites) else stringResource(R.string.add_group_add_favorites),
+                                    text = if (isFavorite) stringResource(R.string.add_group_remove_favorites)
+                                    else stringResource(R.string.add_group_add_favorites),
                                     color = if (isFavorite) Color.Black else Color.White
                                 )
                             }
                         }
 
-                        // Add to Split Screen button
-                        if (onAddToSplitScreen != null) {
+                        // ── Split Screen ─────────────────────────────
+                        if (channel != null) {
                             item {
                                 var isFocused by remember { mutableStateOf(false) }
                                 Button(
-                                    onClick = {
-                                        onAddToSplitScreen()
-                                        onDismiss()
-                                    },
+                                    onClick = { showSlotPicker = true },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .onFocusChanged { isFocused = it.isFocused }
@@ -180,22 +195,20 @@ fun AddToGroupDialog(
                                             CircleShape
                                         ),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isSplitScreenQueued) Color(0xFF1B5E20) else Color(0xFF2E7D32)
+                                        containerColor = if (isQueued) Color(0xFF1B5E20) else Color(0xFF2E7D32)
                                     )
                                 ) {
                                     Text("🔳  ", color = Color.White)
                                     Text(
-                                        text = if (isSplitScreenQueued)
-                                            stringResource(R.string.multiview_queued)
-                                        else
-                                            stringResource(R.string.multiview_add_to_split),
+                                        text = if (isQueued) stringResource(R.string.multiview_queued)
+                                        else stringResource(R.string.multiview_add_to_split),
                                         color = Color.White
                                     )
                                 }
                             }
                         }
 
-                        // Reordering Controls removed (handled in dedicated reorder mode)
+                        // ── Custom Groups Section ─────────────────────
                         item {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Text(
@@ -209,20 +222,20 @@ fun AddToGroupDialog(
                             val groupId = -group.id
                             val isMember = memberOfGroups.contains(groupId)
                             var isFocused by remember { mutableStateOf(false) }
-                            
+
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = group.name, 
+                                    text = group.name,
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Button(
-                                    onClick = { 
-                                        if (isMember) onRemoveFromGroup(group) else onAddToGroup(group) 
+                                    onClick = {
+                                        if (isMember) onRemoveFromGroup(group) else onAddToGroup(group)
                                     },
                                     modifier = Modifier
                                         .onFocusChanged { isFocused = it.isFocused }
@@ -232,15 +245,20 @@ fun AddToGroupDialog(
                                             CircleShape
                                         ),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isMember) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = if (isMember) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                                        containerColor = if (isMember) MaterialTheme.colorScheme.errorContainer
+                                        else MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = if (isMember) MaterialTheme.colorScheme.onErrorContainer
+                                        else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 ) {
-                                    Text(if (isMember) stringResource(R.string.add_group_remove_btn) else stringResource(R.string.add_group_add_btn))
+                                    Text(
+                                        if (isMember) stringResource(R.string.add_group_remove_btn)
+                                        else stringResource(R.string.add_group_add_btn)
+                                    )
                                 }
                             }
                         }
-                        
+
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedButton(

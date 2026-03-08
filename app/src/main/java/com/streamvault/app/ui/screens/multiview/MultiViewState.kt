@@ -1,5 +1,6 @@
 package com.streamvault.app.ui.screens.multiview
 
+import com.streamvault.domain.model.Channel
 import com.streamvault.player.PlayerEngine
 
 /**
@@ -7,12 +8,15 @@ import com.streamvault.player.PlayerEngine
  */
 data class MultiViewSlot(
     val index: Int,
+    val channel: Channel? = null,
     val streamUrl: String = "",
     val title: String = "",
     val playerEngine: PlayerEngine? = null,
     val isLoading: Boolean = false,
     val hasError: Boolean = false
-)
+) {
+    val isEmpty: Boolean get() = channel == null
+}
 
 data class MultiViewUiState(
     val slots: List<MultiViewSlot> = List(4) { MultiViewSlot(index = it) },

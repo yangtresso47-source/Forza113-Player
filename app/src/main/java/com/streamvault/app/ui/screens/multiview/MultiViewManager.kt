@@ -8,33 +8,37 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Singleton manager that holds the pre-launch queue for the Multi-View (Split Screen) feature.
- * Users can add up to 4 channels before launching the MultiViewScreen.
+ * Singleton that holds the 4 fixed slots for the Multi-View (Split Screen) feature.
+ * Each slot can hold exactly one channel. Slots persist across navigation.
  */
 @Singleton
 class MultiViewManager @Inject constructor() {
 
-    private val _queue = MutableStateFlow<List<Channel>>(emptyList())
-    val queue: StateFlow<List<Channel>> = _queue.asStateFlow()
+    // Null = empty slot, non-null = channel in that slot
+    private val _slots = MutableStateFlow<List<Channel?>>(List(MAX_SLOTS) { null })
+    val slots: StateFlow<List<Channel?>> = _slots.asStateFlow()
 
-    val isFull: Boolean get() = _queue.value.size >= MAX_SLOTS
+    val hasAnyChannel: Boolean get() = _slots.value.any { it != null }
 
-    fun addChannel(channel: Channel) {
-        val current = _queue.value
-        if (current.size < MAX_SLOTS && current.none { it.id == channel.id }) {
-            _queue.value = current + channel
-        }
+    /** Place a channel in a specific slot index (0–3). Replaces whatever was there. */
+    fun setChannel(slotIndex: Int, channel: Channel) {
+        if (slotIndex !in 0 until MAX_SLOTS) return
+        _slots.value = _slots.value.toMutableList().also { it[slotIndex] = channel }
     }
 
-    fun removeChannel(channelId: Long) {
-        _queue.value = _queue.value.filter { it.id != channelId }
+    /** Clear a specific slot. */
+    fun clearSlot(slotIndex: Int) {
+        if (slotIndex !in 0 until MAX_SLOTS) return
+        _slots.value = _slots.value.toMutableList().also { it[slotIndex] = null }
     }
 
-    fun clearQueue() {
-        _queue.value = emptyList()
+    /** Clear all slots. */
+    fun clearAll() {
+        _slots.value = List(MAX_SLOTS) { null }
     }
 
-    fun hasChannels(): Boolean = _queue.value.isNotEmpty()
+    /** Returns true if the given channel is in any slot. */
+    fun isQueued(channelId: Long): Boolean = _slots.value.any { it?.id == channelId }
 
     companion object {
         const val MAX_SLOTS = 4

@@ -44,6 +44,9 @@ import com.streamvault.domain.model.Provider
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.streamvault.app.R
+import com.streamvault.app.ui.screens.multiview.MultiViewViewModel
+import com.streamvault.app.ui.screens.multiview.MultiViewPlannerDialog
+import com.streamvault.app.navigation.Routes
 
 
 // ── Screen ─────────────────────────────────────────────────────────
@@ -58,10 +61,16 @@ fun HomeScreen(
     onChannelClick: (Channel, Category?, Provider?) -> Unit,
     onNavigate: (String) -> Unit,
     currentRoute: String,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    multiViewViewModel: MultiViewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Split screen state
+    val splitSlots by multiViewViewModel.slotsFlow.collectAsState()
+    val hasSplitChannels = splitSlots.any { it != null }
+    var showSplitManagerDialog by remember { mutableStateOf(false) }
     
     // Parental Control State
     var showPinDialog by remember { mutableStateOf(false) }
@@ -321,13 +330,38 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = OnBackground
                             )
-                            
-                            SearchInput(
-                                value = uiState.channelSearchQuery,
-                                onValueChange = { viewModel.updateChannelSearchQuery(it) },
-                                placeholder = stringResource(R.string.home_search_channels),
-                                modifier = Modifier.width(300.dp)
-                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Split Screen button — visible only if at least 1 slot is filled
+                                if (hasSplitChannels) {
+                                    Surface(
+                                        onClick = { showSplitManagerDialog = true },
+                                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+                                        colors = ClickableSurfaceDefaults.colors(
+                                            containerColor = Color(0xFF1B5E20),
+                                            focusedContainerColor = Color(0xFF2E7D32)
+                                        )
+                                    ) {
+                                        Text(
+                                            text = "🔳  " + stringResource(R.string.multiview_nav) +
+                                                " (${splitSlots.count { it != null }})",
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+                                }
+
+                                SearchInput(
+                                    value = uiState.channelSearchQuery,
+                                    onValueChange = { viewModel.updateChannelSearchQuery(it) },
+                                    placeholder = stringResource(R.string.home_search_channels),
+                                    modifier = Modifier.width(300.dp)
+                                )
+                            }
                         }
                         
                         if (uiState.isLoading) {
@@ -489,23 +523,33 @@ fun HomeScreen(
 
     if (uiState.showDialog && uiState.selectedChannelForDialog != null) {
         val channel = uiState.selectedChannelForDialog!!
-        val context = androidx.compose.ui.platform.LocalContext.current
         com.streamvault.app.ui.components.dialogs.AddToGroupDialog(
             contentTitle = channel.name,
+            channel = channel,
             groups = uiState.categories.filter { it.isVirtual && it.id != -999L },
-            isFavorite = channel.isFavorite, // This is now Global Favorite status
+            isFavorite = channel.isFavorite,
             memberOfGroups = uiState.dialogGroupMemberships,
             onDismiss = { viewModel.onDismissDialog() },
-            onToggleFavorite = { 
+            onToggleFavorite = {
                 if (channel.isFavorite) viewModel.removeFavorite(channel) else viewModel.addFavorite(channel)
             },
-            onAddToGroup = { group ->
-                viewModel.addToGroup(channel, group)
+            onAddToGroup = { group -> viewModel.addToGroup(channel, group) },
+            onRemoveFromGroup = { group -> viewModel.removeFromGroup(channel, group) },
+            onCreateGroup = { name -> viewModel.createCustomGroup(name) },
+            onNavigateToSplitScreen = { onNavigate(Routes.MULTI_VIEW) }
+        )
+    }
+
+    // Split Screen manager dialog (opened from the header button)
+    if (showSplitManagerDialog) {
+        MultiViewPlannerDialog(
+            pendingChannel = null,
+            onDismiss = { showSplitManagerDialog = false },
+            onLaunch = {
+                showSplitManagerDialog = false
+                onNavigate(Routes.MULTI_VIEW)
             },
-            onRemoveFromGroup = { group ->
-                 viewModel.removeFromGroup(channel, group)
-            },
-            onCreateGroup = { name -> viewModel.createCustomGroup(name) }
+            viewModel = multiViewViewModel
         )
     }
 

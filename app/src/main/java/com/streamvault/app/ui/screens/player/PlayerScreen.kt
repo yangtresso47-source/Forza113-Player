@@ -55,6 +55,9 @@ import androidx.compose.material3.SliderDefaults
 import com.streamvault.app.ui.components.dialogs.ProgramHistoryDialog
 import androidx.compose.ui.res.stringResource
 import com.streamvault.app.R
+import com.streamvault.app.ui.screens.multiview.MultiViewViewModel
+import com.streamvault.app.ui.screens.multiview.MultiViewPlannerDialog
+import com.streamvault.app.navigation.Routes
 
 
 
@@ -70,7 +73,9 @@ fun PlayerScreen(
     isVirtual: Boolean = false,
     contentType: String = "LIVE",
     onBack: () -> Unit,
-    viewModel: PlayerViewModel = hiltViewModel()
+    onNavigate: ((String) -> Unit)? = null,
+    viewModel: PlayerViewModel = hiltViewModel(),
+    multiViewViewModel: MultiViewViewModel = hiltViewModel()
 ) {
     val playbackState by viewModel.playerEngine.playbackState.collectAsState()
     val isPlaying by viewModel.playerEngine.isPlaying.collectAsState()
@@ -102,6 +107,7 @@ fun PlayerScreen(
 
     var showTrackSelection by remember { mutableStateOf<TrackType?>(null) }
     var showProgramHistory by remember { mutableStateOf(false) }
+    var showSplitDialog by remember { mutableStateOf(false) }
     
     val focusRequester = remember { FocusRequester() }
     val channelListFocusRequester = remember { FocusRequester() }
@@ -160,6 +166,19 @@ fun PlayerScreen(
                 viewModel.playCatchUp(program)
                 showProgramHistory = false
             }
+        )
+    }
+
+    // Split Screen Manager dialog
+    if (showSplitDialog) {
+        MultiViewPlannerDialog(
+            pendingChannel = null,
+            onDismiss = { showSplitDialog = false },
+            onLaunch = {
+                showSplitDialog = false
+                onNavigate?.invoke(Routes.MULTI_VIEW)
+            },
+            viewModel = multiViewViewModel
         )
     }
 
@@ -501,6 +520,8 @@ fun PlayerScreen(
                                     if (availableVideoQualities.size > 1) {
                                         QuickSettingsButton("⚙ HD") { showTrackSelection = TrackType.VIDEO }
                                     }
+                                    // Split Screen button — available in LIVE mode
+                                    QuickSettingsButton("🔳 " + stringResource(R.string.multiview_nav)) { showSplitDialog = true }
                                 }
                             }
 

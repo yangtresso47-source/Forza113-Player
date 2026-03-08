@@ -297,7 +297,8 @@ fun AppNavigation() {
                 providerId = providerId,
                 isVirtual = isVirtual,
                 contentType = contentType,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigate = { route -> navController.navigate(route) }
             )
         }
 

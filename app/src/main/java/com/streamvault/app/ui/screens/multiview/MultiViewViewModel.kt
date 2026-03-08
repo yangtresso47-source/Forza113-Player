@@ -8,58 +8,63 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Provider
 
 @HiltViewModel
 class MultiViewViewModel @Inject constructor(
-    private val multiViewManager: MultiViewManager,
+    val multiViewManager: MultiViewManager,
     private val playerEngineProvider: Provider<PlayerEngine>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MultiViewUiState())
     val uiState: StateFlow<MultiViewUiState> = _uiState.asStateFlow()
 
-    val queueFlow = multiViewManager.queue
+    /** Flow of the current 4 slot channels from the manager */
+    val slotsFlow = multiViewManager.slots
 
     private val playerEngines = mutableListOf<PlayerEngine>()
 
+    /** Called when MultiViewScreen is opened — spins up player engines for occupied slots */
     fun initSlots() {
-        val channels = multiViewManager.queue.value
+        val channels = multiViewManager.slots.value
         val slots = channels.mapIndexed { index, channel ->
-            val engine = playerEngineProvider.get()
-            playerEngines.add(engine)
-            MultiViewSlot(
-                index = index,
-                streamUrl = channel.streamUrl,
-                title = channel.name,
-                playerEngine = engine,
-                isLoading = true
-            )
+            if (channel != null) {
+                val engine = playerEngineProvider.get()
+                playerEngines.add(engine)
+                MultiViewSlot(
+                    index = index,
+                    channel = channel,
+                    streamUrl = channel.streamUrl,
+                    title = channel.name,
+                    playerEngine = engine,
+                    isLoading = true
+                )
+            } else {
+                MultiViewSlot(index = index)
+            }
         }
-        // Fill remaining empty slots
-        val allSlots = slots + (slots.size until 4).map { MultiViewSlot(index = it) }
-        _uiState.value = MultiViewUiState(slots = allSlots.take(4))
+        _uiState.value = MultiViewUiState(slots = slots)
 
-        // Start all engines
+        // Start all occupied engines
         slots.forEachIndexed { index, slot ->
-            viewModelScope.launch {
-                try {
-                    slot.playerEngine?.prepare(
-                        com.streamvault.domain.model.StreamInfo(
-                            url = slot.streamUrl
+            if (!slot.isEmpty) {
+                viewModelScope.launch {
+                    try {
+                        slot.playerEngine?.prepare(
+                            com.streamvault.domain.model.StreamInfo(url = slot.streamUrl)
                         )
-                    )
-                    slot.playerEngine?.play()
-                    updateSlot(index) { it.copy(isLoading = false) }
-                } catch (e: Exception) {
-                    updateSlot(index) { it.copy(isLoading = false, hasError = true) }
+                        slot.playerEngine?.play()
+                        updateSlot(index) { it.copy(isLoading = false) }
+                    } catch (e: Exception) {
+                        updateSlot(index) { it.copy(isLoading = false, hasError = true) }
+                    }
                 }
             }
         }
 
-        // Mute all except focused
         applyFocusAudio(0)
     }
 
@@ -74,17 +79,22 @@ class MultiViewViewModel @Inject constructor(
         }
     }
 
-    fun addToQueue(channel: Channel) {
-        multiViewManager.addChannel(channel)
+    /** Assign a channel to a specific slot (0–3). Called from dialog or AddToGroupDialog. */
+    fun assignChannelToSlot(slotIndex: Int, channel: Channel) {
+        multiViewManager.setChannel(slotIndex, channel)
     }
 
-    fun removeFromQueue(channelId: Long) {
-        multiViewManager.removeChannel(channelId)
+    /** Clear a specific slot */
+    fun clearSlot(slotIndex: Int) {
+        multiViewManager.clearSlot(slotIndex)
     }
 
-    fun clearQueue() {
-        multiViewManager.clearQueue()
+    /** Clear all slots */
+    fun clearAll() {
+        multiViewManager.clearAll()
     }
+
+    fun isQueued(channelId: Long): Boolean = multiViewManager.isQueued(channelId)
 
     private fun updateSlot(index: Int, transform: (MultiViewSlot) -> MultiViewSlot) {
         val updated = _uiState.value.slots.toMutableList()
