@@ -24,6 +24,8 @@ import com.streamvault.domain.model.DecoderMode
 import com.streamvault.domain.model.StreamInfo
 import com.streamvault.domain.model.StreamType
 import com.streamvault.domain.model.VideoFormat
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.common.AudioAttributes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -32,7 +34,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @OptIn(UnstableApi::class)
-@Singleton
 class Media3PlayerEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient
@@ -85,7 +86,32 @@ class Media3PlayerEngine @Inject constructor(
             )
         }
 
+        // Optimize for multi-stream (reduce memory pressure/buffer)
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                15000, // min buffer
+                30000, // max buffer
+                2500,  // buffer for playback
+                5000   // buffer for rebuffering
+            )
+            .build()
+
+        val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
+            parameters = parameters.buildUpon()
+                .setMaxVideoSize(1280, 720) // Multi-View optimization: don't request 1080p/4K per slot
+                .build()
+        }
+
         return ExoPlayer.Builder(context, renderersFactory)
+            .setTrackSelector(trackSelector)
+            .setLoadControl(loadControl)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.CONTENT_TYPE_MOVIE)
+                    .build(),
+                true // handleAudioFocus
+            )
             .build()
             .apply {
                 addAnalyticsListener(object : AnalyticsListener {

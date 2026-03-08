@@ -273,14 +273,8 @@ fun AppNavigation() {
                 navArgument("contentType") { type = NavType.StringType; defaultValue = "LIVE" }
             )
         ) { backStackEntry ->
-            val streamUrl = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("streamUrl") ?: "",
-                "UTF-8"
-            )
-            val title = java.net.URLDecoder.decode(
-                backStackEntry.arguments?.getString("title") ?: "",
-                "UTF-8"
-            )
+            val streamUrl = backStackEntry.arguments?.getString("streamUrl") ?: ""
+            val title = backStackEntry.arguments?.getString("title") ?: ""
             val channelId = backStackEntry.arguments?.getString("channelId")?.takeIf { it.isNotBlank() }
             val internalId = backStackEntry.arguments?.getLong("internalId") ?: -1L
             val categoryId = backStackEntry.arguments?.getLong("categoryId")?.takeIf { it != -1L }

@@ -24,10 +24,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import com.streamvault.app.ui.components.SearchInput
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.streamvault.app.navigation.Routes
 import com.streamvault.app.ui.components.CategoryRow
 import com.streamvault.app.ui.components.ContinueWatchingRow
@@ -43,6 +47,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.border
 import com.streamvault.app.ui.components.ReorderTopBar
 import com.streamvault.app.ui.components.dialogs.DeleteGroupDialog
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.tv.material3.Border
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -114,70 +120,38 @@ fun MoviesScreen(
             }
         } else {
             Row(modifier = Modifier.fillMaxSize()) {
-                // Category sidebar
-                LazyColumn(
+                val focusManager = LocalFocusManager.current
+                val categorySearchFocusRequester = remember { FocusRequester() }
+
+                Column(
                     modifier = Modifier
                         .width(220.dp)
                         .fillMaxHeight()
                         .background(SurfaceElevated.copy(alpha = 0.5f))
-                        .padding(vertical = 8.dp)
+                        .padding(top = 8.dp)
                 ) {
-                    item {
+                    // Sticky Header
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Text(
                             text = "Categories",
                             style = MaterialTheme.typography.titleMedium,
                             color = Primary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        
+                        SearchInput(
+                            value = uiState.searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            placeholder = "Search movies...",
+                            focusRequester = categorySearchFocusRequester,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
-                    // Search box — keyboard only opens on OK press (not on D-pad focus)
-                    item {
-                        val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-                        val searchFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-                        var searchFieldFocused by remember { mutableStateOf(false) }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                .height(44.dp)
-                                .background(
-                                    if (searchFieldFocused) SurfaceHighlight else SurfaceElevated,
-                                    androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    if (searchFieldFocused) 2.dp else 0.dp,
-                                    if (searchFieldFocused) Primary else Color.Transparent,
-                                    androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                                )
-                                .onFocusChanged { searchFieldFocused = it.hasFocus }
-                                .clickable {
-                                    searchFocusRequester.requestFocus()
-                                    keyboardController?.show()
-                                }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🔍", style = MaterialTheme.typography.bodySmall)
-                                Spacer(Modifier.width(8.dp))
-                                Box(modifier = Modifier.weight(1f)) {
-                                    if (uiState.searchQuery.isEmpty() && !searchFieldFocused) {
-                                        Text("Search movies...", style = MaterialTheme.typography.bodySmall, color = OnSurfaceDim)
-                                    }
-                                    BasicTextField(
-                                        value = uiState.searchQuery,
-                                        onValueChange = { viewModel.setSearchQuery(it) },
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.bodySmall.copy(color = OnSurface),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .focusRequester(searchFocusRequester),
-                                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Primary)
-                                    )
-                                }
-                            }
-                        }
-                    }
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 8.dp)
+                    ) {
                     item {
                         val isAllSelected = uiState.selectedCategory == null
                         Surface(
@@ -190,6 +164,14 @@ fun MoviesScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .onPreviewKeyEvent { event ->
+                                    if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                                        if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                                            categorySearchFocusRequester.requestFocus()
+                                            true
+                                        } else false
+                                    } else false
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -224,6 +206,14 @@ fun MoviesScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .onPreviewKeyEvent { event ->
+                                    if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                                        if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                                            categorySearchFocusRequester.requestFocus()
+                                            true
+                                        } else false
+                                    } else false
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -246,12 +236,13 @@ fun MoviesScreen(
                         }
                     }
                 }
+                }
 
                 // Main content
                 if (uiState.selectedCategory == null) {
                     // Netflix-style rows (All categories view)
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().weight(1f),
                         contentPadding = PaddingValues(
                             start = LocalSpacing.current.safeHoriz, 
                             end = LocalSpacing.current.safeHoriz, 
@@ -355,6 +346,7 @@ fun MoviesScreen(
                         columns = GridCells.Adaptive(minSize = 240.dp),
                         modifier = Modifier
                             .fillMaxSize()
+                            .weight(1f)
                             .onPreviewKeyEvent { event ->
                                 if (uiState.isReorderMode && event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
                                     if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_BACK) {
@@ -493,7 +485,10 @@ fun HeroBanner(
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = androidx.tv.material3.Border(BorderStroke(2.dp, Primary))
+            focusedBorder = Border(
+                border = BorderStroke(3.dp, Color.White),
+                shape = RoundedCornerShape(8.dp)
+            )
         )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {

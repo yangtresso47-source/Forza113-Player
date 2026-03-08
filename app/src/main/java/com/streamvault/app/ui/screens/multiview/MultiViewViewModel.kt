@@ -21,25 +21,24 @@ class MultiViewViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MultiViewUiState())
     val uiState: StateFlow<MultiViewUiState> = _uiState.asStateFlow()
+    
+    private var borderHideJob: kotlinx.coroutines.Job? = null
 
     /** Flow of the current 4 slot channels from the manager */
     val slotsFlow = multiViewManager.slots
 
-    private val playerEngines = mutableListOf<PlayerEngine>()
+    private val playerEngines = mutableMapOf<Int, PlayerEngine>()
 
     /** Called when MultiViewScreen is opened — spins up player engines for occupied slots */
     fun initSlots() {
         val channels = multiViewManager.slots.value
         val slots = channels.mapIndexed { index, channel ->
             if (channel != null) {
-                val engine = playerEngineProvider.get()
-                playerEngines.add(engine)
                 MultiViewSlot(
                     index = index,
                     channel = channel,
                     streamUrl = channel.streamUrl,
                     title = channel.name,
-                    playerEngine = engine,
                     isLoading = true
                 )
             } else {
@@ -52,12 +51,21 @@ class MultiViewViewModel @Inject constructor(
         slots.forEachIndexed { index, slot ->
             if (!slot.isEmpty) {
                 viewModelScope.launch {
+                    kotlinx.coroutines.delay(index * 250L) // Stagger decoders to prevent Peak usage crash
                     try {
-                        slot.playerEngine?.prepare(
+                        val engine = playerEngineProvider.get()
+                        playerEngines[index] = engine
+                        
+                        engine.prepare(
                             com.streamvault.domain.model.StreamInfo(url = slot.streamUrl)
                         )
-                        slot.playerEngine?.play()
-                        updateSlot(index) { it.copy(isLoading = false) }
+                        engine.play()
+                        
+                        // Copy the engine into the slot UI state as well
+                        updateSlot(index) { it.copy(isLoading = false, playerEngine = engine) }
+                        
+                        // Re-apply audio to make sure the focused one is audible
+                        applyFocusAudio(_uiState.value.focusedSlotIndex)
                     } catch (e: Exception) {
                         updateSlot(index) { it.copy(isLoading = false, hasError = true) }
                     }
@@ -66,15 +74,28 @@ class MultiViewViewModel @Inject constructor(
         }
 
         applyFocusAudio(0)
+        showSelectionBorderTemporarily()
     }
 
     fun setFocus(slotIndex: Int) {
-        _uiState.value = _uiState.value.copy(focusedSlotIndex = slotIndex)
-        applyFocusAudio(slotIndex)
+        if (_uiState.value.focusedSlotIndex != slotIndex) {
+            _uiState.value = _uiState.value.copy(focusedSlotIndex = slotIndex)
+            applyFocusAudio(slotIndex)
+            showSelectionBorderTemporarily()
+        }
+    }
+
+    private fun showSelectionBorderTemporarily() {
+        borderHideJob?.cancel()
+        _uiState.value = _uiState.value.copy(showSelectionBorder = true)
+        borderHideJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(3000)
+            _uiState.value = _uiState.value.copy(showSelectionBorder = false)
+        }
     }
 
     private fun applyFocusAudio(focusedIndex: Int) {
-        playerEngines.forEachIndexed { index, engine ->
+        playerEngines.forEach { (index, engine) ->
             if (index == focusedIndex) engine.setVolume(1f) else engine.setVolume(0f)
         }
     }
@@ -106,7 +127,7 @@ class MultiViewViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        playerEngines.forEach { it.release() }
+        playerEngines.values.forEach { it.release() }
         playerEngines.clear()
     }
 }

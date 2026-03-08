@@ -37,6 +37,11 @@ object NetworkModule {
             )
             .followRedirects(true)
             .followSslRedirects(true)
+            .connectionPool(okhttp3.ConnectionPool(10, 5, TimeUnit.MINUTES)) // Allow more idle connections
+            .dispatcher(okhttp3.Dispatcher().apply {
+                maxRequests = 64
+                maxRequestsPerHost = 10 // Increase host limit for Multi-View
+            })
             .build()
 
     @Provides

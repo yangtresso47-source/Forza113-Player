@@ -21,5 +21,6 @@ data class MultiViewSlot(
 data class MultiViewUiState(
     val slots: List<MultiViewSlot> = List(4) { MultiViewSlot(index = it) },
     val focusedSlotIndex: Int = 0,
-    val isLaunching: Boolean = false
+    val isLaunching: Boolean = false,
+    val showSelectionBorder: Boolean = true
 )

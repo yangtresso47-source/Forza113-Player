@@ -15,16 +15,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.streamvault.app.ui.components.SearchInput
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.*
 import androidx.compose.material3.SnackbarHost
@@ -260,58 +264,123 @@ fun HomeScreen(
                 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Sidebar - Categories
-                    LazyColumn(
+                    val categorySearchFocusRequester = remember { FocusRequester() }
+                    val focusManager = LocalFocusManager.current
+                    
+                    Column(
                         modifier = Modifier
                             .width(280.dp)
                             .fillMaxHeight()
                             .background(SurfaceElevated)
-                            .padding(vertical = 16.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp)
+                            .padding(top = 16.dp)
                     ) {
-                        item {
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.home_categories_title),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = OnSurface,
-                                    modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
-                                )
-                                SearchInput(
-                                    value = uiState.categorySearchQuery,
-                                    onValueChange = { viewModel.updateCategorySearchQuery(it) },
-                                    placeholder = stringResource(R.string.home_search_categories),
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
+                        // Sticky Header Part
+                        Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                            Text(
+                                text = stringResource(R.string.home_categories_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = OnSurface,
+                                modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
+                            )
+                            SearchInput(
+                                value = uiState.categorySearchQuery,
+                                onValueChange = { viewModel.updateCategorySearchQuery(it) },
+                                placeholder = stringResource(R.string.home_search_categories),
+                                focusRequester = categorySearchFocusRequester,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                        }
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+
+                        // ── Split Screen entry (under search bar) ──
+                        if (hasSplitChannels) {
+                            item {
+                                Spacer(Modifier.height(8.dp))
+                                var isFocused by remember { mutableStateOf(false) }
+                                Surface(
+                                    onClick = { showSplitManagerDialog = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { isFocused = it.isFocused },
+                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                                    colors = ClickableSurfaceDefaults.colors(
+                                        containerColor = Color(0xFF0D2E16),
+                                        focusedContainerColor = Color(0xFF1B5E20)
+                                    ),
+                                    border = ClickableSurfaceDefaults.border(
+                                        border = androidx.tv.material3.Border(
+                                            border = androidx.compose.foundation.BorderStroke(
+                                                1.dp,
+                                                Color(0xFF2E7D32)
+                                            )
+                                        )
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "🔳",
+                                            fontSize = 14.sp
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.multiview_nav),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = "${splitSlots.count { it != null }}/4 slots",
+                                                style = androidx.compose.ui.text.TextStyle(
+                                                    fontSize = 9.sp,
+                                                    color = Color(0xFF81C784)
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(12.dp))
                             }
                         }
-                        
+
                         items(
-                            items = uiState.categories.filter { 
-                                uiState.categorySearchQuery.isEmpty() || 
-                                it.name.contains(uiState.categorySearchQuery, ignoreCase = true) 
+                            items = uiState.categories.filter {
+                                uiState.categorySearchQuery.isEmpty() ||
+                                it.name.contains(uiState.categorySearchQuery, ignoreCase = true)
                             },
                             key = { it.id }
                         ) { category ->
                             val isLocked = (category.isAdult || category.isUserProtected) && uiState.parentalControlLevel == 1
-                            
+
                             CategoryItem(
                                 category = category,
                                 isSelected = category.id == uiState.selectedCategory?.id,
                                 isLocked = isLocked,
-                                onClick = { 
+                                onClick = {
                                     if (isLocked) {
                                         pendingUnlockCategory = category
                                         showPinDialog = true
                                     } else {
-                                        viewModel.selectCategory(category) 
+                                        viewModel.selectCategory(category)
                                     }
                                 },
-                                onLongClick = { viewModel.showCategoryOptions(category) }
+                                onLongClick = { viewModel.showCategoryOptions(category) },
+                                onJumpToSearch = { categorySearchFocusRequester.requestFocus() }
                             )
                         }
                     }
-                    
-                    // Content - Channel Grid
+                }
+
+                // Content - Channel Grid
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -330,38 +399,13 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = OnBackground
                             )
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // Split Screen button — visible only if at least 1 slot is filled
-                                if (hasSplitChannels) {
-                                    Surface(
-                                        onClick = { showSplitManagerDialog = true },
-                                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-                                        colors = ClickableSurfaceDefaults.colors(
-                                            containerColor = Color(0xFF1B5E20),
-                                            focusedContainerColor = Color(0xFF2E7D32)
-                                        )
-                                    ) {
-                                        Text(
-                                            text = "🔳  " + stringResource(R.string.multiview_nav) +
-                                                " (${splitSlots.count { it != null }})",
-                                            color = Color.White,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-                                    }
-                                }
-
-                                SearchInput(
-                                    value = uiState.channelSearchQuery,
-                                    onValueChange = { viewModel.updateChannelSearchQuery(it) },
-                                    placeholder = stringResource(R.string.home_search_channels),
-                                    modifier = Modifier.width(300.dp)
-                                )
-                            }
+                            SearchInput(
+                                value = uiState.channelSearchQuery,
+                                onValueChange = { viewModel.updateChannelSearchQuery(it) },
+                                placeholder = stringResource(R.string.home_search_channels),
+                                onSearch = { focusManager.clearFocus() },
+                                modifier = Modifier.width(300.dp)
+                            )
                         }
                         
                         if (uiState.isLoading) {
@@ -591,7 +635,8 @@ private fun CategoryItem(
     isSelected: Boolean,
     isLocked: Boolean = false,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    onJumpToSearch: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
     
@@ -601,7 +646,15 @@ private fun CategoryItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged { isFocused = it.isFocused }
+            .onPreviewKeyEvent { event ->
+                if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                    if (event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                        onJumpToSearch()
+                        true
+                    } else false
+                } else false
+            },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (isSelected) Primary.copy(alpha = 0.15f) else Color.Transparent,
@@ -610,7 +663,7 @@ private fun CategoryItem(
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, FocusBorder),
+                border = BorderStroke(3.dp, Color.White), // More pronounced border
                 shape = RoundedCornerShape(8.dp)
             )
         )
@@ -639,64 +692,7 @@ private fun CategoryItem(
     }
 }
 
-@Composable
-fun SearchInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    placeholder: String,
-    modifier: Modifier = Modifier
-) {
-    var isFocused by remember { mutableStateOf(false) }
-    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-
-    val borderColor = if (isFocused) FocusBorder else OnSurfaceDim.copy(alpha = 0.5f)
-    val bgColor = if (isFocused) SurfaceHighlight else SurfaceElevated
-    val borderWidth = if (isFocused) 2.dp else 1.dp
-
-    // Pattern copied from ProviderSetupScreen's TvTextField
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .background(bgColor, RoundedCornerShape(8.dp))
-            .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
-            .onFocusChanged { isFocused = it.hasFocus } // Track focus (self or child)
-            .clickable { 
-                focusRequester.requestFocus() 
-                keyboardController?.show()
-            }
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("🔍", modifier = Modifier.padding(end = 8.dp))
-            
-            Box(modifier = Modifier.weight(1f)) {
-                if (value.isEmpty() && !isFocused) {
-                    Text(
-                        text = placeholder, 
-                        style = MaterialTheme.typography.bodyMedium, 
-                        color = OnSurfaceDim
-                    )
-                }
-
-                androidx.compose.foundation.text.BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = OnSurface
-                    ),
-                    singleLine = true,
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Primary)
-                )
-            }
-        }
-    }
-}
+// SearchInput moved to its own component file
 
 @Composable
 fun ReorderSidePanel(

@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.animation.*
@@ -61,6 +63,7 @@ import com.streamvault.app.navigation.Routes
 
 
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
@@ -120,29 +123,22 @@ fun PlayerScreen(
         focusRequester.requestFocus()
     }
 
-    // Transfer focus to/from channel list overlay
-    LaunchedEffect(showChannelListOverlay) {
-        if (showChannelListOverlay) {
-            kotlinx.coroutines.delay(120) // allow AnimatedVisibility to complete
-            try { channelListFocusRequester.requestFocus() } catch (_: Exception) {}
-        } else if (!showEpgOverlay && !showChannelInfoOverlay) {
-            try { focusRequester.requestFocus() } catch (_: Exception) {}
-        }
-    }
+    // Consolidated focus management for all overlays
+    val anyOverlayVisible = showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showTrackSelection != null || showProgramHistory || showSplitDialog || showZapOverlay || showDiagnostics
     
-    // Transfer focus to/from channel info overlay
-    LaunchedEffect(showChannelInfoOverlay) {
-        if (showChannelInfoOverlay) {
-            kotlinx.coroutines.delay(120) // allow AnimatedVisibility to complete
-            try { channelInfoFocusRequester.requestFocus() } catch (_: Exception) {}
-        } else if (!showEpgOverlay && !showChannelListOverlay) {
-            try { focusRequester.requestFocus() } catch (_: Exception) {}
-        }
-    }
-
-    // Transfer focus to/from EPG overlay
-    LaunchedEffect(showEpgOverlay) {
-        if (!showEpgOverlay && !showChannelListOverlay && !showChannelInfoOverlay) {
+    LaunchedEffect(anyOverlayVisible) {
+        if (anyOverlayVisible) {
+            // Give overlays a moment to animate in before requesting focus
+            delay(150)
+            try {
+                when {
+                    showChannelListOverlay -> channelListFocusRequester.requestFocus()
+                    showChannelInfoOverlay -> channelInfoFocusRequester.requestFocus()
+                    // EPG and Dialogs usually handle their own initial focus or use their own re-composition logic
+                }
+            } catch (_: Exception) {}
+        } else {
+            // Restore focus to main player when all overlays are gone
             try { focusRequester.requestFocus() } catch (_: Exception) {}
         }
     }
@@ -170,9 +166,9 @@ fun PlayerScreen(
     }
 
     // Split Screen Manager dialog
-    if (showSplitDialog) {
+    if (showSplitDialog && currentChannel != null) {
         MultiViewPlannerDialog(
-            pendingChannel = null,
+            pendingChannel = currentChannel,
             onDismiss = { showSplitDialog = false },
             onLaunch = {
                 showSplitDialog = false
@@ -201,7 +197,11 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(focusRequester)
-            .focusable(!showChannelListOverlay && !showEpgOverlay && !showChannelInfoOverlay)
+            .focusProperties {
+                // Only allow focus on the main background when no overlays are active
+                canFocus = !anyOverlayVisible
+            }
+            .focusable()
             .onKeyEvent { event ->
                 // Only handle KeyDown to avoid double actions
                 if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
@@ -899,7 +899,11 @@ fun PlayerScreen(
             visible = showChannelListOverlay,
             enter = slideInHorizontally(initialOffsetX = { if (isRtl) it else -it }),
             exit = slideOutHorizontally(targetOffsetX = { if (isRtl) it else -it }),
-            modifier = Modifier.align(if (isRtl) Alignment.TopEnd else Alignment.TopStart).fillMaxHeight().width(350.dp)
+            modifier = Modifier
+                .align(if (isRtl) Alignment.TopEnd else Alignment.TopStart)
+                .fillMaxHeight()
+                .width(350.dp)
+                .focusGroup()
         ) {
             ChannelListOverlay(
                 channels = currentChannelList,
@@ -914,7 +918,11 @@ fun PlayerScreen(
             visible = showEpgOverlay,
             enter = slideInHorizontally(initialOffsetX = { if (isRtl) -it else it }),
             exit = slideOutHorizontally(targetOffsetX = { if (isRtl) -it else it }),
-            modifier = Modifier.align(if (isRtl) Alignment.TopStart else Alignment.TopEnd).fillMaxHeight().width(400.dp)
+            modifier = Modifier
+                .align(if (isRtl) Alignment.TopStart else Alignment.TopEnd)
+                .fillMaxHeight()
+                .width(400.dp)
+                .focusGroup()
         ) {
             EpgOverlay(
                 currentChannel = currentChannel,
@@ -934,7 +942,10 @@ fun PlayerScreen(
             visible = showChannelInfoOverlay,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .focusGroup()
         ) {
             ChannelInfoOverlay(
                 currentChannel = currentChannel,
@@ -957,7 +968,8 @@ fun PlayerScreen(
                 onTogglePlayPause = { if (isPlaying) viewModel.pause() else viewModel.play() },
                 isPlaying = isPlaying,
                 currentAspectRatio = aspectRatio.modeName,
-                isDiagnosticsEnabled = showDiagnostics
+                isDiagnosticsEnabled = showDiagnostics,
+                onOpenSplitScreen = { showSplitDialog = true }
             )
         }
     }
@@ -979,7 +991,8 @@ fun ChannelInfoOverlay(
     onTogglePlayPause: () -> Unit,
     isPlaying: Boolean,
     currentAspectRatio: String,
-    isDiagnosticsEnabled: Boolean
+    isDiagnosticsEnabled: Boolean,
+    onOpenSplitScreen: () -> Unit = {}
 ) {
     val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
 
@@ -1142,6 +1155,14 @@ fun ChannelInfoOverlay(
                         icon = "📋",
                         label = "Full EPG",
                         onClick = onOpenFullEpg
+                    )
+                    QuickActionButton(
+                        icon = "🔳",
+                        label = "Split Screen",
+                        onClick = {
+                            onDismiss()
+                            onOpenSplitScreen()
+                        }
                     )
                     QuickActionButton(
                         icon = if (isDiagnosticsEnabled) "🛠️" else "📊",

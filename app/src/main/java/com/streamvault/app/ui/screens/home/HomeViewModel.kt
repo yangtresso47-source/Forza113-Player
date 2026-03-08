@@ -147,13 +147,11 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun loadChannelsForCategory(category: Category) {
+        val providerId = _uiState.value.provider?.id ?: return
         loadChannelsJob?.cancel()
         loadChannelsJob = viewModelScope.launch {
-            val providerId = _uiState.value.provider?.id ?: return@launch
-
             val channelsFlow = if (category.isVirtual) {
                 if (category.id == -999L) {
-                    // Global Favorites
                     favoriteRepository.getFavorites(ContentType.LIVE)
                         .map { favorites -> favorites.sortedBy { it.position }.map { it.contentId } }
                         .flatMapLatest { ids ->
@@ -164,7 +162,6 @@ class HomeViewModel @Inject constructor(
                             }
                         }
                 } else {
-                    // Custom Group
                     val groupId = -category.id
                     favoriteRepository.getFavoritesByGroup(groupId)
                         .map { favorites -> favorites.sortedBy { it.position }.map { it.contentId } }
@@ -181,7 +178,7 @@ class HomeViewModel @Inject constructor(
             }
 
             channelsFlow.collect { channels ->
-                _uiState.update { it.copy(hasChannels = channels.isNotEmpty()) }
+                _uiState.update { it.copy(hasChannels = channels.isNotEmpty(), isLoading = false) } // Force isLoading = false here
                 _localChannels.value = channels
             }
         }

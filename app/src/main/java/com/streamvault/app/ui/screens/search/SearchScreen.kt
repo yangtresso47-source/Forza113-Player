@@ -21,12 +21,15 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.tv.material3.*
+import com.streamvault.app.R
+import com.streamvault.app.ui.components.SearchInput
 import com.streamvault.app.ui.components.ChannelCard
 import com.streamvault.app.ui.components.MovieCard
 import com.streamvault.app.ui.components.SeriesCard
@@ -43,8 +46,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import androidx.compose.ui.res.stringResource
-import com.streamvault.app.R
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -159,6 +160,7 @@ fun SearchScreen(
     val selectedTab by viewModel.selectedTab.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    val searchFocusRequester = remember { FocusRequester() }
     val context = androidx.compose.ui.platform.LocalContext.current
     var showPinDialog by remember { mutableStateOf(false) }
     var pinError by remember { mutableStateOf<String?>(null) }
@@ -207,27 +209,14 @@ fun SearchScreen(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Fake Search Text Field (Display Only)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(SurfaceElevated, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                if (query.isEmpty()) {
-                    Text(stringResource(R.string.search_hint), color = OnSurfaceDim)
-                } else {
-                    Text(query, color = OnBackground, style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-
-            com.streamvault.app.ui.components.TvKeyboard(
-                onKeyPress = { viewModel.onQueryChange(query + it) },
-                onDelete = { if (query.isNotEmpty()) viewModel.onQueryChange(query.dropLast(1)) },
-                onClear = { viewModel.onQueryChange("") },
-                onDone = { focusManager.clearFocus() }
+            // Real Search Input triggering system keyboard
+            SearchInput(
+                value = query,
+                onValueChange = { viewModel.onQueryChange(it) },
+                placeholder = stringResource(R.string.search_hint),
+                focusRequester = searchFocusRequester,
+                onSearch = { focusManager.clearFocus() },
+                modifier = Modifier.padding(bottom = 0.dp)
             )
 
             androidx.compose.foundation.lazy.LazyRow(

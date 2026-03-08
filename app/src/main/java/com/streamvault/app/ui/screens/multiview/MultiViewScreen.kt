@@ -1,30 +1,33 @@
 package com.streamvault.app.ui.screens.multiview
 
-import android.view.SurfaceView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import android.view.View
+import androidx.annotation.OptIn
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.PlayerView
+import androidx.media3.ui.AspectRatioFrameLayout
 import com.streamvault.app.R
-import com.streamvault.domain.model.StreamInfo
+import com.streamvault.app.ui.theme.*
+import androidx.tv.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun MultiViewScreen(
@@ -32,9 +35,15 @@ fun MultiViewScreen(
     viewModel: MultiViewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val firstSlotFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
     LaunchedEffect(Unit) {
         viewModel.initSlots()
+        try {
+            // Force focus on first slot after a tiny delay for inflation
+            kotlinx.coroutines.delay(100)
+            firstSlotFocusRequester.requestFocus()
+        } catch (e: Exception) {}
     }
 
     Box(
@@ -43,40 +52,45 @@ fun MultiViewScreen(
             .background(Color.Black)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 2x2 grid
+            // Row 1
             Row(modifier = Modifier.weight(1f)) {
                 PlayerCell(
                     slot = uiState.slots.getOrNull(0),
                     isFocused = uiState.focusedSlotIndex == 0,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    showSelectionBorder = uiState.showSelectionBorder,
+                    modifier = Modifier.weight(1f).fillMaxHeight().focusRequester(firstSlotFocusRequester),
                     onFocused = { viewModel.setFocus(0) }
                 )
                 PlayerCell(
                     slot = uiState.slots.getOrNull(1),
                     isFocused = uiState.focusedSlotIndex == 1,
+                    showSelectionBorder = uiState.showSelectionBorder,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onFocused = { viewModel.setFocus(1) }
                 )
             }
+            // Row 2
             Row(modifier = Modifier.weight(1f)) {
                 PlayerCell(
                     slot = uiState.slots.getOrNull(2),
                     isFocused = uiState.focusedSlotIndex == 2,
+                    showSelectionBorder = uiState.showSelectionBorder,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onFocused = { viewModel.setFocus(2) }
                 )
                 PlayerCell(
                     slot = uiState.slots.getOrNull(3),
                     isFocused = uiState.focusedSlotIndex == 3,
+                    showSelectionBorder = uiState.showSelectionBorder,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onFocused = { viewModel.setFocus(3) }
                 )
             }
         }
 
-        // Focused slot label
+        // Focused slot label at bottom center
         val focused = uiState.slots.getOrNull(uiState.focusedSlotIndex)
-        if (focused != null && focused.streamUrl.isNotBlank()) {
+        if (focused != null && focused.title.isNotBlank()) {
             Text(
                 text = "▶ ${focused.title}",
                 color = Color(0xFF4CAF50),
@@ -92,33 +106,48 @@ fun MultiViewScreen(
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun PlayerCell(
     slot: MultiViewSlot?,
     isFocused: Boolean,
+    showSelectionBorder: Boolean,
     modifier: Modifier,
     onFocused: () -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .border(
-                width = if (isFocused) 3.dp else 1.dp,
-                color = if (isFocused) Color(0xFF4CAF50) else Color(0xFF333333)
-            )
-            .focusable()
-            .onFocusChanged { if (it.isFocused) onFocused() }
-            .background(Color(0xFF111111)),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            slot == null || slot.streamUrl.isBlank() -> {
-                // Empty slot
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "+",
-                        color = Color(0xFF555555),
-                        fontSize = 32.sp
+    val showBorder = isFocused && showSelectionBorder
+    
+        Surface(
+            onClick = { /* Could open full screen? */ },
+            modifier = modifier
+                .padding(2.dp)
+                .onFocusChanged { if (it.isFocused) onFocused() },
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+            border = ClickableSurfaceDefaults.border(
+                border = Border(
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = if (showBorder) 4.dp else 0.dp,
+                        color = if (showBorder) Color.White else Color.Transparent
                     )
+                ),
+                focusedBorder = Border.None,
+                pressedBorder = Border.None
+            ),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Color(0xFF111111),
+                contentColor = Color.White,
+                focusedContainerColor = Color(0xFF111111)
+            ),
+            shape = ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+        ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+        when {
+            slot == null || slot.isEmpty -> {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("+", color = Color(0xFF555555), fontSize = 32.sp)
                     Text(
                         text = stringResource(R.string.multiview_empty_slot),
                         color = Color(0xFF555555),
@@ -134,11 +163,7 @@ private fun PlayerCell(
             }
             slot.hasError -> {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "⚠",
-                        color = Color(0xFFFF5252),
-                        fontSize = 24.sp
-                    )
+                    Text("⚠", color = Color(0xFFFF5252), fontSize = 24.sp)
                     Text(
                         text = stringResource(R.string.multiview_stream_error),
                         color = Color(0xFFFF5252),
@@ -148,18 +173,56 @@ private fun PlayerCell(
                 }
             }
             else -> {
-                // Render the player surface
+                // ✅ Attach ExoPlayer to a Media3 PlayerView — this is what actually renders video
                 val engine = slot.playerEngine
                 if (engine != null) {
-                    AndroidView(
-                        factory = { ctx ->
-                            val surface = engine.getPlayerView() as? SurfaceView ?: SurfaceView(ctx)
-                            surface
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    val exoPlayer = engine.getPlayerView()
+                    if (exoPlayer is androidx.media3.common.Player) {
+                        AndroidView(
+                            factory = { ctx ->
+                                PlayerView(ctx).apply {
+                                    player = exoPlayer
+                                    useController = false
+                                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+                                    // CRITICAL: Ensure view doesn't steal focus
+                                    isFocusable = false
+                                    isFocusableInTouchMode = false
+                                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                                }
+                            },
+                            update = { view ->
+                                if (view.player != exoPlayer) {
+                                    view.player = exoPlayer
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
-                // Title overlay
+
+
+
+                // Speaker icon overlay (only when focused and has channel)
+                if (isFocused && !slot.isEmpty) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🔊",
+                                color = Primary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Title overlay at bottom
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -178,4 +241,5 @@ private fun PlayerCell(
             }
         }
     }
+}
 }
