@@ -10,10 +10,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
+import com.streamvault.data.preferences.PreferencesRepository
 
 @Singleton
 class PlaybackHistoryRepositoryImpl @Inject constructor(
-    private val dao: PlaybackHistoryDao
+    private val dao: PlaybackHistoryDao,
+    private val preferencesRepository: PreferencesRepository
 ) : PlaybackHistoryRepository {
 
     override fun getRecentlyWatched(limit: Int): Flow<List<PlaybackHistory>> {
@@ -29,6 +32,8 @@ class PlaybackHistoryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun recordPlayback(history: PlaybackHistory) {
+        if (preferencesRepository.isIncognitoMode.first()) return
+
         val existing = dao.get(history.contentId, history.contentType.name, history.providerId)
         val updatedHistory = history.copy(
             resumePositionMs = 0,
@@ -40,6 +45,8 @@ class PlaybackHistoryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateResumePosition(history: PlaybackHistory) {
+        if (preferencesRepository.isIncognitoMode.first()) return
+
         val existing = dao.get(history.contentId, history.contentType.name, history.providerId)
 
         // Resume ticks should not increment watch count on every update.

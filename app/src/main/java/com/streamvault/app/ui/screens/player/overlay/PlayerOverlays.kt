@@ -7,8 +7,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,10 +17,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -32,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -41,10 +46,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Border
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import com.streamvault.app.R
 import com.streamvault.app.ui.components.shell.StatusPill
 import com.streamvault.app.ui.design.AppColors
@@ -68,22 +77,30 @@ private fun PlayerOverlayPanel(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(28.dp),
-        colors = androidx.tv.material3.SurfaceDefaults.colors(containerColor = AppColors.SurfaceElevated)
+        shape = RoundedCornerShape(26.dp),
+        border = Border(
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                AppColors.Focus.copy(alpha = 0.05f)
+            )
+        ),
+        colors = androidx.tv.material3.SurfaceDefaults.colors(
+            containerColor = AppColors.Canvas.copy(alpha = 0.38f)
+        )
     ) {
         Column(
             modifier = Modifier
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            AppColors.BrandMuted.copy(alpha = 0.15f),
-                            AppColors.SurfaceElevated,
-                            AppColors.Surface
+                            AppColors.BrandMuted.copy(alpha = 0.06f),
+                            AppColors.SurfaceElevated.copy(alpha = 0.34f),
+                            AppColors.Surface.copy(alpha = 0.28f)
                         )
                     )
                 )
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content
         )
     }
@@ -94,21 +111,33 @@ private fun PlayerMetaRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.TextTertiary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            color = AppColors.TextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        style = MaterialTheme.typography.labelSmall,
+        color = AppColors.TextTertiary,
+        modifier = Modifier.weight(0.44f)
+    )
+    Text(
+        text = value,
+        style = MaterialTheme.typography.labelSmall,
+        color = AppColors.TextPrimary,
+        modifier = Modifier.weight(0.56f),
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
+    )
     }
+}
+
+@Composable
+private fun PlayerOverlaySectionLabel(text: String) {
+    Text(
+        text = text,
+        color = Primary,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold
+    )
 }
 
 @Composable
@@ -120,6 +149,7 @@ fun ChannelInfoOverlay(
     focusRequester: FocusRequester,
     lastVisitedCategoryName: String?,
     onDismiss: () -> Unit,
+    onOverlayInteracted: () -> Unit,
     onOpenFullEpg: () -> Unit,
     onOpenLastGroup: () -> Unit,
     onOpenRecentChannels: () -> Unit,
@@ -140,184 +170,267 @@ fun ChannelInfoOverlay(
     PlayerOverlayPanel(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 32.dp)
+            .padding(horizontal = 56.dp, vertical = 20.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (currentChannel != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusPill(
-                        label = stringResource(R.string.player_live_channel, displayChannelNumber),
-                        containerColor = AppColors.BrandMuted
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = currentChannel.name,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = AppColors.TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (currentChannel.catchUpSupported) {
-                        Spacer(Modifier.width(12.dp))
-                        StatusPill(
-                            label = stringResource(R.string.player_catchup_badge),
-                            containerColor = AppColors.Live
-                        )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (currentChannel != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AppColors.SurfaceEmphasis.copy(alpha = 0.46f))
+                                .border(1.dp, AppColors.Focus.copy(alpha = 0.05f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!currentChannel.logoUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = currentChannel.logoUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(6.dp),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                )
+                            } else {
+                                Text(
+                                    text = currentChannel.name.take(2).uppercase(Locale.getDefault()),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = AppColors.TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
-                }
-            }
-
-            if (currentProgram != null) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            StatusPill(
+                                label = stringResource(R.string.player_live_channel, displayChannelNumber),
+                                containerColor = AppColors.BrandMuted
+                            )
+                            if (currentChannel != null) {
+                                Text(
+                                    text = currentChannel.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = AppColors.TextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
+                            if (currentChannel?.catchUpSupported == true) {
+                                StatusPill(
+                                    label = stringResource(R.string.player_catchup_badge),
+                                    containerColor = AppColors.Live
+                                )
+                            }
+                        }
+
+                        if (currentProgram != null) {
                             Text(
                                 text = currentProgram.title,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 color = AppColors.TextPrimary,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.player_time_range_minutes,
+                                        timeFormat.format(Date(currentProgram.startTime)),
+                                        timeFormat.format(Date(currentProgram.endTime)),
+                                        currentProgram.durationMinutes
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AppColors.TextSecondary,
+                                    maxLines = 1
+                                )
+                                val now = System.currentTimeMillis()
+                                val start = currentProgram.startTime
+                                val end = currentProgram.endTime
+                                if (start in 1..<end) {
+                                    val progress = (now - start).toFloat() / (end - start)
+                                    val remainingMin = ((end - now) / 60000).toInt().coerceAtLeast(0)
+                                    androidx.compose.material3.LinearProgressIndicator(
+                                        progress = { progress.coerceIn(0f, 1f) },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(4.dp)
+                                            .clip(RoundedCornerShape(999.dp)),
+                                        color = Primary,
+                                        trackColor = AppColors.SurfaceEmphasis.copy(alpha = 0.45f)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.player_minutes_remaining, remainingMin),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = OnSurfaceDim,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            if (nextProgram != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.player_next_label),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Primary
+                                    )
+                                    Text(
+                                        text = nextProgram.title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AppColors.TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = timeFormat.format(Date(nextProgram.startTime)),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AppColors.TextTertiary
+                                    )
+                                }
+                            }
+                        } else {
                             Text(
-                                text = stringResource(
-                                    R.string.player_time_range_minutes,
-                                    timeFormat.format(Date(currentProgram.startTime)),
-                                    timeFormat.format(Date(currentProgram.endTime)),
-                                    currentProgram.durationMinutes
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = AppColors.TextSecondary
+                                text = stringResource(R.string.player_no_guide_data),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColors.TextSecondary,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
-                    val now = System.currentTimeMillis()
-                    val start = currentProgram.startTime
-                    val end = currentProgram.endTime
-                    if (start in 1..<end) {
-                        val progress = (now - start).toFloat() / (end - start)
-                        val remainingMin = ((end - now) / 60000).toInt().coerceAtLeast(0)
-                        androidx.compose.material3.LinearProgressIndicator(
-                            progress = { progress.coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp),
-                            color = Primary,
-                            trackColor = AppColors.SurfaceEmphasis
-                        )
-                        Text(
-                            text = stringResource(R.string.player_minutes_remaining, remainingMin),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceDim
-                        )
                     }
                 }
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 16.dp)
-                ) {
-                    if (nextProgram != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = stringResource(R.string.player_next_label),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Primary
-                            )
-                            Text(
-                                text = nextProgram.title,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = AppColors.TextSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = timeFormat.format(Date(nextProgram.startTime)),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AppColors.TextTertiary
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_playback),
+                    label = if (isPlaying) stringResource(R.string.player_pause) else stringResource(R.string.player_play),
+                    onClick = {
+                        onOverlayInteracted()
+                        onTogglePlayPause()
+                    },
+                    onInteraction = onOverlayInteracted,
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = Primary.copy(alpha = 0.20f),
+                        focusedContainerColor = Primary,
+                        pressedContainerColor = Primary.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier.focusRequester(focusRequester)
+                )
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_controls),
+                    label = stringResource(R.string.player_more_controls),
+                    onClick = {
+                        onOverlayInteracted()
+                        onDismiss()
+                        onOpenFullControls()
+                    },
+                    onInteraction = onOverlayInteracted
+                )
+                if (currentChannel?.catchUpSupported == true && currentProgram?.hasArchive == true) {
                     QuickActionButton(
-                        icon = stringResource(R.string.player_action_playback),
-                        label = if (isPlaying) stringResource(R.string.player_pause) else stringResource(R.string.player_play),
-                        onClick = onTogglePlayPause,
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = Primary.copy(alpha = 0.25f),
-                            focusedContainerColor = Primary,
-                            pressedContainerColor = Primary.copy(alpha = 0.8f)
-                        )
-                    )
-                    if (currentChannel?.catchUpSupported == true && currentProgram?.hasArchive == true) {
-                        QuickActionButton(
-                            icon = stringResource(R.string.player_action_restart_short),
-                            label = stringResource(R.string.player_restart),
-                            onClick = {
-                                onRestartProgram()
-                                onDismiss()
-                            }
-                        )
-                    }
-                    QuickActionButton(
-                        icon = stringResource(R.string.player_action_view),
-                        label = currentAspectRatio,
-                        onClick = onToggleAspectRatio,
-                        modifier = Modifier.focusRequester(focusRequester)
-                    )
-                    if (!lastVisitedCategoryName.isNullOrBlank()) {
-                        QuickActionButton(
-                            icon = stringResource(R.string.player_action_group),
-                            label = stringResource(R.string.player_last_group_label, lastVisitedCategoryName),
-                            onClick = onOpenLastGroup
-                        )
-                    }
-                    QuickActionButton(
-                        icon = stringResource(R.string.player_action_recent_short),
-                        label = stringResource(R.string.player_recent_channels),
-                        onClick = onOpenRecentChannels
-                    )
-                    QuickActionButton(
-                        icon = stringResource(R.string.player_action_guide),
-                        label = stringResource(R.string.player_full_epg),
-                        onClick = onOpenFullEpg
-                    )
-                    QuickActionButton(
-                        icon = stringResource(R.string.player_action_split),
-                        label = stringResource(R.string.multiview_nav),
+                        icon = stringResource(R.string.player_action_restart_short),
+                        label = stringResource(R.string.player_restart),
                         onClick = {
+                            onOverlayInteracted()
+                            onRestartProgram()
                             onDismiss()
-                            onOpenSplitScreen()
-                        }
-                    )
-                    QuickActionButton(
-                        icon = stringResource(R.string.player_action_diagnostics),
-                        label = stringResource(R.string.player_stats),
-                        onClick = onToggleDiagnostics
+                        },
+                        onInteraction = onOverlayInteracted
                     )
                 }
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_view),
+                    label = currentAspectRatio,
+                    onClick = {
+                        onOverlayInteracted()
+                        onToggleAspectRatio()
+                    },
+                    onInteraction = onOverlayInteracted
+                )
+                if (!lastVisitedCategoryName.isNullOrBlank()) {
+                    QuickActionButton(
+                        icon = stringResource(R.string.player_action_group),
+                        label = stringResource(R.string.player_last_group_label, lastVisitedCategoryName),
+                        onClick = {
+                            onOverlayInteracted()
+                            onOpenLastGroup()
+                        },
+                        onInteraction = onOverlayInteracted
+                    )
+                }
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_recent_short),
+                    label = stringResource(R.string.player_recent_channels),
+                    onClick = {
+                        onOverlayInteracted()
+                        onOpenRecentChannels()
+                    },
+                    onInteraction = onOverlayInteracted
+                )
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_guide),
+                    label = stringResource(R.string.player_full_epg),
+                    onClick = {
+                        onOverlayInteracted()
+                        onOpenFullEpg()
+                    },
+                    onInteraction = onOverlayInteracted
+                )
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_split),
+                    label = stringResource(R.string.multiview_nav),
+                    onClick = {
+                        onOverlayInteracted()
+                        onDismiss()
+                        onOpenSplitScreen()
+                    },
+                    onInteraction = onOverlayInteracted
+                )
+                QuickActionButton(
+                    icon = stringResource(R.string.player_action_diagnostics),
+                    label = stringResource(R.string.player_stats),
+                    onClick = {
+                        onOverlayInteracted()
+                        onToggleDiagnostics()
+                    },
+                    onInteraction = onOverlayInteracted
+                )
             }
         }
     }
@@ -332,19 +445,27 @@ private fun QuickActionButton(
         containerColor = AppColors.SurfaceEmphasis,
         focusedContainerColor = Primary.copy(alpha = 0.85f)
     ),
+    onInteraction: () -> Unit = {},
     onClick: () -> Unit
 ) {
     Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
+        onClick = {
+            onInteraction()
+            onClick()
+        },
+        modifier = modifier
+            .widthIn(min = 92.dp, max = 176.dp)
+            .onFocusChanged {
+                if (it.isFocused) onInteraction()
+            },
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
         colors = colors,
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f)
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
             horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             AnimatedContent(
                 targetState = icon,
@@ -357,14 +478,18 @@ private fun QuickActionButton(
                     text = targetIcon.uppercase(Locale.getDefault()),
                     style = MaterialTheme.typography.labelSmall,
                     color = AppColors.BrandStrong,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = AppColors.TextPrimary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -381,7 +506,8 @@ fun ChannelListOverlay(
     lastVisitedCategoryName: String? = null,
     onOpenLastGroup: () -> Unit = {},
     onSelectChannel: (Long) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOverlayInteracted: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -406,11 +532,11 @@ fun ChannelListOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.42f))
+            .background(Color.Black.copy(alpha = 0.18f))
     ) {
         PlayerOverlayPanel(
             modifier = Modifier
-                .width(520.dp)
+                .width(500.dp)
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
@@ -435,12 +561,18 @@ fun ChannelListOverlay(
                         )
                         if (!lastVisitedCategoryName.isNullOrBlank()) {
                             Surface(
-                                onClick = onOpenLastGroup,
+                                onClick = {
+                                    onOverlayInteracted()
+                                    onOpenLastGroup()
+                                },
                                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
                                 colors = ClickableSurfaceDefaults.colors(
                                     containerColor = AppColors.SurfaceEmphasis,
                                     focusedContainerColor = Primary
-                                )
+                                ),
+                                modifier = Modifier.onFocusChanged {
+                                    if (it.isFocused) onOverlayInteracted()
+                                }
                             ) {
                                 Text(
                                     text = stringResource(R.string.player_last_group_label, lastVisitedCategoryName),
@@ -490,6 +622,7 @@ fun ChannelListOverlay(
                                 itemsIndexed(recentChannels, key = { _, channel -> channel.id }) { index, channel ->
                                     Surface(
                                         onClick = {
+                                            onOverlayInteracted()
                                             onSelectChannel(channel.id)
                                             onDismiss()
                                         },
@@ -497,7 +630,10 @@ fun ChannelListOverlay(
                                         colors = ClickableSurfaceDefaults.colors(
                                             containerColor = AppColors.SurfaceEmphasis,
                                             focusedContainerColor = Primary
-                                        )
+                                        ),
+                                        modifier = Modifier.onFocusChanged {
+                                            if (it.isFocused) onOverlayInteracted()
+                                        }
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -540,6 +676,7 @@ fun ChannelListOverlay(
                             .padding(vertical = 3.dp)
                             .onFocusChanged {
                                 if (it.isFocused) {
+                                    onOverlayInteracted()
                                     onFocusedChannelChange(channel.id)
                                     scope.launch {
                                         val targetIndex = (index - 1).coerceAtLeast(0)
@@ -554,7 +691,7 @@ fun ChannelListOverlay(
                         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (isSelected) Primary.copy(alpha = 0.25f) else AppColors.Surface.copy(alpha = 0.82f),
+                            containerColor = if (isSelected) Primary.copy(alpha = 0.20f) else AppColors.Surface.copy(alpha = 0.68f),
                             focusedContainerColor = Primary
                         )
                     ) {
@@ -612,7 +749,8 @@ fun EpgOverlay(
     preferredFocusedProgramToken: Long? = null,
     onFocusedProgramChange: (Long) -> Unit = {},
     onDismiss: () -> Unit,
-    onPlayCatchUp: (Program) -> Unit
+    onPlayCatchUp: (Program) -> Unit,
+    onOverlayInteracted: () -> Unit = {}
 ) {
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     val listState = rememberLazyListState()
@@ -628,12 +766,12 @@ fun EpgOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.42f))
+            .background(Color.Black.copy(alpha = 0.18f))
     ) {
         PlayerOverlayPanel(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .width(560.dp)
+                .width(520.dp)
                 .padding(24.dp)
         ) {
             androidx.compose.foundation.lazy.LazyColumn(
@@ -644,7 +782,7 @@ fun EpgOverlay(
                 item {
                     Text(
                         text = stringResource(R.string.epg_title),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = Primary,
                         fontWeight = FontWeight.Bold
                     )
@@ -769,6 +907,7 @@ fun EpgOverlay(
                         Surface(
                             onClick = {
                                 if (program.hasArchive || currentChannel?.catchUpSupported == true) {
+                                    onOverlayInteracted()
                                     onPlayCatchUp(program)
                                 }
                             },
@@ -784,7 +923,10 @@ fun EpgOverlay(
                                     else Modifier
                                 )
                                 .onFocusChanged {
-                                    if (it.isFocused) onFocusedProgramChange(focusToken)
+                                    if (it.isFocused) {
+                                        onOverlayInteracted()
+                                        onFocusedProgramChange(focusToken)
+                                    }
                                 }
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -842,57 +984,70 @@ fun DiagnosticsOverlay(
     diagnostics: PlayerDiagnosticsUiState,
     modifier: Modifier = Modifier
 ) {
-    PlayerOverlayPanel(modifier = modifier.width(420.dp)) {
-        Text(
-            text = stringResource(R.string.player_diagnostics_title),
-            color = Primary,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        if (diagnostics.providerName.isNotBlank()) {
-            PlayerMetaRow(stringResource(R.string.player_diagnostics_provider), diagnostics.providerName)
-        }
-        if (diagnostics.providerSourceLabel.isNotBlank()) {
-            PlayerMetaRow(stringResource(R.string.player_diagnostics_source), diagnostics.providerSourceLabel)
-        }
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_decoder), diagnostics.decoderMode.name)
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_stream_class), diagnostics.streamClassLabel)
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_playback_state), diagnostics.playbackStateLabel)
-        if (diagnostics.archiveSupportLabel.isNotBlank()) {
-            PlayerMetaRow(stringResource(R.string.player_diagnostics_archive), diagnostics.archiveSupportLabel)
-        }
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_alternates), diagnostics.alternativeStreamCount.toString())
-        if (diagnostics.channelErrorCount > 0) {
-            PlayerMetaRow(stringResource(R.string.player_diagnostics_channel_errors), diagnostics.channelErrorCount.toString())
-        }
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_resolution), "${stats.width}x${stats.height}")
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_video_codec), stats.videoCodec)
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_audio_codec), stats.audioCodec)
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_video_bitrate), "${stats.videoBitrate / 1000} kbps")
-        PlayerMetaRow(stringResource(R.string.player_diagnostics_dropped_frames), stats.droppedFrames.toString())
-        diagnostics.lastFailureReason?.let { reason ->
-            PlayerMetaRow(stringResource(R.string.player_diagnostics_last_failure), reason)
-        }
-        if (diagnostics.recentRecoveryActions.isNotEmpty()) {
+    PlayerOverlayPanel(modifier = modifier.width(380.dp)) {
+        Column(
+            modifier = Modifier
+                .heightIn(max = 420.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
-                text = stringResource(R.string.player_diagnostics_recovery_actions),
+                text = stringResource(R.string.player_diagnostics_title),
                 color = Primary,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
-            diagnostics.recentRecoveryActions.forEach { action ->
-                Text(action, color = AppColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            PlayerOverlaySectionLabel(stringResource(R.string.player_diagnostics_section_source))
+            if (diagnostics.providerName.isNotBlank()) {
+                PlayerMetaRow(stringResource(R.string.player_diagnostics_provider), diagnostics.providerName)
             }
-        }
-        if (diagnostics.troubleshootingHints.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.player_diagnostics_troubleshooting),
-                color = Primary,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
-            )
-            diagnostics.troubleshootingHints.forEach { hint ->
-                Text(hint, color = AppColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            if (diagnostics.providerSourceLabel.isNotBlank()) {
+                PlayerMetaRow(stringResource(R.string.player_diagnostics_source), diagnostics.providerSourceLabel)
+            }
+            PlayerOverlaySectionLabel(stringResource(R.string.player_diagnostics_section_playback))
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_decoder), diagnostics.decoderMode.name)
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_stream_class), diagnostics.streamClassLabel)
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_playback_state), diagnostics.playbackStateLabel)
+            if (diagnostics.archiveSupportLabel.isNotBlank()) {
+                PlayerMetaRow(stringResource(R.string.player_diagnostics_archive), diagnostics.archiveSupportLabel)
+            }
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_alternates), diagnostics.alternativeStreamCount.toString())
+            if (diagnostics.channelErrorCount > 0) {
+                PlayerMetaRow(stringResource(R.string.player_diagnostics_channel_errors), diagnostics.channelErrorCount.toString())
+            }
+            PlayerOverlaySectionLabel(stringResource(R.string.player_diagnostics_section_video))
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_resolution), "${stats.width}x${stats.height}")
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_video_codec), stats.videoCodec)
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_video_bitrate), "${stats.videoBitrate / 1000} kbps")
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_dropped_frames), stats.droppedFrames.toString())
+            PlayerOverlaySectionLabel(stringResource(R.string.player_diagnostics_section_audio))
+            PlayerMetaRow(stringResource(R.string.player_diagnostics_audio_codec), stats.audioCodec)
+            PlayerOverlaySectionLabel(stringResource(R.string.player_diagnostics_section_recovery))
+            diagnostics.lastFailureReason?.let { reason ->
+                PlayerMetaRow(stringResource(R.string.player_diagnostics_last_failure), reason)
+            }
+            if (diagnostics.recentRecoveryActions.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.player_diagnostics_recovery_actions),
+                    color = Primary,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                diagnostics.recentRecoveryActions.forEach { action ->
+                    Text(action, color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            if (diagnostics.troubleshootingHints.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.player_diagnostics_troubleshooting),
+                    color = Primary,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                diagnostics.troubleshootingHints.forEach { hint ->
+                    Text(hint, color = AppColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }

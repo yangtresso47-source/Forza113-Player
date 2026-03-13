@@ -40,7 +40,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -220,6 +224,7 @@ fun AppScreenHeader(
     }
 }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun TopNavigationBar(
     currentRoute: String,
@@ -229,8 +234,15 @@ private fun TopNavigationBar(
     val items = buildDestinationItems()
     val scrollState = rememberScrollState()
 
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    
     Surface(
-        modifier = modifier,
+        modifier = modifier.focusProperties {
+            enter = {
+                val activeItem = items.firstOrNull { it.route == currentRoute }
+                focusRequesters[activeItem?.route] ?: FocusRequester.Default
+            }
+        },
         shape = RoundedCornerShape(18.dp),
         colors = SurfaceDefaults.colors(containerColor = AppColors.Surface.copy(alpha = 0.9f))
     ) {
@@ -246,22 +258,23 @@ private fun TopNavigationBar(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleSmall,
                 color = AppColors.TextPrimary,
-                modifier = Modifier
-                    .width(190.dp)
-                    .wrapContentWidth(Alignment.Start)
+                modifier = Modifier.wrapContentWidth(Alignment.Start)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(32.dp)) // Increased spacing to prevent overlap
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .horizontalScroll(scrollState),
+                    .horizontalScroll(scrollState)
+                    .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items.forEach { item ->
+                    val requester = focusRequesters.getOrPut(item.route) { FocusRequester() }
                     TopNavigationButton(
                         label = stringResource(item.labelRes),
                         icon = item.icon,
                         selected = currentRoute == item.route,
+                        modifier = Modifier.focusRequester(requester),
                         onClick = {
                             if (currentRoute != item.route) {
                                 onNavigate(item.route)
@@ -279,6 +292,7 @@ private fun TopNavigationButton(
     label: String,
     icon: ImageVector,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -290,7 +304,8 @@ private fun TopNavigationButton(
 
     Surface(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
+            .zIndex(if (isFocused) 1f else 0f) // Keep focused button on top
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale

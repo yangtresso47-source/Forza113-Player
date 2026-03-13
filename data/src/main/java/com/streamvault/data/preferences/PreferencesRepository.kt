@@ -3,6 +3,7 @@ package com.streamvault.data.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -49,6 +50,7 @@ class PreferencesRepository @Inject constructor(
         val MULTIVIEW_PRESET_2 = stringPreferencesKey("multiview_preset_2")
         val MULTIVIEW_PRESET_3 = stringPreferencesKey("multiview_preset_3")
         val MULTIVIEW_PERFORMANCE_MODE = stringPreferencesKey("multiview_performance_mode")
+        val IS_INCOGNITO_MODE = booleanPreferencesKey("is_incognito_mode")
     }
 
     val lastActiveProviderId: Flow<Long?> = context.dataStore.data.map { preferences ->
@@ -57,6 +59,10 @@ class PreferencesRepository @Inject constructor(
 
     val defaultViewMode: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[PreferencesKeys.DEFAULT_VIEW_MODE]
+    }
+
+    val isIncognitoMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.IS_INCOGNITO_MODE] ?: false
     }
 
     val parentalControlLevel: Flow<Int> = context.dataStore.data
@@ -79,6 +85,12 @@ class PreferencesRepository @Inject constructor(
     suspend fun setParentalControlLevel(level: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PARENTAL_CONTROL_LEVEL] = level
+        }
+    }
+
+    suspend fun setIncognitoMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_INCOGNITO_MODE] = enabled
         }
     }
 
@@ -268,6 +280,19 @@ class PreferencesRepository @Inject constructor(
         val key = stringPreferencesKey("aspect_ratio_$channelId")
         context.dataStore.edit { preferences ->
             preferences[key] = ratio
+        }
+    }
+
+    suspend fun clearAllRecentData() {
+        context.dataStore.edit { preferences ->
+            val keysToRemove = preferences.asMap().keys.filter { key ->
+                key.name.startsWith("last_live_category_id_") || 
+                key.name.startsWith("aspect_ratio_") ||
+                key.name == PreferencesKeys.DEFAULT_CATEGORY_ID.name
+            }
+            keysToRemove.forEach { key ->
+                preferences.remove(key)
+            }
         }
     }
 

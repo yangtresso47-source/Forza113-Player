@@ -237,7 +237,9 @@ class HomeViewModel @Inject constructor(
             val providerId = _uiState.value.provider?.id
             if (providerId != null) {
                 viewModelScope.launch {
-                    preferencesRepository.setLastLiveCategoryId(providerId, category.id)
+                    if (!preferencesRepository.isIncognitoMode.first()) {
+                        preferencesRepository.setLastLiveCategoryId(providerId, category.id)
+                    }
                 }
             }
         }

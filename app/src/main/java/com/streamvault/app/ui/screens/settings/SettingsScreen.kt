@@ -1,16 +1,19 @@
-﻿package com.streamvault.app.ui.screens.settings
+package com.streamvault.app.ui.screens.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.*
@@ -80,6 +83,7 @@ fun SettingsScreen(
     var showPinDialog by remember { mutableStateOf(false) }
     var showLevelDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
     var pinError by remember { mutableStateOf<String?>(null) }
     var pendingAction by remember { mutableStateOf<ParentalAction?>(null) }
 
@@ -95,7 +99,7 @@ fun SettingsScreen(
         uri?.let { viewModel.inspectBackup(it.toString()) }
     }
 
-
+    val uriHandler = LocalUriHandler.current
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { message ->
@@ -116,7 +120,7 @@ fun SettingsScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 32.dp),
+                contentPadding = PaddingValues(start = 8.dp, top = 80.dp, end = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 userScrollEnabled = !uiState.isSyncing
             ) {
@@ -139,25 +143,55 @@ fun SettingsScreen(
                     )
                 }
             } else {
-                items(uiState.providers, key = { it.id }) { provider ->
+                item {
+                    var selectedProviderId by rememberSaveable(uiState.providers, uiState.activeProviderId) {
+                        mutableStateOf(uiState.activeProviderId ?: uiState.providers.first().id)
+                    }
+                    LaunchedEffect(uiState.providers, uiState.activeProviderId) {
+                        val availableIds = uiState.providers.map { it.id }.toSet()
+                        if (selectedProviderId !in availableIds) {
+                            selectedProviderId = uiState.activeProviderId ?: uiState.providers.first().id
+                        }
+                    }
+
+                    val selectedProvider = uiState.providers.firstOrNull { it.id == selectedProviderId }
+                        ?: uiState.providers.first()
+
+                    Text(
+                        text = stringResource(R.string.settings_provider_selector_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceDim,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 14.dp)
+                    ) {
+                        items(uiState.providers, key = { it.id }) { provider ->
+                            ProviderSelectorTab(
+                                provider = provider,
+                                isSelected = provider.id == selectedProvider.id,
+                                isActive = provider.id == uiState.activeProviderId,
+                                onClick = { selectedProviderId = provider.id }
+                            )
+                        }
+                    }
+
                     ProviderSettingsCard(
-                        provider = provider,
-                        isActive = provider.id == uiState.activeProviderId,
+                        provider = selectedProvider,
+                        isActive = selectedProvider.id == uiState.activeProviderId,
                         isSyncing = uiState.isSyncing,
-                        diagnostics = uiState.diagnosticsByProvider[provider.id],
-                        syncWarnings = uiState.syncWarningsByProvider[provider.id].orEmpty(),
-                        onRetryWarningAction = { action -> viewModel.retryWarningAction(provider.id, action) },
-                        onConnect = { viewModel.setActiveProvider(provider.id) },
-                        onRefresh = { viewModel.refreshProvider(provider.id) },
-                        onDelete = { viewModel.deleteProvider(provider.id) },
-                        onEdit = { onEditProvider(provider) },
-                        onParentalControl = { onNavigateToParentalControl(provider.id) }
+                        diagnostics = uiState.diagnosticsByProvider[selectedProvider.id],
+                        syncWarnings = uiState.syncWarningsByProvider[selectedProvider.id].orEmpty(),
+                        onRetryWarningAction = { action -> viewModel.retryWarningAction(selectedProvider.id, action) },
+                        onConnect = { viewModel.setActiveProvider(selectedProvider.id) },
+                        onRefresh = { viewModel.refreshProvider(selectedProvider.id) },
+                        onDelete = { viewModel.deleteProvider(selectedProvider.id) },
+                        onEdit = { onEditProvider(selectedProvider) },
+                        onParentalControl = { onNavigateToParentalControl(selectedProvider.id) }
                     )
                 }
-
-
-
-
             }
 
             // Add Provider button
@@ -318,13 +352,22 @@ fun SettingsScreen(
 
             if (uiState.recordingItems.isEmpty()) {
                 item {
-                    TvEmptyState(
-                        title = stringResource(R.string.settings_recording_empty_title),
-                        subtitle = stringResource(R.string.settings_recording_empty_subtitle),
+                    Surface(
+                        onClick = {},
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = Color.Transparent,
+                            focusedContainerColor = Primary.copy(alpha = 0.1f)
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp, bottom = 8.dp)
-                    )
+                    ) {
+                        TvEmptyState(
+                            title = stringResource(R.string.settings_recording_empty_title),
+                            subtitle = stringResource(R.string.settings_recording_empty_subtitle)
+                        )
+                    }
                 }
             } else {
                 items(uiState.recordingItems, key = { it.id }) { item ->
@@ -347,6 +390,90 @@ fun SettingsScreen(
                 SettingsRow(label = stringResource(R.string.settings_buffer_duration), value = stringResource(R.string.settings_buffer_5s))
             }
 
+            // Privacy section
+            item {
+                Spacer(Modifier.height(16.dp))
+                SettingsSectionHeader(
+                    title = stringResource(R.string.settings_privacy),
+                    subtitle = stringResource(R.string.settings_privacy_subtitle)
+                )
+                
+                Surface(
+                    onClick = { viewModel.toggleIncognitoMode() },
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = SurfaceElevated,
+                        focusedContainerColor = Primary.copy(alpha = 0.2f)
+                    ),
+                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_incognito_mode),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = OnBackground
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_incognito_mode_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnBackground.copy(alpha = 0.6f)
+                            )
+                        }
+                        Switch(
+                            checked = uiState.isIncognitoMode,
+                            onCheckedChange = { viewModel.toggleIncognitoMode() }
+                        )
+                    }
+                }
+                
+                Spacer(Modifier.height(8.dp))
+                
+                Surface(
+                    onClick = { showClearHistoryDialog = true },
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = SurfaceElevated,
+                        focusedContainerColor = Primary.copy(alpha = 0.2f)
+                    ),
+                    scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_clear_history),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = OnBackground
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_clear_history_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnBackground.copy(alpha = 0.6f)
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.settings_clear_history_confirm),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Primary
+                        )
+                    }
+                }
+            }
+
             // About section
             item {
                 Spacer(Modifier.height(16.dp))
@@ -357,6 +484,11 @@ fun SettingsScreen(
                 SettingsRow(label = stringResource(R.string.settings_app_version), value = "1.0.0")
                 SettingsRow(label = stringResource(R.string.settings_build), value = stringResource(R.string.settings_build_desc))
                 SettingsRow(label = stringResource(R.string.settings_developed_by), value = stringResource(R.string.settings_developer_name))
+                ClickableSettingsRow(
+                    label = stringResource(R.string.settings_github),
+                    value = stringResource(R.string.settings_github_url),
+                    onClick = { uriHandler.openUri(context.getString(R.string.settings_github_url)) }
+                )
             }
         }
         }
@@ -525,6 +657,32 @@ fun SettingsScreen(
                 onImportPlaybackHistoryChanged = { viewModel.setImportPlaybackHistory(it) },
                 onImportMultiViewChanged = { viewModel.setImportMultiViewPresets(it) },
                 onConfirm = { viewModel.confirmBackupImport() }
+            )
+        }
+
+        if (showClearHistoryDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showClearHistoryDialog = false },
+                title = { Text(text = stringResource(R.string.settings_clear_history_dialog_title)) },
+                text = { Text(text = stringResource(R.string.settings_clear_history_dialog_body)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.clearHistory()
+                            showClearHistoryDialog = false
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.settings_clear_history_confirm), color = Primary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearHistoryDialog = false }) {
+                        Text(text = stringResource(R.string.settings_cancel))
+                    }
+                },
+                containerColor = SurfaceElevated,
+                titleContentColor = OnSurface,
+                textContentColor = OnSurfaceVariant
             )
         }
     }
@@ -952,6 +1110,69 @@ private fun ProviderSettingsCard(
 }
 
 @Composable
+private fun ProviderSelectorTab(
+    provider: Provider,
+    isSelected: Boolean,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (isSelected) Primary.copy(alpha = 0.18f) else SurfaceElevated,
+            focusedContainerColor = Primary.copy(alpha = 0.34f)
+        ),
+        border = ClickableSurfaceDefaults.border(
+            border = Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = if (isSelected) Primary.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.08f)
+                )
+            ),
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 2.dp,
+                    color = Primary
+                )
+            )
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = provider.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = OnBackground,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = provider.type.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OnSurfaceDim
+                )
+            }
+            if (isActive) {
+                Text(
+                    text = stringResource(R.string.settings_active),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ProviderCompactStat(
     title: String,
     count: Int
@@ -1211,14 +1432,51 @@ private fun SettingsSectionHeader(
 
 @Composable
 private fun SettingsRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+    Surface(
+        onClick = {},
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = Primary.copy(alpha = 0.15f)
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = OnSurface)
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = OnBackground)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = OnSurface)
+            Text(text = value, style = MaterialTheme.typography.bodyMedium, color = OnBackground)
+        }
+    }
+}
+
+@Composable
+private fun ClickableSettingsRow(label: String, value: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = Primary.copy(alpha = 0.15f)
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyMedium, color = OnSurface)
+            Text(text = value, style = MaterialTheme.typography.bodyMedium, color = Primary)
+        }
     }
 }
 
@@ -1367,9 +1625,15 @@ private fun RecordingOverviewCard(
     scheduledCount: Int
 ) {
     Surface(
+        onClick = {},
         modifier = Modifier.fillMaxWidth(),
-        colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
-        shape = RoundedCornerShape(16.dp)
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = SurfaceElevated,
+            focusedContainerColor = SurfaceElevated,
+            focusedContentColor = OnBackground
+        ),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),

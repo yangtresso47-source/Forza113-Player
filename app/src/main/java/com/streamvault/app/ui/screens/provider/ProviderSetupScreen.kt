@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,6 +22,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -306,6 +308,7 @@ fun ProviderSetupScreen(
                         onValueChange = { name = it },
                         label = stringResource(R.string.setup_name_hint),
                         focusRequester = providerNameFocusRequester,
+                        onMoveUp = { false },
                         onMoveDown = {
                             if (selectedTab == 1) {
                                 if (uiState.m3uTab == 0) {
@@ -313,6 +316,9 @@ fun ProviderSetupScreen(
                                 } else {
                                     m3uFileTabFocusRequester.requestFocus()
                                 }
+                                true
+                            } else {
+                                false // Let system find next item (Server URL)
                             }
                         }
                     )
@@ -361,8 +367,14 @@ fun ProviderSetupScreen(
                                     onClick = { viewModel.updateM3uTab(0) },
                                     onFocused = { viewModel.updateM3uTab(0) },
                                     focusRequester = m3uUrlTabFocusRequester,
-                                    onMoveUp = { providerNameFocusRequester.requestFocus() },
-                                    onMoveDown = { m3uValueFocusRequester.requestFocus() }
+                                    onMoveUp = { 
+                                        providerNameFocusRequester.requestFocus()
+                                        true
+                                    },
+                                    onMoveDown = { 
+                                        m3uValueFocusRequester.requestFocus()
+                                        true
+                                    }
                                 )
                                 TabButton(
                                     text = stringResource(R.string.setup_tab_file),
@@ -370,8 +382,14 @@ fun ProviderSetupScreen(
                                     onClick = { viewModel.updateM3uTab(1) },
                                     onFocused = { viewModel.updateM3uTab(1) },
                                     focusRequester = m3uFileTabFocusRequester,
-                                    onMoveUp = { providerNameFocusRequester.requestFocus() },
-                                    onMoveDown = { m3uValueFocusRequester.requestFocus() }
+                                    onMoveUp = { 
+                                        providerNameFocusRequester.requestFocus()
+                                        true
+                                    },
+                                    onMoveDown = { 
+                                        m3uValueFocusRequester.requestFocus()
+                                        true
+                                    }
                                 )
                             }
 
@@ -381,8 +399,14 @@ fun ProviderSetupScreen(
                                     onValueChange = { m3uUrl = it },
                                     label = stringResource(R.string.setup_m3u_hint),
                                     focusRequester = m3uValueFocusRequester,
-                                    onMoveUp = { m3uUrlTabFocusRequester.requestFocus() },
-                                    onMoveDown = { m3uSubmitFocusRequester.requestFocus() }
+                                    onMoveUp = { 
+                                        m3uUrlTabFocusRequester.requestFocus()
+                                        true
+                                    },
+                                    onMoveDown = { 
+                                        m3uSubmitFocusRequester.requestFocus()
+                                        true
+                                    }
                                 )
                             } else {
                                 FileSelectorCard(
@@ -396,8 +420,14 @@ fun ProviderSetupScreen(
                                     emptySelectionHint = stringResource(R.string.setup_file_browse_hint),
                                     onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
                                     focusRequester = m3uValueFocusRequester,
-                                    onMoveUp = { m3uFileTabFocusRequester.requestFocus() },
-                                    onMoveDown = { m3uSubmitFocusRequester.requestFocus() }
+                                    onMoveUp = { 
+                                        m3uFileTabFocusRequester.requestFocus()
+                                        true
+                                    },
+                                    onMoveDown = { 
+                                        m3uSubmitFocusRequester.requestFocus()
+                                        true
+                                    }
                                 )
 
                                 fileImportError?.let { importError ->
@@ -420,7 +450,10 @@ fun ProviderSetupScreen(
                                 enabled = !uiState.isLoading,
                                 onClick = { viewModel.addM3u(m3uUrl, name) },
                                 focusRequester = m3uSubmitFocusRequester,
-                                onMoveUp = { m3uValueFocusRequester.requestFocus() }
+                                onMoveUp = { 
+                                    m3uValueFocusRequester.requestFocus()
+                                    true
+                                }
                             )
                         }
                     }
@@ -506,8 +539,8 @@ private fun TvTextField(
     isPassword: Boolean = false,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveUp: (() -> Boolean)? = null,
+    onMoveDown: (() -> Boolean)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val internalFocusRequester = focusRequester ?: remember { FocusRequester() }
@@ -516,13 +549,38 @@ private fun TvTextField(
     val bgColor = if (isFocused) Surface else SurfaceElevated
     val borderWidth = if (isFocused) 2.dp else 1.dp
 
-    // Use Box instead of TV Surface so key events (paste, etc.) reach BasicTextField
+    // Use Box as the focusable container (Mode 1: Highlighted)
+    // BasicTextField will be Mode 2 (Edit Mode)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
+            .onFocusEvent { isFocused = it.isFocused }
+            .focusRequester(internalFocusRequester)
+            .focusable() // Make the container focusable
+            .onPreviewKeyEvent { event ->
+                if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                    when (event.nativeKeyEvent.keyCode) {
+                        android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                            onMoveUp?.invoke() ?: false
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            onMoveDown?.invoke() ?: false
+                        }
+                        android.view.KeyEvent.KEYCODE_ENTER,
+                        android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
+                        android.view.KeyEvent.KEYCODE_DPAD_CENTER -> {
+                            // Click to enter edit mode (Mode 2)
+                            // In a real TV app, you might show a keyboard dialog here
+                            // For now, we just let the click reach the child if needed
+                            false 
+                        }
+                        else -> false
+                    }
+                } else false
+            }
             .clickable { internalFocusRequester.requestFocus() }
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
@@ -539,25 +597,7 @@ private fun TvTextField(
         androidx.compose.foundation.text.BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(internalFocusRequester)
-                .onFocusChanged { isFocused = it.isFocused }
-                .onPreviewKeyEvent { event ->
-                    if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-                        when (event.nativeKeyEvent.keyCode) {
-                            android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                onMoveUp?.invoke()
-                                onMoveUp != null
-                            }
-                            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                onMoveDown?.invoke()
-                                onMoveDown != null
-                            }
-                            else -> false
-                        }
-                    } else false
-                },
+            modifier = Modifier.fillMaxWidth(),
             textStyle = MaterialTheme.typography.bodySmall.copy(color = OnBackground),
             singleLine = true,
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
@@ -572,7 +612,7 @@ private fun ActionButton(
     enabled: Boolean,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
-    onMoveUp: (() -> Unit)? = null
+    onMoveUp: (() -> Boolean)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val internalFocusRequester = focusRequester ?: remember { FocusRequester() }
@@ -597,7 +637,6 @@ private fun ActionButton(
                     onMoveUp != null
                 ) {
                     onMoveUp()
-                    true
                 } else false
             },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
@@ -628,8 +667,8 @@ private fun FileSelectorCard(
     emptySelectionHint: String,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveUp: (() -> Boolean)? = null,
+    onMoveDown: (() -> Boolean)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val internalFocusRequester = focusRequester ?: remember { FocusRequester() }
@@ -649,12 +688,10 @@ private fun FileSelectorCard(
                 if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
                     when (event.nativeKeyEvent.keyCode) {
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                            onMoveUp?.invoke()
-                            onMoveUp != null
+                            onMoveUp?.invoke() ?: false
                         }
                         android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            onMoveDown?.invoke()
-                            onMoveDown != null
+                            onMoveDown?.invoke() ?: false
                         }
                         else -> false
                     }
@@ -710,8 +747,8 @@ private fun TabButton(
     onClick: () -> Unit,
     onFocused: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
-    onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveUp: (() -> Boolean)? = null,
+    onMoveDown: (() -> Boolean)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val internalFocusRequester = focusRequester ?: remember { FocusRequester() }
@@ -728,12 +765,10 @@ private fun TabButton(
                 if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
                     when (event.nativeKeyEvent.keyCode) {
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                            onMoveUp?.invoke()
-                            onMoveUp != null
+                            onMoveUp?.invoke() ?: false
                         }
                         android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            onMoveDown?.invoke()
-                            onMoveDown != null
+                            onMoveDown?.invoke() ?: false
                         }
                         else -> false
                     }

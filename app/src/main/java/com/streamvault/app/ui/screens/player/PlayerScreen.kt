@@ -75,7 +75,6 @@ import com.streamvault.app.ui.screens.player.overlay.PlayerAspectRatioToast
 import com.streamvault.app.ui.screens.player.overlay.PlayerControlsOverlay
 import com.streamvault.app.ui.screens.player.overlay.PlayerNumericInputOverlay
 import com.streamvault.app.ui.screens.player.overlay.PlayerResolutionBadge
-import com.streamvault.app.ui.screens.player.overlay.PlayerZapOverlay
 import com.streamvault.app.ui.screens.multiview.MultiViewViewModel
 import com.streamvault.app.ui.screens.multiview.MultiViewPlannerDialog
 import com.streamvault.app.navigation.Routes
@@ -112,7 +111,6 @@ fun PlayerScreen(
     val nextProgram by viewModel.nextProgram.collectAsState()
     val programHistory by viewModel.programHistory.collectAsState()
     val currentChannel by viewModel.currentChannel.collectAsState()
-    val showZapOverlay by viewModel.showZapOverlay.collectAsState()
     val resumePrompt by viewModel.resumePrompt.collectAsState()
     
     val showChannelListOverlay by viewModel.showChannelListOverlay.collectAsState()
@@ -172,7 +170,7 @@ fun PlayerScreen(
     }
 
     // Consolidated focus management for all overlays
-    val anyOverlayVisible = showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showTrackSelection != null || showProgramHistory || showSplitDialog || showZapOverlay || showDiagnostics
+    val anyOverlayVisible = showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showTrackSelection != null || showProgramHistory || showSplitDialog || showDiagnostics
     
     LaunchedEffect(anyOverlayVisible) {
         if (anyOverlayVisible) {
@@ -279,6 +277,9 @@ fun PlayerScreen(
                 if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                     when (event.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             if (contentType == "LIVE" && viewModel.hasPendingNumericChannelInput()) {
                                 viewModel.commitNumericChannelInput()
                             } else if (contentType == "LIVE") {
@@ -290,6 +291,9 @@ fun PlayerScreen(
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             if (contentType == "LIVE" && !showChannelListOverlay && !showEpgOverlay && !showChannelInfoOverlay) {
                                 if (isRtl) viewModel.openEpgOverlay() else viewModel.openChannelListOverlay()
                                 true
@@ -301,6 +305,9 @@ fun PlayerScreen(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             if (contentType == "LIVE" && !showChannelListOverlay && !showEpgOverlay && !showChannelInfoOverlay) {
                                 if (isRtl) viewModel.openChannelListOverlay() else viewModel.openEpgOverlay()
                                 true
@@ -312,6 +319,9 @@ fun PlayerScreen(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             if (showChannelListOverlay || showEpgOverlay) return@onKeyEvent false
 
                             if (contentType == "LIVE") {
@@ -322,6 +332,9 @@ fun PlayerScreen(
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             if (showChannelListOverlay || showEpgOverlay) return@onKeyEvent false
 
                             if (contentType == "LIVE") {
@@ -401,6 +414,9 @@ fun PlayerScreen(
                             }
                         }
                         KeyEvent.KEYCODE_INFO -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             if (contentType == "LIVE") {
                                 if (showChannelInfoOverlay) viewModel.closeChannelInfoOverlay()
                                 else viewModel.openChannelInfoOverlay()
@@ -410,6 +426,9 @@ fun PlayerScreen(
                             true
                         }
                         KeyEvent.KEYCODE_MENU -> {
+                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                                viewModel.onLiveOverlayInteraction()
+                            }
                             viewModel.toggleControls()
                             true
                         }
@@ -539,14 +558,6 @@ fun PlayerScreen(
             onOpenSplitScreen = { showSplitDialog = true }
         )
 
-        PlayerZapOverlay(
-            visible = showZapOverlay && !showControls && currentChannel != null,
-            displayChannelNumber = displayChannelNumber,
-            channelName = currentChannel?.name,
-            programTitle = currentProgram?.title,
-            modifier = Modifier.align(Alignment.BottomStart)
-        )
-
         PlayerNumericInputOverlay(
             state = numericChannelInput,
             visible = contentType == "LIVE" && !showControls,
@@ -621,7 +632,8 @@ fun PlayerScreen(
                 lastVisitedCategoryName = lastVisitedCategory?.name,
                 onOpenLastGroup = { viewModel.openLastVisitedCategory() },
                 onSelectChannel = { channelId -> viewModel.zapToChannel(channelId) },
-                onDismiss = { viewModel.closeOverlays() }
+                onDismiss = { viewModel.closeOverlays() },
+                onOverlayInteracted = viewModel::onLiveOverlayInteraction
             )
         }
 
@@ -648,7 +660,8 @@ fun PlayerScreen(
                 onPlayCatchUp = { program -> 
                     viewModel.playCatchUp(program)
                     viewModel.closeOverlays()
-                }
+                },
+                onOverlayInteracted = viewModel::onLiveOverlayInteraction
             )
         }
 
@@ -669,6 +682,7 @@ fun PlayerScreen(
                 focusRequester = channelInfoFocusRequester,
                 lastVisitedCategoryName = lastVisitedCategory?.name,
                 onDismiss = { viewModel.closeChannelInfoOverlay() },
+                onOverlayInteracted = viewModel::onLiveOverlayInteraction,
                 onOpenFullEpg = {
                     viewModel.closeChannelInfoOverlay()
                     viewModel.openEpgOverlay()

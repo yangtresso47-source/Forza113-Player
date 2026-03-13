@@ -194,6 +194,10 @@
     <string name="library_saved_primary_hint">Return to the full library</string>
     <string name="library_saved_manage_hint">Hold a saved group for options</string>
     <string name="library_browse_all">Browse All</string>
+    <string name="vod_category_picker_title">Browse categories</string>
+    <string name="vod_category_picker_subtitle">Search by category name, then open the matching shelf.</string>
+    <string name="vod_category_picker_search_placeholder">Search categories…</string>
+    <string name="vod_category_picker_empty">No matching categories found.</string>
     <string name="library_lens_title">Library Lens</string>
     <string name="library_lens_favorites">Saved Favorites</string>
     <string name="library_lens_continue">Continue Watching</string>
@@ -218,6 +222,7 @@
     <string name="settings_no_providers">No providers configured</string>
     <string name="settings_add_provider">Add Provider</string>
     <string name="settings_providers_subtitle">Switch, sync, edit, and troubleshoot your IPTV sources.</string>
+    <string name="settings_provider_selector_hint">Select a provider to view details and actions.</string>
     <string name="settings_parental_control">Parental Control</string>
     <string name="settings_parental_subtitle">Protect adult or sensitive content with TV-friendly controls.</string>
     <string name="settings_parental_groups_title">Protected Groups</string>
@@ -236,6 +241,8 @@
     <string name="settings_build_desc">StreamVault for Android TV</string>
     <string name="settings_developed_by">Developed by</string>
     <string name="settings_developer_name">David Nashash</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_url">https://github.com/Davidona</string>
     <string name="settings_syncing">Syncing data, please wait...</string>
     <string name="settings_syncing_title">Syncing data...</string>
     <string name="settings_syncing_subtitle">Please wait while your playlist is imported.</string>
@@ -519,6 +526,7 @@
     <string name="player_stats">Stats</string>
     <string name="player_minutes_remaining">%1$d min remaining</string>
     <string name="player_action_playback">Playback</string>
+    <string name="player_action_controls">Controls</string>
     <string name="player_action_restart_short">Restart</string>
     <string name="player_action_view">View</string>
     <string name="player_action_group">Group</string>
@@ -543,6 +551,12 @@
     <string name="player_diagnostics_last_failure">Last Failure</string>
     <string name="player_diagnostics_recovery_actions">Recovery Actions</string>
     <string name="player_diagnostics_troubleshooting">Troubleshooting</string>
+    <string name="player_diagnostics_section_source">Source</string>
+    <string name="player_diagnostics_section_playback">Playback</string>
+    <string name="player_diagnostics_section_video">Video</string>
+    <string name="player_diagnostics_section_audio">Audio</string>
+    <string name="player_diagnostics_section_recovery">Recovery</string>
+    <string name="player_no_guide_data">No guide data</string>
     <string name="epg_loading">Loading TV guide...</string>
     <string name="epg_error">Unable to load the TV guide right now.</string>
     <string name="epg_no_provider">Add or activate a provider to view the TV guide.</string>
@@ -699,4 +713,15 @@
     <string name="multiview_thermal_severe">Severe</string>
     <string name="multiview_thermal_critical">Critical</string>
     <string name="multiview_low_memory_warning">Memory pressure is high. Extra slots stay in standby until playback stabilizes.</string>
+
+    <!-- Privacy -->
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_privacy_subtitle">Manage watch history and incognito mode.</string>
+    <string name="settings_incognito_mode">Incognito Mode</string>
+    <string name="settings_incognito_mode_subtitle">Don\'t save watch history or recently visited categories while active.</string>
+    <string name="settings_clear_history">Clear Watch History</string>
+    <string name="settings_clear_history_subtitle">Wipe all watch progress and recents for all providers.</string>
+    <string name="settings_clear_history_confirm">Clear History</string>
+    <string name="settings_clear_history_dialog_title">Clear Watch History?</string>
+    <string name="settings_clear_history_dialog_body">This will permanently delete all watch history, continue watching progress, and last visited categories across all providers.</string>
 </resources>

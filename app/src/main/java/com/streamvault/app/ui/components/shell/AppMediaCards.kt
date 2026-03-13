@@ -318,8 +318,10 @@ private fun PosterCard(
             AsyncImage(
                 model = imageUrl,
                 contentDescription = title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
             )
         } else {
             Box(

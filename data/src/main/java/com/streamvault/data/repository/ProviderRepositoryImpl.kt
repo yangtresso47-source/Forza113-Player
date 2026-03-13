@@ -127,6 +127,10 @@ class ProviderRepositoryImpl @Inject constructor(
                     }
                     is Result.Error -> {
                         updateProviderSyncStatus(providerData.id, ProviderStatus.ERROR)
+                        if (existingProvider == null) {
+                            // Rollback: if this was a new provider and initial sync failed, don't leave it in the database
+                            providerDao.delete(providerData.id)
+                        }
                         Result.error(
                             "Provider authenticated, but initial sync failed: ${syncResult.message}",
                             syncResult.exception
@@ -194,6 +198,10 @@ class ProviderRepositoryImpl @Inject constructor(
             }
             is Result.Error -> {
                 updateProviderSyncStatus(providerData.id, ProviderStatus.ERROR)
+                if (existingProvider == null) {
+                    // Rollback: if this was a new provider and initial sync failed, don't leave it in the database
+                    providerDao.delete(providerData.id)
+                }
                 Result.error(
                     "Playlist saved, but initial sync failed: ${syncResult.message}",
                     syncResult.exception

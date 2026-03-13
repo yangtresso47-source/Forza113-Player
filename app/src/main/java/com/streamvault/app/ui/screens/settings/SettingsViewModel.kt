@@ -39,7 +39,8 @@ class SettingsViewModel @Inject constructor(
     private val backupManager: BackupManager,
     private val recordingManager: RecordingManager,
     private val syncManager: SyncManager,
-    private val syncMetadataRepository: SyncMetadataRepository
+    private val syncMetadataRepository: SyncMetadataRepository,
+    private val playbackHistoryRepository: com.streamvault.domain.repository.PlaybackHistoryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -51,9 +52,10 @@ class SettingsViewModel @Inject constructor(
                 providerRepository.getProviders(),
                 preferencesRepository.lastActiveProviderId,
                 preferencesRepository.parentalControlLevel,
-                preferencesRepository.appLanguage
-            ) { providers, activeId, level, language ->
-                arrayOf(providers, activeId, level, language)
+                preferencesRepository.appLanguage,
+                preferencesRepository.isIncognitoMode
+            ) { providers, activeId, level, language, incognito ->
+                arrayOf(providers, activeId, level, language, incognito)
             }.collect { values ->
                 @Suppress("UNCHECKED_CAST")
                 _uiState.update {
@@ -61,7 +63,8 @@ class SettingsViewModel @Inject constructor(
                         providers = values[0] as List<Provider>,
                         activeProviderId = values[1] as Long?,
                         parentalControlLevel = values[2] as Int,
-                        appLanguage = values[3] as String
+                        appLanguage = values[3] as String,
+                        isIncognitoMode = values[4] as Boolean
                     )
                 }
             }
@@ -153,6 +156,22 @@ class SettingsViewModel @Inject constructor(
     fun setAppLanguage(language: String) {
         viewModelScope.launch {
             preferencesRepository.setAppLanguage(language)
+        }
+    }
+
+    fun toggleIncognitoMode() {
+        viewModelScope.launch {
+            val current = _uiState.value.isIncognitoMode
+            preferencesRepository.setIncognitoMode(!current)
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true) }
+            playbackHistoryRepository.clearAllHistory()
+            preferencesRepository.clearAllRecentData()
+            _uiState.update { it.copy(isSyncing = false, userMessage = "Watch history and recents cleared") }
         }
     }
 
@@ -415,5 +434,6 @@ data class SettingsUiState(
     val pendingBackupUri: String? = null,
     val backupImportPlan: BackupImportPlan = BackupImportPlan(),
     val recordingItems: List<RecordingItem> = emptyList(),
-    val recordingStorageState: RecordingStorageState = RecordingStorageState()
+    val recordingStorageState: RecordingStorageState = RecordingStorageState(),
+    val isIncognitoMode: Boolean = false
 )

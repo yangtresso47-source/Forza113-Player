@@ -93,7 +93,7 @@ fun FocusableCard(
                 scaleX = scale
                 scaleY = scale
                 shape = RoundedCornerShape(12.dp)
-                clip = false
+                clip = true
             }
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),

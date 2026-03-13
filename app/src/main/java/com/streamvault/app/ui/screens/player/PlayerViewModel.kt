@@ -160,6 +160,8 @@ class PlayerViewModel @Inject constructor(
     val currentChannelRecording: StateFlow<RecordingItem?> = _currentChannelRecording.asStateFlow()
 
     private var channelInfoHideJob: Job? = null
+    private var liveOverlayHideJob: Job? = null
+    private var diagnosticsHideJob: Job? = null
     private var numericInputCommitJob: Job? = null
     private var numericInputFeedbackJob: Job? = null
     private var playerNoticeHideJob: Job? = null
@@ -272,6 +274,7 @@ class PlayerViewModel @Inject constructor(
         _showEpgOverlay.value = false
         _showChannelInfoOverlay.value = false
         _showControls.value = false
+        scheduleLiveOverlayAutoHide()
     }
 
     fun openEpgOverlay() {
@@ -280,6 +283,7 @@ class PlayerViewModel @Inject constructor(
         _showChannelListOverlay.value = false
         _showChannelInfoOverlay.value = false
         _showControls.value = false
+        scheduleLiveOverlayAutoHide()
     }
 
     fun openChannelInfoOverlay() {
@@ -289,11 +293,13 @@ class PlayerViewModel @Inject constructor(
         _showEpgOverlay.value = false
         _showControls.value = false
         channelInfoHideJob?.cancel()
+        scheduleLiveOverlayAutoHide()
     }
 
     fun closeChannelInfoOverlay() {
         channelInfoHideJob?.cancel()
         _showChannelInfoOverlay.value = false
+        if (!hasVisibleTransientLiveOverlay()) clearLiveOverlayAutoHide()
     }
 
     fun closeOverlays() {
@@ -301,7 +307,10 @@ class PlayerViewModel @Inject constructor(
         _showChannelListOverlay.value = false
         _showEpgOverlay.value = false
         _showChannelInfoOverlay.value = false
+        _showDiagnostics.value = false
         channelInfoHideJob?.cancel()
+        clearLiveOverlayAutoHide()
+        clearDiagnosticsAutoHide()
     }
 
     private fun refreshCurrentChannelRecording(items: List<RecordingItem> = _recordingItems.value) {
@@ -315,6 +324,20 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleDiagnostics() {
         _showDiagnostics.value = !_showDiagnostics.value
+        if (_showDiagnostics.value) {
+            scheduleDiagnosticsAutoHide()
+        } else {
+            clearDiagnosticsAutoHide()
+        }
+    }
+
+    fun onLiveOverlayInteraction() {
+        if (hasVisibleTransientLiveOverlay()) {
+            scheduleLiveOverlayAutoHide()
+        }
+        if (_showDiagnostics.value) {
+            scheduleDiagnosticsAutoHide()
+        }
     }
 
     // Zapping state
@@ -949,16 +972,14 @@ class PlayerViewModel @Inject constructor(
         
         fetchEpg(currentProviderId, channel.epgChannelId)
         
-        // Show Zap Overlay & Brief Info
-        _showZapOverlay.value = true
+        // Show bottom live info overlay
+        _showZapOverlay.value = false
         _showControls.value = false 
         openChannelInfoOverlay()
         
         // Reset tried streams for manual switch
         triedAlternativeStreams.clear()
         triedAlternativeStreams.add(channel.streamUrl)
-
-        hideZapOverlayAfterDelay()
         if (currentContentType == ContentType.LIVE) {
             recordLivePlayback(channel)
             scheduleZapBufferWatchdog(index)
@@ -1405,6 +1426,47 @@ class PlayerViewModel @Inject constructor(
             _showZapOverlay.value = false
         }
     }
+
+    private fun hasVisibleTransientLiveOverlay(): Boolean =
+        _showChannelInfoOverlay.value ||
+            _showChannelListOverlay.value ||
+            _showEpgOverlay.value
+
+    private fun clearLiveOverlayAutoHide() {
+        liveOverlayHideJob?.cancel()
+        liveOverlayHideJob = null
+    }
+
+    private fun clearDiagnosticsAutoHide() {
+        diagnosticsHideJob?.cancel()
+        diagnosticsHideJob = null
+    }
+
+    private fun scheduleLiveOverlayAutoHide() {
+        if (currentContentType != ContentType.LIVE) {
+            clearLiveOverlayAutoHide()
+            return
+        }
+        liveOverlayHideJob?.cancel()
+        liveOverlayHideJob = viewModelScope.launch {
+            delay(4000)
+            _showChannelInfoOverlay.value = false
+            _showChannelListOverlay.value = false
+            _showEpgOverlay.value = false
+        }
+    }
+
+    private fun scheduleDiagnosticsAutoHide() {
+        if (currentContentType != ContentType.LIVE) {
+            clearDiagnosticsAutoHide()
+            return
+        }
+        diagnosticsHideJob?.cancel()
+        diagnosticsHideJob = viewModelScope.launch {
+            delay(15000)
+            _showDiagnostics.value = false
+        }
+    }
     
     fun retryStream(streamUrl: String, epgChannelId: String?) {
         val currentId = if (currentChannelIndex != -1 && channelList.isNotEmpty()) channelList[currentChannelIndex].id else -1L
@@ -1424,6 +1486,8 @@ class PlayerViewModel @Inject constructor(
         super.onCleared()
         onPlayerScreenDisposed()
         channelInfoHideJob?.cancel()
+        liveOverlayHideJob?.cancel()
+        diagnosticsHideJob?.cancel()
         numericInputCommitJob?.cancel()
         numericInputFeedbackJob?.cancel()
         playerNoticeHideJob?.cancel()
