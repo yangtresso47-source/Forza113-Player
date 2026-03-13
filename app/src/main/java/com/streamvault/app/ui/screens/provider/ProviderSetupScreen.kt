@@ -544,6 +544,7 @@ private fun TvTextField(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val internalFocusRequester = focusRequester ?: remember { FocusRequester() }
+    val textFieldFocusRequester = remember { FocusRequester() }
 
     val borderColor = if (isFocused) Primary else SurfaceHighlight
     val bgColor = if (isFocused) Surface else SurfaceElevated
@@ -557,7 +558,7 @@ private fun TvTextField(
             .height(52.dp)
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(borderWidth, borderColor, RoundedCornerShape(8.dp))
-            .onFocusEvent { isFocused = it.isFocused }
+            .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
             .focusRequester(internalFocusRequester)
             .focusable() // Make the container focusable
             .onPreviewKeyEvent { event ->
@@ -573,15 +574,17 @@ private fun TvTextField(
                         android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
                         android.view.KeyEvent.KEYCODE_DPAD_CENTER -> {
                             // Click to enter edit mode (Mode 2)
-                            // In a real TV app, you might show a keyboard dialog here
-                            // For now, we just let the click reach the child if needed
-                            false 
+                            textFieldFocusRequester.requestFocus()
+                            true 
                         }
                         else -> false
                     }
                 } else false
             }
-            .clickable { internalFocusRequester.requestFocus() }
+            .clickable { 
+                internalFocusRequester.requestFocus()
+                textFieldFocusRequester.requestFocus()
+            }
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -597,7 +600,9 @@ private fun TvTextField(
         androidx.compose.foundation.text.BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(textFieldFocusRequester),
             textStyle = MaterialTheme.typography.bodySmall.copy(color = OnBackground),
             singleLine = true,
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
