@@ -140,7 +140,7 @@ class SyncManager @Inject constructor(
             }
             com.streamvault.domain.model.Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Sync failed for provider $providerId: ${e.message}", e)
+            Log.e(TAG, "Sync failed for provider $providerId: ${redactUrlForLogs(e.message)}")
             _syncState.value = SyncState.Error(e.message ?: "Unknown error", e)
             com.streamvault.domain.model.Result.error(e.message ?: "Sync failed", e)
         }
@@ -175,7 +175,7 @@ class SyncManager @Inject constructor(
             _syncState.value = SyncState.Success()
             com.streamvault.domain.model.Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Section retry failed for provider $providerId [$section]: ${e.message}", e)
+            Log.e(TAG, "Section retry failed for provider $providerId [$section]: ${redactUrlForLogs(e.message)}")
             _syncState.value = SyncState.Error(e.message ?: "Retry failed", e)
             com.streamvault.domain.model.Result.error(e.message ?: "Retry failed", e)
         }

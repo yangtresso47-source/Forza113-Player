@@ -3,6 +3,7 @@ package com.streamvault.player
 import com.streamvault.domain.model.DecoderMode
 import com.streamvault.domain.model.StreamInfo
 import com.streamvault.domain.model.VideoFormat
+import androidx.media3.common.PlaybackException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -66,15 +67,30 @@ sealed class PlayerError(val message: String) {
     companion object {
         fun fromException(e: Throwable): PlayerError {
             val msg = e.message ?: "Unknown playback error"
-            return when {
-                msg.contains("Unable to connect", ignoreCase = true) -> NetworkError(msg)
-                msg.contains("timeout", ignoreCase = true) -> NetworkError(msg)
-                msg.contains("Response code: 4", ignoreCase = true) -> SourceError(msg)
-                msg.contains("Response code: 5", ignoreCase = true) -> NetworkError(msg)
-                msg.contains("decoder", ignoreCase = true) -> DecoderError(msg)
-                msg.contains("codec", ignoreCase = true) -> DecoderError(msg)
-                else -> UnknownError(msg)
+            if (e is PlaybackException) {
+                return when (e.errorCode) {
+                    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+                    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                    PlaybackException.ERROR_CODE_IO_UNSPECIFIED ->
+                        NetworkError(msg)
+                    PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+                    PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+                    PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
+                    PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED,
+                    PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+                    PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+                    PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ->
+                        SourceError(msg)
+                    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                    PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+                    PlaybackException.ERROR_CODE_DECODING_FAILED,
+                    PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+                    PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ->
+                        DecoderError(msg)
+                    else -> UnknownError(msg)
+                }
             }
+            return UnknownError(msg)
         }
     }
 }

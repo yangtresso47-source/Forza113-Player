@@ -15,7 +15,10 @@ data class Provider(
     val status: ProviderStatus = ProviderStatus.UNKNOWN,
     val lastSyncedAt: Long = 0L,
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    override fun toString(): String =
+        "Provider(id=$id, name=$name, type=$type, status=$status, isActive=$isActive)"
+}
 
 enum class ProviderType {
     XTREAM_CODES,

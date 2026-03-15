@@ -20,6 +20,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.common.Format
+import androidx.media3.session.MediaSession
 import com.streamvault.domain.model.DecoderMode
 import com.streamvault.domain.model.StreamInfo
 import com.streamvault.domain.model.StreamType
@@ -44,6 +45,7 @@ class Media3PlayerEngine @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var exoPlayer: ExoPlayer? = null
+    private var mediaSession: MediaSession? = null
     private var currentDecoderMode: DecoderMode = DecoderMode.AUTO
     private var pollingJob: Job? = null
     private var lastStreamInfo: StreamInfo? = null
@@ -85,7 +87,10 @@ class Media3PlayerEngine @Inject constructor(
     override val playerStats: StateFlow<PlayerStats> = _playerStats.asStateFlow()
 
     private fun getOrCreatePlayer(): ExoPlayer {
-        return exoPlayer ?: createPlayer().also { exoPlayer = it }
+        return exoPlayer ?: createPlayer().also {
+            exoPlayer = it
+            mediaSession = MediaSession.Builder(context, it).build()
+        }
     }
 
     private fun createPlayer(): ExoPlayer {
@@ -282,12 +287,17 @@ class Media3PlayerEngine @Inject constructor(
             streamInfo.userAgent?.let { put("User-Agent", it) }
         }
 
+        val timeoutClient = okHttpClient.newBuilder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
         return if (headers.isNotEmpty()) {
-            OkHttpDataSource.Factory(okHttpClient).apply {
+            OkHttpDataSource.Factory(timeoutClient).apply {
                 setDefaultRequestProperties(headers)
             }
         } else {
-            OkHttpDataSource.Factory(okHttpClient)
+            OkHttpDataSource.Factory(timeoutClient)
         }
     }
 
@@ -442,6 +452,8 @@ class Media3PlayerEngine @Inject constructor(
     override fun release() {
         stopPolling()
         handler.removeCallbacksAndMessages(null)
+        mediaSession?.release()
+        mediaSession = null
         exoPlayer?.release()
         exoPlayer = null
         lastStreamInfo = null

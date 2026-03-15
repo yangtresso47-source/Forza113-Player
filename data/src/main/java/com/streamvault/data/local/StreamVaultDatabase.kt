@@ -212,11 +212,12 @@ abstract class StreamVaultDatabase : RoomDatabase() {
                 database.execSQL(
                     """
                     INSERT INTO channel_id_map(old_id, new_id)
-                    SELECT old.id, new.id
+                    SELECT old.id, MIN(new.id)
                     FROM channels old
                     JOIN channels_new new
                       ON new.provider_id = old.provider_id
                      AND new.stream_id = old.stream_id
+                    GROUP BY old.id
                     """.trimIndent()
                 )
                 database.execSQL(
@@ -295,11 +296,12 @@ abstract class StreamVaultDatabase : RoomDatabase() {
                 database.execSQL(
                     """
                     INSERT INTO movie_id_map(old_id, new_id)
-                    SELECT old.id, new.id
+                    SELECT old.id, MIN(new.id)
                     FROM movies old
                     JOIN movies_new new
                       ON new.provider_id = old.provider_id
                      AND new.stream_id = old.stream_id
+                    GROUP BY old.id
                     """.trimIndent()
                 )
                 database.execSQL(
@@ -370,11 +372,12 @@ abstract class StreamVaultDatabase : RoomDatabase() {
                 database.execSQL(
                     """
                     INSERT INTO series_id_map(old_id, new_id)
-                    SELECT old.id, new.id
+                    SELECT old.id, MIN(new.id)
                     FROM series old
                     JOIN series_new new
                       ON new.provider_id = old.provider_id
                      AND new.series_id = old.series_id
+                    GROUP BY old.id
                     """.trimIndent()
                 )
                 database.execSQL(

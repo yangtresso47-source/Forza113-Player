@@ -206,7 +206,8 @@ class XmltvParser {
 
         for (format in dateFormats) {
             try {
-                return format.parse(dateStr)?.time ?: continue
+                val threadSafeFormat = format.clone() as SimpleDateFormat
+                return threadSafeFormat.parse(dateStr)?.time ?: continue
             } catch (_: Exception) {
                 continue
             }
