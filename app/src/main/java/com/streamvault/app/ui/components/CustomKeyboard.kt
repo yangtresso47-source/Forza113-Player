@@ -8,7 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.*
+import com.streamvault.app.R
 import com.streamvault.app.ui.theme.Primary
 
 @Composable
@@ -54,22 +56,22 @@ fun TvKeyboard(
             modifier = Modifier.padding(top = 8.dp)
         ) {
             KeyboardButton(
-                text = "Space",
+                text = stringResource(R.string.action_space),
                 onClick = { onKeyPress(" ") },
                 modifier = Modifier.width(96.dp)
             )
             KeyboardButton(
-                text = "Delete",
+                text = stringResource(R.string.action_delete),
                 onClick = onDelete,
                 modifier = Modifier.width(96.dp)
             )
             KeyboardButton(
-                text = "Clear",
+                text = stringResource(R.string.action_clear),
                 onClick = onClear,
                 modifier = Modifier.width(96.dp)
             )
             KeyboardButton(
-                text = "Done",
+                text = stringResource(R.string.action_done),
                 onClick = onDone,
                 modifier = Modifier.width(96.dp),
                 backgroundColor = Primary

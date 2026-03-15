@@ -32,12 +32,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.streamvault.app.R
 import com.streamvault.app.ui.design.AppColors
 import com.streamvault.app.ui.design.AppMotion
 import com.streamvault.app.ui.design.FocusSpec
@@ -154,7 +156,7 @@ fun LiveChannelRowCard(
                     }
                 } else {
                     Text(
-                        text = "No schedule information",
+                        text = stringResource(R.string.label_no_schedule),
                         style = if (isDense) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodySmall,
                         color = AppColors.TextTertiary
                     )

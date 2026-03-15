@@ -402,7 +402,7 @@ fun HomeScreen(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "SPLIT",
+                                            text = stringResource(R.string.action_split),
                                             fontSize = 14.sp
                                         )
                                         Column(modifier = Modifier.weight(1f)) {
@@ -413,7 +413,7 @@ fun HomeScreen(
                                                 fontWeight = FontWeight.Medium
                                             )
                                             Text(
-                                                text = "${splitSlots.count { it != null }}/4 slots",
+                                                text = stringResource(R.string.label_slots_count, splitSlots.count { it != null }),
                                                 style = androidx.compose.ui.text.TextStyle(
                                                     fontSize = 9.sp,
                                                     color = Color(0xFF81C784)
@@ -1116,7 +1116,7 @@ fun ReorderSidePanel(
                         contentColor = Color.White
                     ),
                     modifier = Modifier.weight(1f)
-                ) { Text("Save", maxLines = 1) }
+                ) { Text(stringResource(R.string.action_save), maxLines = 1) }
 
                 androidx.tv.material3.Button(
                     onClick = onCancel,
@@ -1125,7 +1125,7 @@ fun ReorderSidePanel(
                         contentColor = OnSurface
                     ),
                     modifier = Modifier.weight(1f)
-                ) { Text("Cancel", maxLines = 1) }
+                ) { Text(stringResource(R.string.action_cancel), maxLines = 1) }
             }
             
             // List
@@ -1187,7 +1187,7 @@ fun ReorderSidePanel(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (isDraggingThis) {
-                                Text("MOVE", color = Color.White, modifier = Modifier.padding(end = 8.dp))
+                                Text(stringResource(R.string.action_move), color = Color.White, modifier = Modifier.padding(end = 8.dp))
                             }
                             Text(
                                 "${index + 1}. ${channel.name}", 

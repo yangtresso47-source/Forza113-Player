@@ -742,4 +742,26 @@
     <string name="settings_clear_history_confirm">Clear History</string>
     <string name="settings_clear_history_dialog_title">Clear Watch History?</string>
     <string name="settings_clear_history_dialog_body">This will permanently delete all watch history, continue watching progress, and last visited categories across all providers.</string>
+
+    <!-- Common Actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save_order">Save Order</string>
+    <string name="action_done">Done</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_space">Space</string>
+    <string name="action_move">MOVE</string>
+    <string name="action_split">SPLIT</string>
+
+    <!-- Misc UI -->
+    <string name="label_provider">PROVIDER</string>
+    <string name="label_selected">Selected</string>
+    <string name="label_categories">Categories</string>
+    <string name="label_no_schedule">No schedule information</string>
+    <string name="label_reordering">Reordering %1$s</string>
+    <string name="label_slots_count">%1$d/4 slots</string>
+    <string name="label_rating">RTG %1$s</string>
+    <string name="label_episode">E%1$d</string>
+    <string name="label_duration_min">%1$d min</string>
 </resources>

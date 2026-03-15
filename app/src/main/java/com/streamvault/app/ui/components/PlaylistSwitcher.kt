@@ -56,7 +56,7 @@ fun PlaylistSwitcher(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "PROVIDER",
+                    text = stringResource(R.string.label_provider),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isFocused) Primary else OnSurfaceDim
                 )
@@ -129,7 +129,7 @@ private fun ProviderItem(
             )
             if (isSelected) {
                 Text(
-                    text = "Selected",
+                    text = stringResource(R.string.label_selected),
                     style = MaterialTheme.typography.labelSmall,
                     color = Primary
                 )

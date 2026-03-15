@@ -7,10 +7,10 @@ object UrlSecurityPolicy {
     private val secureRemoteSchemes = setOf("https")
     private val localSchemes = setOf("file", "content")
 
-    fun isSecureRemoteUrl(url: String): Boolean = hasAllowedScheme(url, secureRemoteSchemes)
+    fun isSecureRemoteUrl(url: String): Boolean = !containsNewlines(url) && hasAllowedScheme(url, secureRemoteSchemes)
 
     fun isAllowedImportedUrl(url: String): Boolean =
-        hasAllowedScheme(url, secureRemoteSchemes + localSchemes)
+        !containsNewlines(url) && hasAllowedScheme(url, secureRemoteSchemes + localSchemes)
 
     fun validateXtreamServerUrl(url: String): String? {
         return if (isSecureRemoteUrl(url)) {
@@ -44,6 +44,12 @@ object UrlSecurityPolicy {
     private fun hasAllowedScheme(url: String, allowedSchemes: Set<String>): Boolean {
         val scheme = parseScheme(url) ?: return false
         return scheme in allowedSchemes
+    }
+
+    private fun containsNewlines(url: String): Boolean {
+        val decoded = url.replace("%0A", "\n", ignoreCase = true)
+            .replace("%0D", "\r", ignoreCase = true)
+        return decoded.contains('\n') || decoded.contains('\r')
     }
 
     private fun parseScheme(url: String): String? {

@@ -1240,7 +1240,7 @@ fun CategoryListOverlay(
                 ) {
                     item {
                         Text(
-                            text = "Categories",
+                            text = stringResource(R.string.label_categories),
                             style = MaterialTheme.typography.titleMedium,
                             color = Primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)

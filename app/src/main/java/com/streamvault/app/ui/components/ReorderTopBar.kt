@@ -12,7 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.*
+import com.streamvault.app.R
 import com.streamvault.app.ui.theme.OnSurface
 import com.streamvault.app.ui.theme.Primary
 import com.streamvault.app.ui.theme.SurfaceElevated
@@ -59,7 +61,7 @@ fun ReorderTopBar(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Reordering $categoryName",
+                        text = stringResource(R.string.label_reordering, categoryName),
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary
                     )
@@ -79,7 +81,7 @@ fun ReorderTopBar(
                             contentColor = OnSurface
                         )
                     ) {
-                        Text("Cancel", modifier = Modifier.padding(horizontal = 8.dp))
+                        Text(stringResource(R.string.action_cancel), modifier = Modifier.padding(horizontal = 8.dp))
                     }
 
                     Button(
@@ -89,7 +91,7 @@ fun ReorderTopBar(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("Save Order", modifier = Modifier.padding(horizontal = 8.dp))
+                        Text(stringResource(R.string.action_save_order), modifier = Modifier.padding(horizontal = 8.dp))
                     }
                 }
             }

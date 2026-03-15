@@ -22,11 +22,12 @@ import com.streamvault.app.R
 // ── Netflix-style horizontal category row ─────────────────────────
 
 @Composable
-fun <T> CategoryRow(
+fun <T : Any> CategoryRow(
     title: String,
     items: List<T>,
     modifier: Modifier = Modifier,
     onSeeAll: (() -> Unit)? = null,
+    keySelector: ((T) -> Any)? = null,
     itemContent: @Composable (T) -> Unit
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -68,7 +69,7 @@ fun <T> CategoryRow(
         ) {
             items(
                 items = items,
-                key = { it.hashCode() }
+                key = keySelector ?: { it.hashCode() }
             ) { item ->
                 itemContent(item)
             }
