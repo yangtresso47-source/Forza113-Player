@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Tue Ko-fi:ssa</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Synkronoidaan tietoja, odota...</string>
     <string name="settings_syncing_title">Synkronoidaan tietoja...</string>
     <string name="settings_syncing_subtitle">Odota, kun soittolistasi on tuotu.</string>

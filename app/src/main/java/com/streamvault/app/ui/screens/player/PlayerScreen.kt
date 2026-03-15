@@ -64,6 +64,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.streamvault.app.R
 import com.streamvault.app.ui.screens.player.overlay.ChannelInfoOverlay
+import com.streamvault.app.ui.screens.player.overlay.CategoryListOverlay
 import com.streamvault.app.ui.screens.player.overlay.ChannelListOverlay
 import com.streamvault.app.ui.screens.player.overlay.DiagnosticsOverlay
 import com.streamvault.app.ui.screens.player.overlay.EpgOverlay
@@ -114,6 +115,9 @@ fun PlayerScreen(
     val resumePrompt by viewModel.resumePrompt.collectAsState()
     
     val showChannelListOverlay by viewModel.showChannelListOverlay.collectAsState()
+    val showCategoryListOverlay by viewModel.showCategoryListOverlay.collectAsState()
+    val availableCategories by viewModel.availableCategories.collectAsState()
+    val activeCategoryId by viewModel.activeCategoryId.collectAsState()
     val showEpgOverlay by viewModel.showEpgOverlay.collectAsState()
     val currentChannelList by viewModel.currentChannelList.collectAsState()
     val recentChannels by viewModel.recentChannels.collectAsState()
@@ -141,6 +145,7 @@ fun PlayerScreen(
     
     val focusRequester = remember { FocusRequester() }
     val channelListFocusRequester = remember { FocusRequester() }
+    val categoryListFocusRequester = remember { FocusRequester() }
     val epgFocusRequester = remember { FocusRequester() }
     val playButtonFocusRequester = remember { FocusRequester() }
     val channelInfoFocusRequester = remember { FocusRequester() } // NEW
@@ -170,7 +175,7 @@ fun PlayerScreen(
     }
 
     // Consolidated focus management for all overlays
-    val anyOverlayVisible = showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showTrackSelection != null || showProgramHistory || showSplitDialog || showDiagnostics
+    val anyOverlayVisible = showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay || showTrackSelection != null || showProgramHistory || showSplitDialog || showDiagnostics
     
     LaunchedEffect(anyOverlayVisible) {
         if (anyOverlayVisible) {
@@ -178,10 +183,10 @@ fun PlayerScreen(
             delay(150)
             try {
                 when {
+                    showCategoryListOverlay -> categoryListFocusRequester.requestFocus()
                     showChannelListOverlay -> channelListFocusRequester.requestFocus()
                     showEpgOverlay -> epgFocusRequester.requestFocus()
                     showChannelInfoOverlay -> channelInfoFocusRequester.requestFocus()
-                    // EPG and Dialogs usually handle their own initial focus or use their own re-composition logic
                 }
             } catch (_: Exception) {}
         } else {
@@ -291,13 +296,17 @@ fun PlayerScreen(
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                            if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
                                 viewModel.onLiveOverlayInteraction()
                             }
-                            if (contentType == "LIVE" && !showChannelListOverlay && !showEpgOverlay && !showChannelInfoOverlay) {
+                            if (showChannelListOverlay && contentType == "LIVE") {
+                                // Second left press while channel list is open → open category list
+                                viewModel.openCategoryListOverlay()
+                                true
+                            } else if (contentType == "LIVE" && !showChannelListOverlay && !showCategoryListOverlay && !showEpgOverlay && !showChannelInfoOverlay) {
                                 if (isRtl) viewModel.openEpgOverlay() else viewModel.openChannelListOverlay()
                                 true
-                            } else if (!showChannelListOverlay && !showEpgOverlay && !showChannelInfoOverlay) {
+                            } else if (!showChannelListOverlay && !showCategoryListOverlay && !showEpgOverlay && !showChannelInfoOverlay) {
                                 if (isRtl) viewModel.seekForward() else viewModel.seekBackward()
                                 true
                             } else {
@@ -319,10 +328,10 @@ fun PlayerScreen(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                            if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
                                 viewModel.onLiveOverlayInteraction()
                             }
-                            if (showChannelListOverlay || showEpgOverlay) return@onKeyEvent false
+                            if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay) return@onKeyEvent false
 
                             if (contentType == "LIVE") {
                                 viewModel.playNext()
@@ -332,10 +341,10 @@ fun PlayerScreen(
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            if (showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
+                            if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay || showDiagnostics) {
                                 viewModel.onLiveOverlayInteraction()
                             }
-                            if (showChannelListOverlay || showEpgOverlay) return@onKeyEvent false
+                            if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay) return@onKeyEvent false
 
                             if (contentType == "LIVE") {
                                 viewModel.playPrevious()
@@ -366,7 +375,7 @@ fun PlayerScreen(
                             } else if (showChannelInfoOverlay) {
                                 viewModel.closeChannelInfoOverlay()
                                 true
-                            } else if (showChannelListOverlay || showEpgOverlay) {
+                            } else if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay) {
                                 viewModel.closeOverlays()
                                 true
                             } else if (showControls) {
@@ -638,6 +647,29 @@ fun PlayerScreen(
                 lastVisitedCategoryName = lastVisitedCategory?.name,
                 onOpenLastGroup = { viewModel.openLastVisitedCategory() },
                 onSelectChannel = { channelId -> viewModel.zapToChannel(channelId) },
+                onOpenCategories = { viewModel.openCategoryListOverlay() },
+                onDismiss = { viewModel.closeOverlays() },
+                onOverlayInteracted = viewModel::onLiveOverlayInteraction
+            )
+        }
+
+        AnimatedVisibility(
+            visible = showCategoryListOverlay,
+            enter = slideInHorizontally(initialOffsetX = { if (isRtl) it else -it }),
+            exit = slideOutHorizontally(targetOffsetX = { if (isRtl) it else -it }),
+            modifier = Modifier
+                .align(if (isRtl) Alignment.TopEnd else Alignment.TopStart)
+                .fillMaxHeight()
+                .width(350.dp)
+                .focusGroup()
+        ) {
+            CategoryListOverlay(
+                categories = availableCategories,
+                currentCategoryId = activeCategoryId,
+                overlayFocusRequester = categoryListFocusRequester,
+                onSelectCategory = { category ->
+                    viewModel.selectCategoryFromOverlay(category)
+                },
                 onDismiss = { viewModel.closeOverlays() },
                 onOverlayInteracted = viewModel::onLiveOverlayInteraction
             )

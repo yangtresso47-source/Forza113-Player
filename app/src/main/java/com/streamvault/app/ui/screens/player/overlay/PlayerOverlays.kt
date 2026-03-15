@@ -2,6 +2,7 @@ package com.streamvault.app.ui.screens.player.overlay
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -32,8 +33,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.rememberScrollState
@@ -510,12 +516,12 @@ fun ChannelListOverlay(
     onFocusedChannelChange: (Long) -> Unit = {},
     lastVisitedCategoryName: String? = null,
     onOpenLastGroup: () -> Unit = {},
+    onOpenCategories: () -> Unit = {},
     onSelectChannel: (Long) -> Unit,
     onDismiss: () -> Unit,
     onOverlayInteracted: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
     val currentIndex = remember(channels, currentChannelId) {
         channels.indexOfFirst { it.id == currentChannelId }.coerceAtLeast(0)
     }
@@ -524,6 +530,16 @@ fun ChannelListOverlay(
             channels.indexOfFirst { it.id == channelId }.takeIf { it >= 0 }
         }
         focused ?: currentIndex
+    }
+    val canScrollUp by remember { derivedStateOf { listState.canScrollBackward } }
+    val canScrollDown by remember { derivedStateOf { listState.canScrollForward } }
+    val scope = rememberCoroutineScope()
+    // Count header items before the channels list so we can map channel index → lazy index
+    val headerItemCount = remember(lastVisitedCategoryName, recentChannels) {
+        var count = 2 // title row + channel list hint (always present)
+        if (!lastVisitedCategoryName.isNullOrBlank()) count++ // last group hint
+        if (recentChannels.isNotEmpty()) count++ // recent channels row
+        count
     }
 
     LaunchedEffect(channels, preferredIndex) {
@@ -539,204 +555,314 @@ fun ChannelListOverlay(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.18f))
     ) {
-        PlayerOverlayPanel(
+        Box(
             modifier = Modifier
                 .width(500.dp)
                 .fillMaxWidth()
+                .fillMaxHeight()
                 .padding(20.dp)
         ) {
-            androidx.compose.foundation.lazy.LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.player_channel_list_title, channels.size),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Primary
-                        )
-                        if (!lastVisitedCategoryName.isNullOrBlank()) {
-                            Surface(
-                                onClick = {
-                                    onOverlayInteracted()
-                                    onOpenLastGroup()
-                                },
-                                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
-                                colors = ClickableSurfaceDefaults.colors(
-                                    containerColor = AppColors.SurfaceEmphasis,
-                                    focusedContainerColor = Primary
-                                ),
-                                modifier = Modifier.onFocusChanged {
-                                    if (it.isFocused) onOverlayInteracted()
-                                }
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.player_last_group_label, lastVisitedCategoryName),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-                if (!lastVisitedCategoryName.isNullOrBlank()) {
+            PlayerOverlayPanel(modifier = Modifier.fillMaxSize()) {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     item {
-                        Text(
-                            text = stringResource(R.string.player_last_group_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceDim,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
-                }
-                item {
-                    Text(
-                        text = stringResource(R.string.player_channel_list_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurfaceDim,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-                if (recentChannels.isNotEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.player_recent_channels),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = OnSurfaceDim,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-                            )
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                itemsIndexed(recentChannels, key = { _, channel -> channel.id }) { index, channel ->
-                                    Surface(
-                                        onClick = {
-                                            onOverlayInteracted()
-                                            onSelectChannel(channel.id)
-                                            onDismiss()
-                                        },
-                                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
-                                        colors = ClickableSurfaceDefaults.colors(
-                                            containerColor = AppColors.SurfaceEmphasis,
-                                            focusedContainerColor = Primary
-                                        ),
-                                        modifier = Modifier.onFocusChanged {
-                                            if (it.isFocused) onOverlayInteracted()
-                                        }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            val recentNumber = (index + 1).toString().padStart(2, '0')
-                                            Text(
-                                                text = recentNumber,
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = Color.White.copy(alpha = 0.75f)
-                                            )
-                                            Text(
-                                                text = channel.name,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = Color.White,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                items(channels.size) { index ->
-                    val channel = channels[index]
-                    val isSelected = channel.id == currentChannelId
-                    val shouldRequestFocus = preferredFocusedChannelId?.let { it == channel.id } ?: isSelected
-                    val channelNumber = index + 1
-
-                    Surface(
-                        onClick = {
-                            onSelectChannel(channel.id)
-                            onDismiss()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 3.dp)
-                            .onFocusChanged {
-                                if (it.isFocused) {
-                                    onOverlayInteracted()
-                                    onFocusedChannelChange(channel.id)
-                                    scope.launch {
-                                        val targetIndex = (index - 1).coerceAtLeast(0)
-                                        listState.animateScrollToItem(targetIndex)
-                                    }
-                                }
-                            }
-                            .then(
-                                if (shouldRequestFocus) Modifier.focusRequester(overlayFocusRequester)
-                                else Modifier
-                            ),
-                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-                        colors = ClickableSurfaceDefaults.colors(
-                            containerColor = if (isSelected) Primary.copy(alpha = 0.20f) else AppColors.Surface.copy(alpha = 0.68f),
-                            focusedContainerColor = Primary
-                        )
-                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (isSelected) {
-                                StatusPill(
-                                    label = stringResource(R.string.player_channel_selected),
-                                    containerColor = AppColors.BrandMuted
-                                )
-                            } else {
-                                Spacer(Modifier.width(42.dp))
-                            }
                             Text(
-                                text = channelNumber.toString().padStart(2, '0'),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.72f)
+                                text = stringResource(R.string.player_channel_list_title, channels.size),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Primary
                             )
-                            Text(
-                                text = channel.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (channel.catchUpSupported) {
-                                StatusPill(
-                                    label = stringResource(R.string.player_archive_badge),
-                                    containerColor = AppColors.Warning,
-                                    contentColor = Color.Black
-                                )
+                            if (!lastVisitedCategoryName.isNullOrBlank()) {
+                                Surface(
+                                    onClick = {
+                                        onOverlayInteracted()
+                                        onOpenLastGroup()
+                                    },
+                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
+                                    colors = ClickableSurfaceDefaults.colors(
+                                        containerColor = AppColors.SurfaceEmphasis,
+                                        focusedContainerColor = Primary
+                                    ),
+                                    modifier = Modifier.onFocusChanged {
+                                        if (it.isFocused) onOverlayInteracted()
+                                    }
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.player_last_group_label, lastVisitedCategoryName),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                                    )
+                                }
                             }
                         }
                     }
+                    if (!lastVisitedCategoryName.isNullOrBlank()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.player_last_group_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnSurfaceDim,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
+                    item {
+                        Text(
+                            text = stringResource(R.string.player_channel_list_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurfaceDim,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    if (recentChannels.isNotEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.player_recent_channels),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = OnSurfaceDim,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                                )
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    itemsIndexed(recentChannels, key = { _, channel -> channel.id }) { index, channel ->
+                                        Surface(
+                                            onClick = {
+                                                onOverlayInteracted()
+                                                onSelectChannel(channel.id)
+                                                onDismiss()
+                                            },
+                                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
+                                            colors = ClickableSurfaceDefaults.colors(
+                                                containerColor = AppColors.SurfaceEmphasis,
+                                                focusedContainerColor = Primary
+                                            ),
+                                            modifier = Modifier.onFocusChanged {
+                                                if (it.isFocused) onOverlayInteracted()
+                                            }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                val recentNumber = (index + 1).toString().padStart(2, '0')
+                                                Text(
+                                                    text = recentNumber,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = Color.White.copy(alpha = 0.75f)
+                                                )
+                                                Text(
+                                                    text = channel.name,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = Color.White,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    items(channels.size) { index ->
+                        val channel = channels[index]
+                        val isSelected = channel.id == currentChannelId
+                        val shouldRequestFocus = preferredFocusedChannelId?.let { it == channel.id } ?: isSelected
+                        val channelNumber = index + 1
+                        var isFocused by remember { mutableStateOf(false) }
+                        val bgColor = when {
+                            isFocused -> Primary
+                            isSelected -> Primary.copy(alpha = 0.20f)
+                            else -> AppColors.Surface.copy(alpha = 0.68f)
+                        }
+
+                        Surface(
+                            onClick = {
+                                onSelectChannel(channel.id)
+                                onDismiss()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp)
+                                .onFocusChanged { focusState ->
+                                    isFocused = focusState.isFocused
+                                    if (focusState.isFocused) {
+                                        onOverlayInteracted()
+                                        onFocusedChannelChange(channel.id)
+                                        // Scroll-ahead: when focused item is at the viewport
+                                        // edge, instantly shift the window by 1 so the next
+                                        // item is already visible before the next D-pad press.
+                                        scope.launch {
+                                            val visible = listState.layoutInfo.visibleItemsInfo
+                                            if (visible.isEmpty()) return@launch
+                                            val myLazyIndex = headerItemCount + index
+                                            when {
+                                                myLazyIndex >= visible.last().index && index < channels.size - 1 -> {
+                                                    listState.scrollToItem(listState.firstVisibleItemIndex + 1)
+                                                }
+                                                myLazyIndex <= visible.first().index && index > 0 -> {
+                                                    val newFirst = (listState.firstVisibleItemIndex - 1).coerceAtLeast(0)
+                                                    listState.scrollToItem(newFirst)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                .then(
+                                    if (shouldRequestFocus) Modifier.focusRequester(overlayFocusRequester)
+                                    else Modifier
+                                ),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = bgColor,
+                                focusedContainerColor = bgColor
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (isSelected) {
+                                    StatusPill(
+                                        label = stringResource(R.string.player_channel_selected),
+                                        containerColor = AppColors.BrandMuted
+                                    )
+                                } else {
+                                    Spacer(Modifier.width(42.dp))
+                                }
+                                Text(
+                                    text = channelNumber.toString().padStart(2, '0'),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White.copy(alpha = 0.72f)
+                                )
+                                Text(
+                                    text = channel.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (channel.catchUpSupported) {
+                                    StatusPill(
+                                        label = stringResource(R.string.player_archive_badge),
+                                        containerColor = AppColors.Warning,
+                                        contentColor = Color.Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Up arrow — fades in when there are channels scrolled above the visible area
+            AnimatedVisibility(
+                visible = canScrollUp,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(AppColors.Canvas.copy(alpha = 0.9f), Color.Transparent)
+                            ),
+                            RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+                        ),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Text(
+                        text = "\u25b2",
+                        color = Color.White.copy(alpha = 0.55f),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            }
+
+            // Down arrow — fades in when there are channels below the visible area
+            AnimatedVisibility(
+                visible = canScrollDown,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, AppColors.Canvas.copy(alpha = 0.9f))
+                            ),
+                            RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp)
+                        ),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Text(
+                        text = "\u25bc",
+                        color = Color.White.copy(alpha = 0.55f),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+            }
+
+            // Vertical categories tab — fixed to the left edge, always visible
+            Surface(
+                onClick = {
+                    onOverlayInteracted()
+                    onOpenCategories()
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = (-28).dp)
+                    .onFocusChanged { if (it.isFocused) onOverlayInteracted() },
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = AppColors.SurfaceEmphasis.copy(alpha = 0.92f),
+                    focusedContainerColor = Primary
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .height(96.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "\u25c4",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
                 }
             }
         }
@@ -1065,6 +1191,127 @@ fun DiagnosticsOverlay(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CategoryListOverlay(
+    categories: List<com.streamvault.domain.model.Category>,
+    currentCategoryId: Long,
+    overlayFocusRequester: FocusRequester = remember { FocusRequester() },
+    onSelectCategory: (com.streamvault.domain.model.Category) -> Unit,
+    onDismiss: () -> Unit,
+    onOverlayInteracted: () -> Unit = {}
+) {
+    val listState = rememberLazyListState()
+    val currentIndex = remember(categories, currentCategoryId) {
+        categories.indexOfFirst { it.id == currentCategoryId }.coerceAtLeast(0)
+    }
+
+    LaunchedEffect(categories, currentIndex) {
+        if (categories.isNotEmpty()) {
+            listState.scrollToItem(currentIndex)
+        }
+    }
+
+    BackHandler { onDismiss() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.18f))
+    ) {
+        Box(
+            modifier = Modifier
+                .width(500.dp)
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(20.dp)
+        ) {
+            PlayerOverlayPanel(modifier = Modifier.fillMaxSize()) {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Categories",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Primary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                        )
+                    }
+                    items(categories.size) { index ->
+                        val category = categories[index]
+                        val isSelected = category.id == currentCategoryId
+                        var isFocused by remember { mutableStateOf(false) }
+                        val shouldRequestFocus = isSelected
+                        val bgColor = when {
+                            isFocused -> Primary
+                            isSelected -> Primary.copy(alpha = 0.20f)
+                            else -> AppColors.Surface.copy(alpha = 0.68f)
+                        }
+
+                        Surface(
+                            onClick = {
+                                onSelectCategory(category)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                                .onFocusChanged { focusState ->
+                                    isFocused = focusState.isFocused
+                                    if (focusState.isFocused) onOverlayInteracted()
+                                }
+                                .then(
+                                    if (shouldRequestFocus) Modifier.focusRequester(overlayFocusRequester)
+                                    else Modifier
+                                ),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = bgColor,
+                                focusedContainerColor = bgColor
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = category.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (isSelected) {
+                                    Text(
+                                        text = "●",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                } else if (category.count > 0) {
+                                    Text(
+                                        text = category.count.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White.copy(alpha = 0.45f),
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -496,6 +496,11 @@ fun SettingsScreen(
                     value = stringResource(R.string.settings_github_url),
                     onClick = { uriHandler.openUri(context.getString(R.string.settings_github_url)) }
                 )
+                ClickableSettingsRow(
+                    label = stringResource(R.string.settings_donate),
+                    value = stringResource(R.string.settings_donate_url),
+                    onClick = { uriHandler.openUri(context.getString(R.string.settings_donate_url)) }
+                )
             }
         }
         }

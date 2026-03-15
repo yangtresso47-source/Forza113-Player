@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Soutenir sur Ko-fi</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Synchronisation des données, veuillez patienter...</string>
     <string name="settings_syncing_title">Synchronisation des données...</string>
     <string name="settings_syncing_subtitle">Veuillez patienter pendant que votre liste de lecture est importée.</string>

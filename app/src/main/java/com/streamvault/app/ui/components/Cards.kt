@@ -92,11 +92,13 @@ fun FocusableCard(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                shape = RoundedCornerShape(12.dp)
-                clip = true
             }
             .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        scale = ClickableSurfaceDefaults.scale(
+            focusedScale = 1f,
+            pressedScale = FocusSpec.PressedScale
+        ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = CardBackground,
             focusedContainerColor = SurfaceHighlight
@@ -108,7 +110,7 @@ fun FocusableCard(
             ),
             focusedBorder = Border(
                 border = BorderStroke(
-                    width = if (isDragging) 4.dp else FocusSpec.BorderWidth,
+                    width = if (isDragging) 4.dp else FocusSpec.CardBorderWidth,
                     color = if (isDragging) AccentAmber else FocusBorder
                 ),
                 shape = RoundedCornerShape(12.dp)

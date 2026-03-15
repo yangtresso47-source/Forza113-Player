@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Ko-fi에서 후원하기</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">데이터를 동기화하는 중입니다. 잠시 기다려 주세요...</string>
     <string name="settings_syncing_title">데이터 동기화 중...</string>
     <string name="settings_syncing_subtitle">재생목록을 가져오는 동안 잠시 기다려 주세요.</string>

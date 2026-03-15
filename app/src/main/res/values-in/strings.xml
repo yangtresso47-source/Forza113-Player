@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Dukung di Ko-fi</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Menyinkronkan data, harap tunggu...</string>
     <string name="settings_syncing_title">Menyinkronkan data...</string>
     <string name="settings_syncing_subtitle">Harap tunggu sementara playlist Anda diimpor.</string>

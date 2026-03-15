@@ -321,7 +321,7 @@ fun HomeScreen(
                     }.isSuccess
                     if (!restored) {
                         val fallbackId = uiState.filteredChannels.firstOrNull()?.id
-                        fallbackId?.let { channelFocusRequesters[it]?.requestFocus() }
+                        fallbackId?.let { runCatching { channelFocusRequesters[it]?.requestFocus() } }
                     }
                     shouldRestoreChannelFocus = false
                 }
@@ -459,9 +459,12 @@ fun HomeScreen(
                                         val preferredChannelId = lastFocusedChannelId
                                             ?.takeIf { channelId -> uiState.filteredChannels.any { it.id == channelId } }
                                             ?: uiState.filteredChannels.first().id
-                                        channelFocusRequesters[preferredChannelId]?.requestFocus()
+                                        val focused = runCatching {
+                                            channelFocusRequesters[preferredChannelId]?.requestFocus()
+                                        }.isSuccess
+                                        if (!focused) runCatching { channelSearchFocusRequester.requestFocus() }
                                     } else {
-                                        channelSearchFocusRequester.requestFocus()
+                                        runCatching { channelSearchFocusRequester.requestFocus() }
                                     }
                                 },
                                 onFocused = { lastFocusedCategoryId = category.id }
@@ -543,20 +546,16 @@ fun HomeScreen(
                         }
 
                         if (uiState.isLoading) {
-                            LazyVerticalGrid(
-                                columns = GridCells.Adaptive(minSize = 180.dp),
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(
-                                    start = LocalSpacing.current.safeHoriz,
-                                    end = LocalSpacing.current.safeHoriz,
-                                    bottom = LocalSpacing.current.safeBottom
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
-                                horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm)
-                            ) {
-                                items(20) {
-                                    SkeletonCard(
-                                        modifier = Modifier.aspectRatio(16f / 9f)
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    CircularProgressIndicator(color = Color.White)
+                                    Text(
+                                        text = stringResource(R.string.home_loading_channels),
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
                             }

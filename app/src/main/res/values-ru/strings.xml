@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Поддержать на Ko-fi</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Синхронизация данных, подождите...</string>
     <string name="settings_syncing_title">Синхронизация данных...</string>
     <string name="settings_syncing_subtitle">Пожалуйста, подождите, пока ваш плейлист будет импортирован.</string>

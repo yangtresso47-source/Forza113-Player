@@ -43,7 +43,6 @@ import com.streamvault.app.ui.components.SelectionChipRow
 import com.streamvault.app.ui.components.SavedCategoryContextCard
 import com.streamvault.app.ui.components.SavedCategoryShortcut
 import com.streamvault.app.ui.components.SavedCategoryShortcutsRow
-import com.streamvault.app.ui.components.SkeletonRow
 import com.streamvault.app.ui.theme.*
 import com.streamvault.domain.model.Movie
 import kotlinx.coroutines.launch
@@ -55,6 +54,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.streamvault.app.ui.components.ReorderTopBar
 import com.streamvault.app.ui.components.dialogs.DeleteGroupDialog
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import com.streamvault.app.ui.components.shell.BrowseSearchLaunchCard
@@ -144,13 +144,15 @@ fun MoviesScreen(
         }
 
         if (uiState.isLoading) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(3) {
-                    SkeletonRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        cardWidth = 160,
-                        cardHeight = 240,
-                        itemsCount = 5
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = Color.White)
+                    Text(
+                        text = stringResource(R.string.movies_loading),
+                        color = Color.White.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -1199,40 +1201,62 @@ private fun MoviesVodContent(
                 )
             }
 
-            gridItems(filteredGridMovies, key = { it.id }) { movie ->
-                val isLocked = (movie.isAdult || movie.isUserProtected) && uiState.parentalControlLevel == 1
-                val isDraggingThis = draggingMovie == movie
-                MovieCard(
-                    movie = movie,
-                    isLocked = isLocked,
-                    isReorderMode = uiState.isReorderMode,
-                    isDragging = isDraggingThis,
-                    onClick = {
-                        if (uiState.isReorderMode) {
-                            draggingMovie = if (isDraggingThis) null else movie
-                        } else if (isLocked) {
-                            onProtectedMovieClick(movie)
-                        } else {
-                            onMovieClick(movie)
-                        }
-                    },
-                    onLongClick = {
-                        if (!uiState.isReorderMode) onShowDialog(movie)
-                    }
-                )
-            }
-
-            if (!uiState.isReorderMode && uiState.canLoadMoreSelectedCategory) {
+            if (uiState.isLoadingSelectedCategory) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    LoadMoreCard(
-                        label = stringResource(
-                            R.string.library_load_more,
-                            uiState.selectedCategoryLoadedCount,
-                            uiState.selectedCategoryTotalCount
-                        ),
-                        onClick = onLoadMore,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                            Text(
+                                text = stringResource(R.string.movies_loading),
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+            } else {
+                gridItems(filteredGridMovies, key = { it.id }) { movie ->
+                    val isLocked = (movie.isAdult || movie.isUserProtected) && uiState.parentalControlLevel == 1
+                    val isDraggingThis = draggingMovie == movie
+                    MovieCard(
+                        movie = movie,
+                        isLocked = isLocked,
+                        isReorderMode = uiState.isReorderMode,
+                        isDragging = isDraggingThis,
+                        onClick = {
+                            if (uiState.isReorderMode) {
+                                draggingMovie = if (isDraggingThis) null else movie
+                            } else if (isLocked) {
+                                onProtectedMovieClick(movie)
+                            } else {
+                                onMovieClick(movie)
+                            }
+                        },
+                        onLongClick = {
+                            if (!uiState.isReorderMode) onShowDialog(movie)
+                        }
                     )
+                }
+
+                if (!uiState.isReorderMode && uiState.canLoadMoreSelectedCategory) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        LoadMoreCard(
+                            label = stringResource(
+                                R.string.library_load_more,
+                                uiState.selectedCategoryLoadedCount,
+                                uiState.selectedCategoryTotalCount
+                            ),
+                            onClick = onLoadMore,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                        )
+                    }
                 }
             }
         }

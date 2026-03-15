@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Susține pe Ko-fi</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Se sincronizează datele, așteptați...</string>
     <string name="settings_syncing_title">Se sincronizează datele...</string>
     <string name="settings_syncing_subtitle">Vă rugăm să așteptați până când lista de redare este importată.</string>

@@ -44,13 +44,14 @@ import com.streamvault.app.ui.components.SavedCategoryShortcutsRow
 import com.streamvault.app.ui.components.SelectionChip
 import com.streamvault.app.ui.components.SelectionChipRow
 import com.streamvault.app.ui.components.SeriesCard
-import com.streamvault.app.ui.components.SkeletonRow
 import com.streamvault.app.ui.theme.*
 import com.streamvault.domain.model.Series
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.streamvault.app.R
 import androidx.compose.foundation.border
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -143,13 +144,15 @@ fun SeriesScreen(
         }
 
         if (uiState.isLoading) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(3) {
-                    SkeletonRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        cardWidth = 160,
-                        cardHeight = 240,
-                        itemsCount = 5
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = Color.White)
+                    Text(
+                        text = stringResource(R.string.series_loading),
+                        color = Color.White.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -1220,40 +1223,62 @@ private fun SeriesVodContent(
                 )
             }
 
-            gridItems(filteredGridSeries, key = { it.id }) { series ->
-                val isLocked = (series.isAdult || series.isUserProtected) && uiState.parentalControlLevel == 1
-                val isDraggingThis = draggingSeries == series
-                SeriesCard(
-                    series = series,
-                    isLocked = isLocked,
-                    isReorderMode = uiState.isReorderMode,
-                    isDragging = isDraggingThis,
-                    onClick = {
-                        if (uiState.isReorderMode) {
-                            draggingSeries = if (isDraggingThis) null else series
-                        } else if (isLocked) {
-                            onProtectedSeriesClick(series.id)
-                        } else {
-                            onSeriesClick(series.id)
-                        }
-                    },
-                    onLongClick = {
-                        if (!uiState.isReorderMode) onShowDialog(series)
-                    }
-                )
-            }
-
-            if (!uiState.isReorderMode && uiState.canLoadMoreSelectedCategory) {
+            if (uiState.isLoadingSelectedCategory) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    LoadMoreCard(
-                        label = stringResource(
-                            R.string.library_load_more,
-                            uiState.selectedCategoryLoadedCount,
-                            uiState.selectedCategoryTotalCount
-                        ),
-                        onClick = onLoadMore,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                            Text(
+                                text = stringResource(R.string.series_loading),
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+            } else {
+                gridItems(filteredGridSeries, key = { it.id }) { series ->
+                    val isLocked = (series.isAdult || series.isUserProtected) && uiState.parentalControlLevel == 1
+                    val isDraggingThis = draggingSeries == series
+                    SeriesCard(
+                        series = series,
+                        isLocked = isLocked,
+                        isReorderMode = uiState.isReorderMode,
+                        isDragging = isDraggingThis,
+                        onClick = {
+                            if (uiState.isReorderMode) {
+                                draggingSeries = if (isDraggingThis) null else series
+                            } else if (isLocked) {
+                                onProtectedSeriesClick(series.id)
+                            } else {
+                                onSeriesClick(series.id)
+                            }
+                        },
+                        onLongClick = {
+                            if (!uiState.isReorderMode) onShowDialog(series)
+                        }
                     )
+                }
+
+                if (!uiState.isReorderMode && uiState.canLoadMoreSelectedCategory) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        LoadMoreCard(
+                            label = stringResource(
+                                R.string.library_load_more,
+                                uiState.selectedCategoryLoadedCount,
+                                uiState.selectedCategoryTotalCount
+                            ),
+                            onClick = onLoadMore,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+                        )
+                    }
                 }
             }
         }

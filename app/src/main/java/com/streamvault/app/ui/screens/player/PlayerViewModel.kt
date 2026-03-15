@@ -138,6 +138,15 @@ class PlayerViewModel @Inject constructor(
     private val _lastVisitedCategory = MutableStateFlow<Category?>(null)
     val lastVisitedCategory: StateFlow<Category?> = _lastVisitedCategory.asStateFlow()
 
+    private val _showCategoryListOverlay = MutableStateFlow(false)
+    val showCategoryListOverlay: StateFlow<Boolean> = _showCategoryListOverlay.asStateFlow()
+
+    private val _availableCategories = MutableStateFlow<List<Category>>(emptyList())
+    val availableCategories: StateFlow<List<Category>> = _availableCategories.asStateFlow()
+
+    private val _activeCategoryId = MutableStateFlow(-1L)
+    val activeCategoryId: StateFlow<Long> = _activeCategoryId.asStateFlow()
+
     private val _displayChannelNumber = MutableStateFlow(0)
     val displayChannelNumber: StateFlow<Int> = _displayChannelNumber.asStateFlow()
 
@@ -271,10 +280,32 @@ class PlayerViewModel @Inject constructor(
     fun openChannelListOverlay() {
         clearNumericChannelInput()
         _showChannelListOverlay.value = true
+        _showCategoryListOverlay.value = false
         _showEpgOverlay.value = false
         _showChannelInfoOverlay.value = false
         _showControls.value = false
         scheduleLiveOverlayAutoHide()
+    }
+
+    fun openCategoryListOverlay() {
+        if (currentProviderId <= 0 || _availableCategories.value.isEmpty()) return
+        _showCategoryListOverlay.value = true
+        _showChannelListOverlay.value = false
+        scheduleLiveOverlayAutoHide()
+    }
+
+    fun selectCategoryFromOverlay(category: Category) {
+        _showCategoryListOverlay.value = false
+        currentCategoryId = category.id
+        _activeCategoryId.value = category.id
+        isVirtualCategory = category.isVirtual
+        loadPlaylist(
+            categoryId = category.id,
+            providerId = currentProviderId,
+            isVirtual = category.isVirtual,
+            initialChannelId = currentContentId
+        )
+        openChannelListOverlay()
     }
 
     fun openEpgOverlay() {
@@ -305,6 +336,7 @@ class PlayerViewModel @Inject constructor(
     fun closeOverlays() {
         clearNumericChannelInput()
         _showChannelListOverlay.value = false
+        _showCategoryListOverlay.value = false
         _showEpgOverlay.value = false
         _showChannelInfoOverlay.value = false
         _showDiagnostics.value = false
@@ -476,6 +508,7 @@ class PlayerViewModel @Inject constructor(
         // Load playlist if context changed
         if (categoryId != -1L && (categoryId != currentCategoryId || providerId != currentProviderId)) {
             currentCategoryId = categoryId
+            _activeCategoryId.value = categoryId
             currentProviderId = providerId
             isVirtualCategory = isVirtual
             loadPlaylist(categoryId, providerId, isVirtual, internalChannelId)
@@ -810,14 +843,16 @@ class PlayerViewModel @Inject constructor(
                 getCustomCategories(ContentType.LIVE),
                 preferencesRepository.getLastLiveCategoryId(currentProviderId)
             ) { providerCategories, customCategories, lastVisitedCategoryId ->
-                if (lastVisitedCategoryId == null || lastVisitedCategoryId == VirtualCategoryIds.RECENT) {
+                val allCategories = customCategories + providerCategories
+                val lastVisited = if (lastVisitedCategoryId == null || lastVisitedCategoryId == VirtualCategoryIds.RECENT) {
                     null
                 } else {
-                    (customCategories + providerCategories)
-                        .firstOrNull { it.id == lastVisitedCategoryId }
+                    allCategories.firstOrNull { it.id == lastVisitedCategoryId }
                 }
-            }.collect { category ->
-                _lastVisitedCategory.value = category
+                Pair(allCategories, lastVisited)
+            }.collect { (allCategories, lastVisited) ->
+                _availableCategories.value = allCategories
+                _lastVisitedCategory.value = lastVisited
             }
         }
     }
@@ -827,6 +862,7 @@ class PlayerViewModel @Inject constructor(
         if (currentContentType != ContentType.LIVE || currentProviderId <= 0) return
 
         currentCategoryId = category.id
+        _activeCategoryId.value = category.id
         isVirtualCategory = category.isVirtual
         loadPlaylist(
             categoryId = category.id,

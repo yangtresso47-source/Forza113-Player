@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Steun op Ko-fi</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Gegevens worden gesynchroniseerd. Even geduld a.u.b....</string>
     <string name="settings_syncing_title">Gegevens synchroniseren...</string>
     <string name="settings_syncing_subtitle">Een ogenblik geduld terwijl uw afspeellijst wordt geïmporteerd.</string>

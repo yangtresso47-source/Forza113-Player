@@ -236,6 +236,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">在Ko-fi上支持</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">正在同步数据，请稍候...</string>
     <string name="settings_syncing_title">正在同步数据...</string>
     <string name="settings_syncing_subtitle">正在导入您的播放列表，请稍候。</string>

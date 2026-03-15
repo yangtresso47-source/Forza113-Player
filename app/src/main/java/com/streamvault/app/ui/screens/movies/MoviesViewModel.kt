@@ -172,7 +172,8 @@ class MoviesViewModel @Inject constructor(
                             selectedCategoryItems = snapshot.items,
                             selectedCategoryLoadedCount = snapshot.loadedCount,
                             selectedCategoryTotalCount = snapshot.totalCount,
-                            canLoadMoreSelectedCategory = snapshot.canLoadMore
+                            canLoadMoreSelectedCategory = snapshot.canLoadMore,
+                            isLoadingSelectedCategory = false
                         )
                     }
                 }
@@ -283,7 +284,8 @@ class MoviesViewModel @Inject constructor(
                 selectedCategoryItems = emptyList(),
                 selectedCategoryLoadedCount = 0,
                 selectedCategoryTotalCount = 0,
-                canLoadMoreSelectedCategory = false
+                canLoadMoreSelectedCategory = false,
+                isLoadingSelectedCategory = categoryName != null
             )
         }
     }
@@ -866,6 +868,7 @@ data class MoviesUiState(
     val selectedCategoryLoadedCount: Int = 0,
     val selectedCategoryTotalCount: Int = 0,
     val canLoadMoreSelectedCategory: Boolean = false,
+    val isLoadingSelectedCategory: Boolean = false,
     val searchQuery: String = "",
     val continueWatching: List<PlaybackHistory> = emptyList(),
     val isLoading: Boolean = true,

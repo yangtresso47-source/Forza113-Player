@@ -258,6 +258,8 @@
     <string name="settings_developer_name">David Nashash</string>
     <string name="settings_github">GitHub</string>
     <string name="settings_github_url">https://github.com/Davidona</string>
+    <string name="settings_donate">Support on Ko-fi</string>
+    <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_syncing">Syncing data, please wait...</string>
     <string name="settings_syncing_title">Syncing data...</string>
     <string name="settings_syncing_subtitle">Please wait while your playlist is imported.</string>
@@ -532,6 +534,7 @@
     <string name="player_channel_selected">Now</string>
     <string name="player_recent_channels">Recent</string>
     <string name="player_last_group_label">Last: %1$s</string>
+    <string name="player_categories_label">Categories</string>
     <string name="player_last_group_hint">Jump back to the last live group you were browsing.</string>
     <string name="player_archive_badge">Archive</string>
     <string name="player_catchup_badge">Catch-up</string>
