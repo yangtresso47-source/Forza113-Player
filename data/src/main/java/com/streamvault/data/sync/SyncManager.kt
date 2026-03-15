@@ -92,7 +92,7 @@ class SyncManager @Inject constructor(
         private val categoryIds = LinkedHashMap<String, Long>()
 
         fun idFor(name: String): Long {
-            return categoryIds.getOrPut(name) { startId + categoryIds.size }
+            return categoryIds.getOrPut(name) { providerId * 100_000L + startId + categoryIds.size }
         }
 
         fun entities(): List<CategoryEntity> {

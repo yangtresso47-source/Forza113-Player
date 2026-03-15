@@ -27,7 +27,10 @@ class XmltvParser {
     private val dateFormats = listOf(
         SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US),
         SimpleDateFormat("yyyyMMddHHmmss", Locale.US),
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US),
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US),
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US),
+        SimpleDateFormat("yyyyMMddHHmm", Locale.US)
     ).onEach { it.timeZone = TimeZone.getTimeZone("UTC") }
 
     fun parse(inputStream: InputStream): List<Program> {
@@ -221,6 +224,7 @@ class XmltvParser {
             // Give up
         }
 
+        logger.warning("Unparseable XMLTV date: $dateStr")
         return 0
     }
 }

@@ -857,6 +857,10 @@ class HomeViewModel @Inject constructor(
             .toList()
 
     override fun onCleared() {
+        epgJob?.cancel()
+        loadChannelsJob?.cancel()
+        categoriesJob?.cancel()
+        recentChannelsJob?.cancel()
         clearPreview()
         super.onCleared()
     }

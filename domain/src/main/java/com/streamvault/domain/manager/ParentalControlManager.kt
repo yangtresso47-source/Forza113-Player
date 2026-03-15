@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,11 +18,10 @@ class ParentalControlManager @Inject constructor() {
         unlockedCategoriesByProvider.map { it[providerId] ?: emptySet() }
 
     fun unlockCategory(providerId: Long, categoryId: Long) {
-        val current = _unlockedCategoriesByProvider.value.toMutableMap()
-        val providerSet = (current[providerId] ?: emptySet()).toMutableSet()
-        providerSet.add(categoryId)
-        current[providerId] = providerSet
-        _unlockedCategoriesByProvider.value = current
+        _unlockedCategoriesByProvider.update { current ->
+            val providerSet = (current[providerId] ?: emptySet()) + categoryId
+            current + (providerId to providerSet)
+        }
     }
 
     fun isCategoryUnlocked(providerId: Long, categoryId: Long): Boolean {
@@ -34,8 +34,8 @@ class ParentalControlManager @Inject constructor() {
             return
         }
 
-        val current = _unlockedCategoriesByProvider.value.toMutableMap()
-        current.remove(providerId)
-        _unlockedCategoriesByProvider.value = current
+        _unlockedCategoriesByProvider.update { current ->
+            current - providerId
+        }
     }
 }

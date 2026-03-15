@@ -159,8 +159,8 @@ class M3uParser {
     private fun parseEntry(extinf: ParsedExtinf, url: String, globalUserAgent: String?): M3uEntry? {
         if (url.isBlank() || extinf.name.isBlank()) return null
         return M3uEntry(
-            name = extinf.name,
-            groupTitle = extinf.groupTitle ?: "Uncategorized",
+            name = extinf.name.take(500),
+            groupTitle = (extinf.groupTitle ?: "Uncategorized").take(200),
             tvgId = extinf.tvgId,
             tvgName = extinf.tvgName,
             tvgLogo = extinf.tvgLogo,

@@ -26,6 +26,9 @@ import com.streamvault.domain.model.StreamType
 import com.streamvault.domain.model.VideoFormat
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.common.AudioAttributes
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -43,6 +46,16 @@ class Media3PlayerEngine @Inject constructor(
     private var exoPlayer: ExoPlayer? = null
     private var currentDecoderMode: DecoderMode = DecoderMode.AUTO
     private var pollingJob: Job? = null
+    private var lastStreamInfo: StreamInfo? = null
+    private var retryCount = 0
+    private var lastFrameRate: Float = 0f
+    private val handler = Handler(Looper.getMainLooper())
+
+    companion object {
+        private const val TAG = "Media3PlayerEngine"
+        private const val MAX_RETRIES = 3
+        private const val RETRY_BASE_DELAY_MS = 2000L
+    }
 
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)
     override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -80,8 +93,8 @@ class Media3PlayerEngine @Inject constructor(
             setExtensionRendererMode(
                 when (currentDecoderMode) {
                     DecoderMode.AUTO -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                    DecoderMode.HARDWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-                    DecoderMode.SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    DecoderMode.HARDWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                    DecoderMode.SOFTWARE -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
                 }
             )
         }
@@ -120,6 +133,7 @@ class Media3PlayerEngine @Inject constructor(
                         format: Format,
                         decoderReuseEvaluation: DecoderReuseEvaluation?
                     ) {
+                        lastFrameRate = format.frameRate.takeIf { it > 0f } ?: lastFrameRate
                         _playerStats.update { 
                             it.copy(
                                 videoCodec = format.sampleMimeType ?: format.codecs ?: it.videoCodec,
@@ -176,15 +190,21 @@ class Media3PlayerEngine @Inject constructor(
                         _videoFormat.value = VideoFormat(
                             width = videoSize.width,
                             height = videoSize.height,
-                            frameRate = videoSize.pixelWidthHeightRatio // Using this as proxy or just storing what we have
+                            frameRate = lastFrameRate
                         )
-                        // Note: ExoPlayer's VideoSize doesn't directly expose bitrate/codec here easily without TrackSelection
-                        // tailored logic, but width/height is the main request.
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
-                        _error.tryEmit(PlayerError.fromException(error))
-                        _playbackState.value = PlaybackState.ERROR
+                        if (retryCount < MAX_RETRIES && isRecoverableError(error)) {
+                            retryCount++
+                            Log.w(TAG, "Recoverable error (attempt $retryCount/$MAX_RETRIES), retrying...")
+                            handler.postDelayed({
+                                lastStreamInfo?.let { prepare(it) }
+                            }, retryCount * RETRY_BASE_DELAY_MS)
+                        } else {
+                            _error.tryEmit(PlayerError.fromException(error))
+                            _playbackState.value = PlaybackState.ERROR
+                        }
                     }
 
                     override fun onPositionDiscontinuity(
@@ -236,6 +256,10 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     override fun prepare(streamInfo: StreamInfo) {
+        lastStreamInfo = streamInfo
+        retryCount = 0
+        lastFrameRate = 0f
+        handler.removeCallbacksAndMessages(null)
         val player = getOrCreatePlayer()
         _error.tryEmit(null)
         _playerStats.value = PlayerStats() // reset stats
@@ -417,11 +441,23 @@ class Media3PlayerEngine @Inject constructor(
 
     override fun release() {
         stopPolling()
+        handler.removeCallbacksAndMessages(null)
         exoPlayer?.release()
         exoPlayer = null
+        lastStreamInfo = null
         scope.cancel()
         _playbackState.value = PlaybackState.IDLE
         _isPlaying.value = false
+    }
+
+    private fun isRecoverableError(error: PlaybackException): Boolean {
+        return when (error.errorCode) {
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+            PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> true
+            else -> false
+        }
     }
 
     private fun startPolling() {

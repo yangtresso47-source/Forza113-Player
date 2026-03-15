@@ -1534,6 +1534,8 @@ class PlayerViewModel @Inject constructor(
         zapBufferWatchdogJob?.cancel()
         progressTrackingJob?.cancel()
         aspectRatioJob?.cancel()
+        recentChannelsJob?.cancel()
+        lastVisitedCategoryJob?.cancel()
         playerEngine.release()
     }
 }

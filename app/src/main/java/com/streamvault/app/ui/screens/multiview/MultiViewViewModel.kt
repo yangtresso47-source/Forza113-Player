@@ -351,6 +351,7 @@ class MultiViewViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         telemetryJob?.cancel()
+        borderHideJob?.cancel()
         cancelSlotStartupJobs()
         unregisterThermalListener()
         playerEngines.values.forEach { it.release() }
