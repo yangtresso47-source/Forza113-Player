@@ -122,7 +122,7 @@ The `stateMutex` protects `itemsState` but `activeJobs` is accessed from multipl
 
 ---
 
-## 13. ⏭️ REMAINING — M3U Parser Unquoted Attribute Values
+## 13. ✅ FIXED — M3U Parser Unquoted Attribute Values
 
 **File:** `data/src/main/java/com/streamvault/data/parser/M3uParser.kt` (lines 309–330)  
 **Severity:** 🟡 MEDIUM
@@ -194,7 +194,7 @@ Movie/Series pagination queries don't return the total count. The UI has no way 
 
 ---
 
-## 19. ⏭️ REMAINING — PIN Hashing - RNG Initialization
+## 19. ✅ FIXED — PIN Hashing - RNG Initialization
 
 **File:** `data/src/main/java/com/streamvault/data/preferences/PreferencesRepository.kt` (lines 28–31)  
 **Severity:** 🔵 LOW
@@ -207,7 +207,7 @@ Creating a new `SecureRandom()` instance per call may use a weaker default provi
 
 ---
 
-## 20. ⏭️ REMAINING — Migration 2→3 Lacks Data Validation
+## 20. ✅ N/A — Migration 2→3 Lacks Data Validation
 
 **File:** `data/src/main/java/com/streamvault/data/local/StreamVaultDatabase.kt` (lines 47–57)  
 **Severity:** 🔵 LOW
@@ -225,7 +225,7 @@ The parser captures unknown M3U attributes into an `extraAttributes` map that is
 
 ---
 
-## 22. ⏭️ REMAINING — Xtream Unknown Status Not Logged
+## 22. ✅ N/A — Xtream Unknown Status Not Logged
 
 **File:** `data/src/main/java/com/streamvault/data/remote/xtream/XtreamProvider.kt` (lines 82–90)  
 **Severity:** 🔵 LOW

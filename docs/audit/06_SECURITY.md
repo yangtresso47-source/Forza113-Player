@@ -94,7 +94,7 @@ These are stored as plain JSON. If a user shares the backup file, their IPTV pro
 
 ---
 
-## 8. ⏭️ REMAINING — PIN Stored as Hash Without Iteration Count
+## 8. ✅ N/A — PIN Stored as Hash Without Iteration Count
 
 **File:** `data/src/main/java/com/streamvault/data/preferences/PreferencesRepository.kt`  
 **Severity:** 🔵 LOW

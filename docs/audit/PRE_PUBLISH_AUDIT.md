@@ -3,13 +3,13 @@
 **Date:** March 15, 2026  
 **Branch:** `review/pre-publish-audit-2026-03-15`  
 **Auditor:** Automated Code Audit  
-**Verdict:** ✅ READY — All critical blockers resolved across 14 fix batches
+**Verdict:** ✅ READY — All critical blockers resolved across 15 fix batches
 
 ---
 
 ## Executive Summary
 
-StreamVault is a well-architected Android TV IPTV player built with Kotlin, Compose for TV, Media3, Room, and Hilt. The overall code quality is high, dependencies are modern, and the Clean Architecture modular design is sound. This audit uncovered **76 issues** across all layers. After 14 fix batches, **all critical and high-severity code issues have been resolved**.
+StreamVault is a well-architected Android TV IPTV player built with Kotlin, Compose for TV, Media3, Room, and Hilt. The overall code quality is high, dependencies are modern, and the Clean Architecture modular design is sound. This audit uncovered **76 issues** across all layers. After 15 fix batches, **all critical and high-severity code issues have been resolved**.
 
 | Severity | Found | Fixed | Remaining | Notes |
 |----------|-------|-------|-----------|-------|
@@ -71,7 +71,7 @@ StreamVault is a well-architected Android TV IPTV player built with Kotlin, Comp
 
 ---
 
-## Fix Log (14 Batches)
+## Fix Log (15 Batches)
 
 | Batch | Commit | Summary |
 |-------|--------|---------|
@@ -89,6 +89,7 @@ StreamVault is a well-architected Android TV IPTV player built with Kotlin, Comp
 | 12 | `3f18d29` | Movies/Series error state UI (errorMessage + try/catch) |
 | 13 | `a8d708b` | N+1 query optimization (EXISTS), 3 hardcoded strings, stable LazyRow keys, sidebar width |
 | 14 | `f95aa70` | Accessibility contentDescription (7 components), sidebar focusGroup |
+| 15 | `6412892` | Audio content type, decoder reuse logging, M3U unquoted attr fix, SecureRandom cache, GetCustomCategories .catch, recovery notice duration, numeric switching in overlays, search hint, multi-view buffering indicator |
 
 ## Remaining (Deferred / Post-Launch)
 

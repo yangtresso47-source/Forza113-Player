@@ -224,7 +224,7 @@ No domain models or repository interfaces exist for:
 
 ---
 
-## 9. ⏭️ REMAINING — `GetCustomCategories` Swallows Exceptions
+## 9. ✅ FIXED — `GetCustomCategories` Swallows Exceptions
 
 **File:** `domain/src/main/java/com/streamvault/domain/usecase/GetCustomCategories.kt`  
 **Severity:** 🟡 MEDIUM

@@ -208,7 +208,7 @@ The fallback `StreamType.UNKNOWN` delegates to ExoPlayer's content-type sniffing
 
 ---
 
-## 13. ⏭️ REMAINING — Audio Content Type Not Stream-Aware
+## 13. ✅ FIXED — Audio Content Type Not Stream-Aware
 
 **File:** `player/src/main/java/com/streamvault/player/Media3PlayerEngine.kt` (lines 106–110)  
 **Severity:** 🔵 LOW
@@ -235,7 +235,7 @@ No Google Cast integration exists. Premium IPTV apps typically support casting f
 
 ---
 
-## 15. ⏭️ REMAINING — Decoder Reuse Evaluation Not Logged
+## 15. ✅ FIXED — Decoder Reuse Evaluation Not Logged
 
 **File:** `player/src/main/java/com/streamvault/player/Media3PlayerEngine.kt` (lines 117–130)  
 **Severity:** 🔵 LOW

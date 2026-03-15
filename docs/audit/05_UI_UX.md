@@ -182,7 +182,7 @@ These strings are visible to users and will appear in English regardless of loca
 
 ---
 
-## 8. ⏭️ REMAINING — Player Error Recovery Not Visible to User
+## 8. ✅ FIXED — Player Error Recovery Not Visible to User
 
 **Severity:** 🟠 HIGH
 
@@ -275,7 +275,7 @@ When selecting a category in HomeScreen, the channel grid content changes instan
 
 ---
 
-## 15. ⏭️ REMAINING — Missing Numeric Channel Switching in All Contexts
+## 15. ✅ FIXED — Missing Numeric Channel Switching in All Contexts
 
 **Severity:** 🟡 MEDIUM
 
@@ -302,7 +302,7 @@ When the user reaches the last item in a LazyRow and presses D-Pad right, nothin
 
 ---
 
-## 18. ⏭️ REMAINING — Search Needs Minimum Query Length Hint
+## 18. ✅ FIXED — Search Needs Minimum Query Length Hint
 
 **Severity:** 🔵 LOW
 
@@ -314,7 +314,7 @@ When the user types a single character, show a hint: "Type at least 2 characters
 
 ---
 
-## 19. ⏭️ REMAINING — Multi-View Has No Slot Status Indicators
+## 19. ✅ FIXED — Multi-View Has No Slot Status Indicators
 
 **Severity:** 🔵 LOW
 
