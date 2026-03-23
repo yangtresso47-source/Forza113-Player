@@ -14,12 +14,16 @@ import com.streamvault.domain.manager.BackupImportPlan
 import com.streamvault.domain.manager.BackupManager
 import com.streamvault.domain.manager.BackupPreview
 import com.streamvault.domain.manager.RecordingManager
+import com.streamvault.domain.model.Category
+import com.streamvault.domain.model.CategorySortMode
+import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.Provider
 import com.streamvault.domain.model.ProviderStatus
 import com.streamvault.domain.model.ProviderType
 import com.streamvault.domain.model.RecordingItem
 import com.streamvault.domain.model.RecordingStorageState
 import com.streamvault.domain.model.Result
+import com.streamvault.domain.model.VodSyncMode
 import com.streamvault.domain.usecase.ExportBackup
 import com.streamvault.domain.usecase.ExportBackupCommand
 import com.streamvault.domain.usecase.ExportBackupResult
@@ -29,6 +33,7 @@ import com.streamvault.domain.usecase.ImportBackupResult
 import com.streamvault.domain.usecase.InspectBackupCommand
 import com.streamvault.domain.usecase.InspectBackupResult
 import com.streamvault.domain.repository.ProviderRepository
+import com.streamvault.domain.repository.CategoryRepository
 import com.streamvault.domain.repository.SyncMetadataRepository
 import com.streamvault.domain.usecase.SyncProvider
 import com.streamvault.domain.usecase.SyncProviderCommand
@@ -72,6 +77,7 @@ private data class SettingsPreferenceSnapshot(
 class SettingsViewModel @Inject constructor(
     application: Application,
     private val providerRepository: ProviderRepository,
+    private val categoryRepository: CategoryRepository,
     private val preferencesRepository: PreferencesRepository,
     private val internetSpeedTestRunner: InternetSpeedTestRunner,
     private val backupManager: BackupManager,
@@ -192,12 +198,18 @@ class SettingsViewModel @Inject constructor(
                                         lastSyncStatus = metadata?.lastSyncStatus ?: "NONE",
                                         lastLiveSync = metadata?.lastLiveSync ?: 0L,
                                         lastMovieSync = metadata?.lastMovieSync ?: 0L,
+                                        lastMovieAttempt = metadata?.lastMovieAttempt ?: 0L,
+                                        lastMovieSuccess = metadata?.lastMovieSuccess ?: 0L,
+                                        lastMoviePartial = metadata?.lastMoviePartial ?: 0L,
                                         lastSeriesSync = metadata?.lastSeriesSync ?: 0L,
                                         lastEpgSync = metadata?.lastEpgSync ?: 0L,
                                         liveCount = metadata?.liveCount ?: 0,
                                         movieCount = metadata?.movieCount ?: 0,
                                         seriesCount = metadata?.seriesCount ?: 0,
                                         epgCount = metadata?.epgCount ?: 0,
+                                        movieSyncMode = metadata?.movieSyncMode ?: VodSyncMode.UNKNOWN,
+                                        movieWarningsCount = metadata?.movieWarningsCount ?: 0,
+                                        movieCatalogStale = metadata?.movieCatalogStale ?: false,
                                         capabilitySummary = buildCapabilitySummary(provider),
                                         sourceLabel = when (provider.type) {
                                             ProviderType.XTREAM_CODES -> "Xtream Codes"
@@ -231,6 +243,56 @@ class SettingsViewModel @Inject constructor(
                 }
                 .collect { diagnosticsByProvider ->
                     _uiState.update { it.copy(diagnosticsByProvider = diagnosticsByProvider) }
+                }
+        }
+
+        viewModelScope.launch {
+            preferencesRepository.lastActiveProviderId
+                .flatMapLatest { providerId ->
+                    if (providerId == null) {
+                        flowOf(CategoryManagementSnapshot())
+                    } else {
+                        combine(
+                            preferencesRepository.getCategorySortMode(providerId, ContentType.LIVE),
+                            preferencesRepository.getCategorySortMode(providerId, ContentType.MOVIE),
+                            preferencesRepository.getCategorySortMode(providerId, ContentType.SERIES),
+                            categoryRepository.getCategories(providerId),
+                            preferencesRepository.getHiddenCategoryIds(providerId, ContentType.LIVE),
+                            preferencesRepository.getHiddenCategoryIds(providerId, ContentType.MOVIE),
+                            preferencesRepository.getHiddenCategoryIds(providerId, ContentType.SERIES)
+                        ) { values ->
+                            val liveSort = values[0] as CategorySortMode
+                            val movieSort = values[1] as CategorySortMode
+                            val seriesSort = values[2] as CategorySortMode
+                            val categories = values[3] as List<Category>
+                            val hiddenLive = values[4] as Set<Long>
+                            val hiddenMovies = values[5] as Set<Long>
+                            val hiddenSeries = values[6] as Set<Long>
+                            val hiddenByType = mapOf(
+                                ContentType.LIVE to hiddenLive,
+                                ContentType.MOVIE to hiddenMovies,
+                                ContentType.SERIES to hiddenSeries
+                            )
+                            CategoryManagementSnapshot(
+                                categorySortModes = mapOf(
+                                    ContentType.LIVE to liveSort,
+                                    ContentType.MOVIE to movieSort,
+                                    ContentType.SERIES to seriesSort
+                                ),
+                                hiddenCategories = categories
+                                    .filter { category -> category.id in hiddenByType[category.type].orEmpty() }
+                                    .sortedWith(compareBy<Category>({ it.type.ordinal }, { it.name.lowercase() }))
+                            )
+                        }
+                    }
+                }
+                .collect { snapshot ->
+                    _uiState.update {
+                        it.copy(
+                            categorySortModes = snapshot.categorySortModes,
+                            hiddenCategories = snapshot.hiddenCategories
+                        )
+                    }
                 }
         }
 
@@ -271,6 +333,26 @@ class SettingsViewModel @Inject constructor(
     fun setLiveTvChannelMode(mode: LiveTvChannelMode) {
         viewModelScope.launch {
             preferencesRepository.setLiveTvChannelMode(mode.name)
+        }
+    }
+
+    fun setCategorySortMode(type: ContentType, mode: CategorySortMode) {
+        val providerId = _uiState.value.activeProviderId ?: return
+        viewModelScope.launch {
+            preferencesRepository.setCategorySortMode(providerId, type, mode)
+        }
+    }
+
+    fun unhideCategory(category: Category) {
+        val providerId = _uiState.value.activeProviderId ?: return
+        viewModelScope.launch {
+            preferencesRepository.setCategoryHidden(
+                providerId = providerId,
+                type = category.type,
+                categoryId = category.id,
+                hidden = false
+            )
+            _uiState.update { it.copy(userMessage = "Unhid ${category.name}") }
         }
     }
 
@@ -615,9 +697,9 @@ class SettingsViewModel @Inject constructor(
         return when (provider.type) {
             ProviderType.XTREAM_CODES -> {
                 if (provider.epgUrl.isNotBlank()) {
-                    "Xtream source with guide support. Catch-up is available when the provider exposes replay streams."
+                    "Xtream source with XMLTV guide support and on-demand guide fallback. Catch-up is available when the provider exposes replay streams."
                 } else {
-                    "Xtream source. Catch-up depends on provider replay support."
+                    "Xtream source with on-demand guide fallback. Catch-up depends on provider replay support."
                 }
             }
             ProviderType.M3U -> {
@@ -635,12 +717,18 @@ data class ProviderDiagnosticsUiModel(
     val lastSyncStatus: String = "NONE",
     val lastLiveSync: Long = 0L,
     val lastMovieSync: Long = 0L,
+    val lastMovieAttempt: Long = 0L,
+    val lastMovieSuccess: Long = 0L,
+    val lastMoviePartial: Long = 0L,
     val lastSeriesSync: Long = 0L,
     val lastEpgSync: Long = 0L,
     val liveCount: Int = 0,
     val movieCount: Int = 0,
     val seriesCount: Int = 0,
     val epgCount: Int = 0,
+    val movieSyncMode: VodSyncMode = VodSyncMode.UNKNOWN,
+    val movieWarningsCount: Int = 0,
+    val movieCatalogStale: Boolean = false,
     val capabilitySummary: String = "",
     val sourceLabel: String = "",
     val expirySummary: String = "",
@@ -673,7 +761,9 @@ data class SettingsUiState(
     val recordingItems: List<RecordingItem> = emptyList(),
     val recordingStorageState: RecordingStorageState = RecordingStorageState(),
     val isIncognitoMode: Boolean = false,
-    val liveTvChannelMode: LiveTvChannelMode = LiveTvChannelMode.COMFORTABLE
+    val liveTvChannelMode: LiveTvChannelMode = LiveTvChannelMode.COMFORTABLE,
+    val categorySortModes: Map<ContentType, CategorySortMode> = emptyMap(),
+    val hiddenCategories: List<Category> = emptyList()
 )
 
 data class InternetSpeedTestUiModel(
@@ -682,4 +772,9 @@ data class InternetSpeedTestUiModel(
     val transportLabel: String,
     val recommendedMaxVideoHeight: Int?,
     val isEstimated: Boolean
+)
+
+private data class CategoryManagementSnapshot(
+    val categorySortModes: Map<ContentType, CategorySortMode> = emptyMap(),
+    val hiddenCategories: List<Category> = emptyList()
 )

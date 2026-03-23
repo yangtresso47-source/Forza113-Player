@@ -71,6 +71,7 @@ import com.streamvault.app.navigation.Routes
 import com.streamvault.app.ui.design.AppColors
 import com.streamvault.app.ui.design.AppMotion
 import com.streamvault.app.ui.design.FocusSpec
+import com.streamvault.app.ui.interaction.rememberTvInteractionSounds
 import com.streamvault.app.ui.design.LocalAppShapes
 import com.streamvault.app.ui.design.LocalAppSpacing
 
@@ -87,6 +88,7 @@ fun AppScreenScaffold(
     subtitle: String? = null,
     modifier: Modifier = Modifier,
     navigationChrome: AppNavigationChrome = AppNavigationChrome.Rail,
+    topBarVisible: Boolean = true,
     compactHeader: Boolean = false,
     showScreenHeader: Boolean = true,
     header: (@Composable ColumnScope.() -> Unit)? = null,
@@ -161,12 +163,14 @@ fun AppScreenScaffold(
                         vertical = 10.dp
                     )
             ) {
-                TopNavigationBar(
-                    currentRoute = currentRoute,
-                    onNavigate = onNavigate,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+                if (topBarVisible) {
+                    TopNavigationBar(
+                        currentRoute = currentRoute,
+                        onNavigate = onNavigate,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
                 if (showScreenHeader) {
                     AppScreenHeader(
                         title = title,
@@ -304,6 +308,7 @@ private fun TopNavigationButton(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val sounds = rememberTvInteractionSounds()
     val scale by animateFloatAsState(
         targetValue = if (isFocused) FocusSpec.FocusedScale else 1f,
         animationSpec = AppMotion.FocusSpec,
@@ -311,14 +316,22 @@ private fun TopNavigationButton(
     )
 
     Surface(
-        onClick = onClick,
+        onClick = {
+            sounds.playSelect()
+            onClick()
+        },
         modifier = modifier
             .zIndex(if (isFocused) 1f else 0f) // Keep focused button on top
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged {
+                if (it.isFocused && !isFocused) {
+                    sounds.playNavigate()
+                }
+                isFocused = it.isFocused
+            },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) AppColors.BrandMuted else Color.Transparent,

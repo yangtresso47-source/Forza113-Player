@@ -4,9 +4,14 @@ import com.streamvault.data.local.dao.CategoryDao
 import com.streamvault.data.local.dao.FavoriteDao
 import com.streamvault.data.local.dao.MovieDao
 import com.streamvault.data.local.dao.PlaybackHistoryDao
+import com.streamvault.data.local.dao.ProviderDao
 import com.streamvault.data.local.entity.MovieEntity
+import com.streamvault.data.local.entity.ProviderEntity
 import com.streamvault.data.local.entity.CategoryEntity
+import com.streamvault.data.mapper.toEntity
 import com.streamvault.data.mapper.toDomain
+import com.streamvault.data.remote.xtream.XtreamApiService
+import com.streamvault.data.remote.xtream.XtreamProvider
 import com.streamvault.domain.model.Category
 import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.LibraryFilterType
@@ -14,21 +19,29 @@ import com.streamvault.domain.model.LibraryBrowseQuery
 import com.streamvault.domain.model.LibrarySortBy
 import com.streamvault.domain.model.Movie
 import com.streamvault.domain.model.PagedResult
+import com.streamvault.domain.model.ProviderType
 import com.streamvault.domain.model.Result
+import com.streamvault.domain.model.Result.Success
 import com.streamvault.domain.model.StreamInfo
 import com.streamvault.domain.repository.MovieRepository
-import com.streamvault.domain.util.isPlaybackComplete
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import com.streamvault.data.util.toFtsPrefixQuery
 import com.streamvault.data.util.rankSearchResults
+import com.streamvault.data.security.CredentialCrypto
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import com.streamvault.data.preferences.PreferencesRepository
 import com.streamvault.data.remote.xtream.XtreamStreamUrlResolver
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Singleton
 
 @Singleton
@@ -36,6 +49,8 @@ import javax.inject.Singleton
 class MovieRepositoryImpl @Inject constructor(
     private val movieDao: MovieDao,
     private val categoryDao: CategoryDao,
+    private val providerDao: ProviderDao,
+    private val xtreamApiService: XtreamApiService,
     private val preferencesRepository: PreferencesRepository,
     private val favoriteDao: FavoriteDao,
     private val playbackHistoryDao: PlaybackHistoryDao,
@@ -45,6 +60,15 @@ class MovieRepositoryImpl @Inject constructor(
         const val SEARCH_RESULT_LIMIT = 320
     }
 
+    private data class CachedXtreamProvider(
+        val signature: String,
+        val provider: XtreamProvider
+    )
+
+    private val xtreamProviderCache = ConcurrentHashMap<Long, CachedXtreamProvider>()
+    private val xtreamCategoryLoadLocks = ConcurrentHashMap<String, Mutex>()
+    private val loadedXtreamCategories = ConcurrentHashMap.newKeySet<String>()
+
     override fun getMovies(providerId: Long): Flow<List<Movie>> =
         preferencesRepository.parentalControlLevel.flatMapLatest { level ->
             if (level == 2) movieDao.getByProviderUnprotected(providerId)
@@ -52,39 +76,53 @@ class MovieRepositoryImpl @Inject constructor(
         }.map { list -> list.map { it.toDomain() } }
 
     override fun getMoviesByCategory(providerId: Long, categoryId: Long): Flow<List<Movie>> =
-        preferencesRepository.parentalControlLevel.flatMapLatest { level ->
-            if (level == 2) movieDao.getByCategoryUnprotected(providerId, categoryId)
-            else movieDao.getByCategory(providerId, categoryId)
-        }.map { list -> list.map { it.toDomain() } }
+        flow {
+            ensureXtreamCategoryLoaded(providerId, categoryId)
+            emitAll(
+                preferencesRepository.parentalControlLevel.flatMapLatest { level ->
+                    if (level == 2) movieDao.getByCategoryUnprotected(providerId, categoryId)
+                    else movieDao.getByCategory(providerId, categoryId)
+                }.map { list -> list.map { it.toDomain() } }
+            )
+        }
 
     override fun getMoviesByCategoryPage(
         providerId: Long,
         categoryId: Long,
         limit: Int,
         offset: Int
-    ): Flow<List<Movie>> =
-        combine(
-            movieDao.getByCategoryPage(providerId, categoryId, limit, offset),
-            preferencesRepository.parentalControlLevel
-        ) { entities: List<MovieEntity>, level: Int ->
-            if (level == 2) {
-                entities.filter { !it.isUserProtected }
-            } else {
-                entities
-            }
-        }.map { list -> list.map { it.toDomain() } }
+    ): Flow<List<Movie>> = flow {
+        ensureXtreamCategoryLoaded(providerId, categoryId)
+        emitAll(
+            combine(
+                movieDao.getByCategoryPage(providerId, categoryId, limit, offset),
+                preferencesRepository.parentalControlLevel
+            ) { entities: List<MovieEntity>, level: Int ->
+                if (level == 2) {
+                    entities.filter { !it.isUserProtected }
+                } else {
+                    entities
+                }
+            }.map { list -> list.map { it.toDomain() } }
+        )
+    }
 
     override fun getMoviesByCategoryPreview(providerId: Long, categoryId: Long, limit: Int): Flow<List<Movie>> =
-        combine(
-            movieDao.getByCategoryPreview(providerId, categoryId, limit),
-            preferencesRepository.parentalControlLevel
-        ) { entities: List<MovieEntity>, level: Int ->
-            if (level == 2) {
-                entities.filter { !it.isUserProtected }
-            } else {
-                entities
-            }
-        }.map { list -> list.map { it.toDomain() } }
+        flow {
+            ensureXtreamCategoryLoaded(providerId, categoryId)
+            emitAll(
+                combine(
+                    movieDao.getByCategoryPreview(providerId, categoryId, limit),
+                    preferencesRepository.parentalControlLevel
+                ) { entities: List<MovieEntity>, level: Int ->
+                    if (level == 2) {
+                        entities.filter { !it.isUserProtected }
+                    } else {
+                        entities
+                    }
+                }.map { list -> list.map { it.toDomain() } }
+            )
+        }
 
     override fun getCategoryPreviewRows(providerId: Long, limitPerCategory: Int): Flow<Map<Long?, List<Movie>>> =
         combine(
@@ -187,40 +225,45 @@ class MovieRepositoryImpl @Inject constructor(
         movieDao.getCount(providerId)
 
     override fun browseMovies(query: LibraryBrowseQuery): Flow<PagedResult<Movie>> {
-        return combine(
-            movieBrowseSource(query.providerId, query.categoryId),
-            favoriteDao.getAllByType(ContentType.MOVIE.name),
-            playbackHistoryDao.getByProvider(query.providerId)
-        ) { movies, favorites, history ->
-            val favoriteIds = favorites
-                .asSequence()
-                .filter { it.groupId == null }
-                .map { it.contentId }
-                .toSet()
-            val inProgressIds = history
-                .asSequence()
-                .filter { it.contentType == ContentType.MOVIE }
-                .filter { it.resumePositionMs > 0L && (it.totalDurationMs <= 0L || !isPlaybackComplete(it.resumePositionMs, it.totalDurationMs)) }
-                .map { it.contentId }
-                .toSet()
-            val watchCounts = history
-                .asSequence()
-                .filter { it.contentType == ContentType.MOVIE }
-                .associate { it.contentId to it.watchCount }
+        return flow {
+            query.categoryId?.let { ensureXtreamCategoryLoaded(query.providerId, it) }
+            emitAll(
+                combine(
+                    movieBrowseSource(query.providerId, query.categoryId),
+                    favoriteDao.getAllByType(ContentType.MOVIE.name),
+                    playbackHistoryDao.getByProvider(query.providerId)
+                ) { movies, favorites, history ->
+                    val favoriteIds = favorites
+                        .asSequence()
+                        .filter { it.groupId == null }
+                        .map { it.contentId }
+                        .toSet()
+                    val inProgressIds = history
+                        .asSequence()
+                        .filter { it.contentType == ContentType.MOVIE }
+                        .filter { it.resumePositionMs > 0L && (it.totalDurationMs <= 0L || !moviePlaybackComplete(it.resumePositionMs, it.totalDurationMs)) }
+                        .map { it.contentId }
+                        .toSet()
+                    val watchCounts = history
+                        .asSequence()
+                        .filter { it.contentType == ContentType.MOVIE }
+                        .associate { it.contentId to it.watchCount }
 
-            val browsed = applyMovieBrowseQuery(
-                movies = movies,
-                query = query,
-                favoriteIds = favoriteIds,
-                inProgressIds = inProgressIds,
-                watchCounts = watchCounts
-            )
+                    val browsed = applyMovieBrowseQuery(
+                        movies = movies,
+                        query = query,
+                        favoriteIds = favoriteIds,
+                        inProgressIds = inProgressIds,
+                        watchCounts = watchCounts
+                    )
 
-            PagedResult(
-                items = browsed.drop(query.offset).take(query.limit),
-                totalCount = browsed.size,
-                offset = query.offset,
-                limit = query.limit
+                    PagedResult(
+                        items = browsed.drop(query.offset).take(query.limit),
+                        totalCount = browsed.size,
+                        offset = query.offset,
+                        limit = query.limit
+                    )
+                }
             )
         }
     }
@@ -248,8 +291,49 @@ class MovieRepositoryImpl @Inject constructor(
         movieDao.getById(movieId)?.toDomain()
 
     override suspend fun getMovieDetails(providerId: Long, movieId: Long): Result<Movie> {
-        val movie = movieDao.getById(movieId)?.toDomain()
-        return if (movie != null) Result.success(movie) else Result.error("Movie not found")
+        val movieEntity = movieDao.getById(movieId)
+            ?: return Result.error("Movie not found")
+
+        val provider = providerDao.getById(providerId)
+            ?: return Result.error("Provider not found")
+
+        if (provider.type != ProviderType.XTREAM_CODES) {
+            return Result.success(movieEntity.toDomain())
+        }
+
+        val xtreamProvider = try {
+            getOrCreateXtreamProvider(providerId, provider)
+        } catch (e: Exception) {
+            return Result.success(movieEntity.toDomain())
+        }
+
+        return when (val remoteResult = xtreamProvider.getVodInfo(movieEntity.streamId)) {
+            is Result.Success -> {
+                val remoteMovie = remoteResult.data
+                val updatedMovie = movieEntity.copy(
+                    name = remoteMovie.name.ifBlank { movieEntity.name },
+                    posterUrl = remoteMovie.posterUrl ?: movieEntity.posterUrl,
+                    backdropUrl = remoteMovie.backdropUrl ?: movieEntity.backdropUrl,
+                    categoryId = remoteMovie.categoryId ?: movieEntity.categoryId,
+                    categoryName = remoteMovie.categoryName ?: movieEntity.categoryName,
+                    plot = remoteMovie.plot ?: movieEntity.plot,
+                    cast = remoteMovie.cast ?: movieEntity.cast,
+                    director = remoteMovie.director ?: movieEntity.director,
+                    genre = remoteMovie.genre ?: movieEntity.genre,
+                    releaseDate = remoteMovie.releaseDate ?: movieEntity.releaseDate,
+                    duration = remoteMovie.duration ?: movieEntity.duration,
+                    durationSeconds = remoteMovie.durationSeconds.takeIf { it > 0 } ?: movieEntity.durationSeconds,
+                    rating = if (remoteMovie.rating > 0f) remoteMovie.rating else movieEntity.rating,
+                    year = remoteMovie.year ?: movieEntity.year,
+                    tmdbId = remoteMovie.tmdbId ?: movieEntity.tmdbId,
+                    youtubeTrailer = remoteMovie.youtubeTrailer ?: movieEntity.youtubeTrailer
+                )
+                movieDao.update(updatedMovie)
+                Result.success((movieDao.getById(movieEntity.id) ?: updatedMovie).toDomain())
+            }
+            is Result.Error -> Result.success(movieEntity.toDomain())
+            is Result.Loading -> Result.error("Unexpected loading state")
+        }
     }
 
     override suspend fun getStreamInfo(movie: Movie): Result<StreamInfo> = try {
@@ -441,10 +525,46 @@ class MovieRepositoryImpl @Inject constructor(
             .any { value -> value.lowercase().contains(normalizedQuery) }
     }
 
+    private suspend fun ensureXtreamCategoryLoaded(providerId: Long, categoryId: Long) {
+        val key = "$providerId:$categoryId"
+        if (loadedXtreamCategories.contains(key)) return
+        if (movieDao.getCountByCategory(providerId, categoryId).first() > 0) {
+            loadedXtreamCategories.add(key)
+            return
+        }
+
+        val provider = providerDao.getById(providerId) ?: return
+        if (provider.type != ProviderType.XTREAM_CODES) return
+
+        val lock = xtreamCategoryLoadLocks.getOrPut(key) { Mutex() }
+        lock.withLock {
+            if (loadedXtreamCategories.contains(key)) return
+            if (movieDao.getCountByCategory(providerId, categoryId).first() > 0) {
+                loadedXtreamCategories.add(key)
+                return
+            }
+
+            runCatching {
+                val xtreamProvider = getOrCreateXtreamProvider(providerId, provider)
+                when (val result = xtreamProvider.getVodStreams(categoryId)) {
+                    is Success -> {
+                        movieDao.replaceCategory(
+                            providerId,
+                            categoryId,
+                            result.data.map { movie -> movie.toEntity() }
+                        )
+                        loadedXtreamCategories.add(key)
+                    }
+                    else -> Unit
+                }
+            }
+        }
+    }
+
     private fun movieIsInProgress(movie: Movie): Boolean {
         if (movie.watchProgress <= 0L) return false
         val totalDurationMs = movie.durationSeconds.takeIf { it > 0 }?.times(1000L) ?: 0L
-        return !isPlaybackComplete(movie.watchProgress, totalDurationMs)
+        return !moviePlaybackComplete(movie.watchProgress, totalDurationMs)
     }
 
     private fun movieReleaseScore(movie: Movie): Long =
@@ -453,4 +573,31 @@ class MovieRepositoryImpl @Inject constructor(
             ?.toLongOrNull()
             ?: movie.year?.toLongOrNull()
             ?: 0L
+
+    private fun getOrCreateXtreamProvider(providerId: Long, provider: ProviderEntity): XtreamProvider {
+        val signature = listOf(provider.serverUrl, provider.username, provider.password).joinToString("\u0000")
+        return xtreamProviderCache.compute(providerId) { _, cached ->
+            if (cached != null && cached.signature == signature) {
+                cached
+            } else {
+                val decryptedPassword = CredentialCrypto.decryptIfNeeded(provider.password)
+                CachedXtreamProvider(
+                    signature = signature,
+                    provider = XtreamProvider(
+                        providerId = providerId,
+                        api = xtreamApiService,
+                        serverUrl = provider.serverUrl,
+                        username = provider.username,
+                        password = decryptedPassword,
+                        allowedOutputFormats = provider.toDomain().allowedOutputFormats
+                    )
+                )
+            }
+        }!!.provider
+    }
+
+    private fun moviePlaybackComplete(progressMs: Long, totalDurationMs: Long): Boolean {
+        if (progressMs <= 0L || totalDurationMs <= 0L) return false
+        return progressMs >= (totalDurationMs * 0.95f).toLong()
+    }
 }

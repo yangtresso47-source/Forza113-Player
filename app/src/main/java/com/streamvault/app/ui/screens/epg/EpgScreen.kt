@@ -1,11 +1,13 @@
 package com.streamvault.app.ui.screens.epg
 
+import com.streamvault.app.ui.model.guideLookupKey
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,9 +20,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -36,12 +41,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
@@ -53,7 +62,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.streamvault.app.R
-import com.streamvault.app.device.rememberIsTelevisionDevice
+import com.streamvault.app.ui.components.ChannelLogoBadge
 import com.streamvault.app.navigation.Routes
 import com.streamvault.app.ui.components.SearchInput
 import com.streamvault.app.ui.components.SelectionChip
@@ -79,7 +88,6 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 @Composable
 fun FullEpgScreen(
@@ -94,7 +102,12 @@ fun FullEpgScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedProgram by remember { mutableStateOf<Pair<Channel, Program>?>(null) }
-    var showAdvancedOptions by rememberSaveable { mutableStateOf(false) }
+    var focusedChannel by remember { mutableStateOf<Channel?>(null) }
+    var focusedProgram by remember { mutableStateOf<Program?>(null) }
+    var topNavVisible by rememberSaveable { mutableStateOf(true) }
+    var showCategoryPicker by rememberSaveable { mutableStateOf(false) }
+    var showGuideOptions by rememberSaveable { mutableStateOf(false) }
+    var showSearchOverlay by rememberSaveable { mutableStateOf(false) }
     val now = rememberGuideNow()
     val returnRoute = remember(uiState.selectedCategoryId, uiState.guideAnchorTime, uiState.showFavoritesOnly) {
         Routes.epg(
@@ -112,12 +125,46 @@ fun FullEpgScreen(
         )
     }
 
+    LaunchedEffect(uiState.channels, uiState.programsByChannel, now) {
+        if (uiState.channels.isEmpty()) {
+            focusedChannel = null
+            focusedProgram = null
+            return@LaunchedEffect
+        }
+        val resolvedChannel = focusedChannel?.let { current ->
+            uiState.channels.firstOrNull { it.id == current.id }
+        } ?: uiState.channels.firstOrNull()
+        focusedChannel = resolvedChannel
+        val resolvedPrograms = resolvedChannel?.let { channel ->
+            channel.guideLookupKey()?.let { lookupKey ->
+                uiState.programsByChannel[lookupKey].orEmpty()
+            }.orEmpty()
+        }.orEmpty()
+        focusedProgram = focusedProgram?.let { focused ->
+            resolvedPrograms.firstOrNull {
+                it.startTime == focused.startTime &&
+                    it.endTime == focused.endTime &&
+                    it.title == focused.title
+            }
+        } ?: resolvedPrograms.firstOrNull { now in it.startTime until it.endTime }
+    }
+
+    val heroSelection = remember(uiState, focusedChannel, focusedProgram, now) {
+        resolveGuideHeroSelection(
+            uiState = uiState,
+            focusedChannel = focusedChannel,
+            focusedProgram = focusedProgram,
+            now = now
+        )
+    }
+
     AppScreenScaffold(
         currentRoute = currentRoute,
         onNavigate = onNavigate,
         title = stringResource(R.string.nav_epg),
         subtitle = stringResource(R.string.guide_shell_subtitle),
         navigationChrome = AppNavigationChrome.TopBar,
+        topBarVisible = topNavVisible,
         compactHeader = true,
         showScreenHeader = false
     ) {
@@ -126,77 +173,21 @@ fun FullEpgScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            if (uiState.error == null) {
-                GuideFilterRow(
-                    categories = uiState.categories,
-                    selectedCategoryId = uiState.selectedCategoryId,
-                    onCategorySelected = viewModel::selectCategory
-                )
-
-                GuideProgramSearchRow(
-                    query = uiState.programSearchQuery,
-                    onQueryChange = viewModel::updateProgramSearchQuery,
-                    onClear = viewModel::clearProgramSearch
-                )
-
-                GuideTimeControlsRow(
-                    onJumpToPreviousDay = viewModel::jumpToPreviousDay,
-                    onPageBackward = viewModel::pageBackward,
-                    onJumpBackwardHalfHour = viewModel::jumpBackwardHalfHour,
-                    onJumpBackward = viewModel::jumpBackward,
-                    onJumpToNow = viewModel::jumpToNow,
-                    onJumpForwardHalfHour = viewModel::jumpForwardHalfHour,
-                    onJumpForward = viewModel::jumpForward,
-                    onPageForward = viewModel::pageForward,
-                    onJumpToPrimeTime = viewModel::jumpToPrimeTime,
-                    onJumpToTomorrow = viewModel::jumpToTomorrow,
-                    onJumpToNextDay = viewModel::jumpToNextDay
-                )
-
-                GuideDayRow(
-                    selectedDayStart = startOfDay(uiState.guideWindowStart + EpgViewModel.LOOKBACK_MS),
-                    onDaySelected = viewModel::jumpToDay
-                )
-
-                GuideOptionsToggleRow(
-                    expanded = showAdvancedOptions,
-                    onToggle = { showAdvancedOptions = !showAdvancedOptions }
-                )
-
-                if (showAdvancedOptions) {
-                    GuideModeRow(
-                        selectedMode = uiState.selectedChannelMode,
-                        onModeSelected = viewModel::selectChannelMode
-                    )
-
-                    GuideDensityRow(
-                        selectedDensity = uiState.selectedDensity,
-                        onDensitySelected = viewModel::selectDensity
-                    )
-
-                    GuideViewOptionsRow(
-                        showScheduledOnly = uiState.showScheduledOnly,
-                        onToggleScheduledOnly = viewModel::toggleScheduledOnly
-                    )
-
-                    GuideFavoritesRow(
-                        showFavoritesOnly = uiState.showFavoritesOnly,
-                        onToggleFavoritesOnly = viewModel::toggleFavoritesOnly
-                    )
-                }
-
-                GuideSummaryCard(uiState = uiState)
-            }
-
             when {
-                uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                uiState.isInitialLoading && uiState.channels.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(stringResource(R.string.epg_loading), color = OnBackground)
                     }
                 }
 
                 uiState.error != null -> {
                     GuideMessageState(
+                        modifier = Modifier.weight(1f),
                         title = when (uiState.error) {
                             EpgViewModel.NO_ACTIVE_PROVIDER -> stringResource(R.string.epg_no_provider)
                             else -> stringResource(R.string.epg_error)
@@ -212,27 +203,26 @@ fun FullEpgScreen(
 
                 uiState.channels.isEmpty() -> {
                     GuideMessageState(
-                        title = if (uiState.programSearchQuery.isNotBlank()) {
-                            stringResource(R.string.epg_no_search_results)
-                        } else if (uiState.selectedCategoryId == ChannelRepository.ALL_CHANNELS_ID) {
-                            if (uiState.showScheduledOnly) {
-                                stringResource(R.string.epg_no_scheduled_channels)
-                            } else {
-                                stringResource(R.string.epg_no_data)
-                            }
-                        } else {
-                            if (uiState.showScheduledOnly) {
-                                stringResource(R.string.epg_no_scheduled_channels)
-                            } else {
+                        modifier = Modifier.weight(1f),
+                        title = when {
+                            uiState.programSearchQuery.isNotBlank() ->
+                                stringResource(R.string.epg_no_search_results)
+                            uiState.totalChannelCount == 0 && uiState.selectedCategoryId != ChannelRepository.ALL_CHANNELS_ID ->
                                 stringResource(R.string.epg_no_channels_in_category)
-                            }
+                            uiState.totalChannelCount == 0 ->
+                                stringResource(R.string.epg_no_data)
+                            else ->
+                                stringResource(R.string.epg_no_scheduled_channels)
                         },
-                        subtitle = if (uiState.programSearchQuery.isNotBlank()) {
-                            stringResource(R.string.epg_search_empty_hint)
-                        } else if (uiState.showScheduledOnly) {
-                            stringResource(R.string.epg_scheduled_only_hint)
-                        } else {
-                            stringResource(R.string.epg_filter_hint)
+                        subtitle = when {
+                            uiState.programSearchQuery.isNotBlank() ->
+                                stringResource(R.string.epg_search_empty_hint)
+                            uiState.totalChannelCount == 0 ->
+                                stringResource(R.string.epg_filter_hint)
+                            uiState.showScheduledOnly ->
+                                stringResource(R.string.epg_scheduled_only_hint)
+                            else ->
+                                stringResource(R.string.epg_stale_warning)
                         },
                         actionLabel = if (uiState.programSearchQuery.isNotBlank()) {
                             stringResource(R.string.epg_clear_search)
@@ -248,7 +238,62 @@ fun FullEpgScreen(
                 }
 
                 else -> {
+                    ImmersiveGuideHero(
+                        selection = heroSelection,
+                        providerLabel = uiState.providerSourceLabel,
+                        selectedCategoryName = uiState.categories
+                            .firstOrNull { it.id == uiState.selectedCategoryId }
+                            ?.name
+                            .orEmpty(),
+                        isGuideStale = uiState.isGuideStale,
+                        channelCount = uiState.totalChannelCount,
+                        channelsWithSchedule = uiState.channelsWithSchedule,
+                        lastUpdatedAt = uiState.lastUpdatedAt,
+                        isRefreshing = uiState.isRefreshing,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                    )
+                    GuideToolbarRow(
+                        selectedCategoryName = uiState.categories
+                            .firstOrNull { it.id == uiState.selectedCategoryId }
+                            ?.name
+                            ?: stringResource(R.string.epg_filter_short),
+                        onOpenCategoryPicker = {
+                            topNavVisible = false
+                            showCategoryPicker = true
+                        },
+                        onJumpToNow = {
+                            topNavVisible = false
+                            viewModel.jumpToNow()
+                        },
+                        onOpenSearch = {
+                            topNavVisible = false
+                            showSearchOverlay = true
+                        },
+                        onOpenOptions = {
+                            topNavVisible = false
+                            showGuideOptions = true
+                        },
+                        onGuideInteract = { topNavVisible = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp)
+                    )
+                    if (uiState.isRefreshing) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 4.dp)
+                                .height(3.dp),
+                            color = Primary,
+                            trackColor = SurfaceHighlight
+                        )
+                    }
                     EpgGrid(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         channels = uiState.channels,
                         favoriteChannelIds = uiState.favoriteChannelIds,
                         programsByChannel = uiState.programsByChannel,
@@ -257,233 +302,97 @@ fun FullEpgScreen(
                         density = uiState.selectedDensity,
                         now = now,
                         onChannelClick = { channel -> onPlayChannel(channel, returnRoute) },
-                        onProgramClick = { channel, program -> selectedProgram = channel to program }
+                        onProgramClick = { channel, program ->
+                            topNavVisible = false
+                            selectedProgram = channel to program
+                        },
+                        onChannelFocused = { channel, currentProgram ->
+                            topNavVisible = false
+                            focusedChannel = channel
+                            focusedProgram = currentProgram
+                        },
+                        onProgramFocused = { channel, program ->
+                            topNavVisible = false
+                            focusedChannel = channel
+                            focusedProgram = program
+                        }
                     )
                 }
             }
         }
     }
 
+    if (showCategoryPicker) {
+        GuideCategoryPickerDialog(
+            categories = uiState.categories,
+            selectedCategoryId = uiState.selectedCategoryId,
+            onDismiss = { showCategoryPicker = false },
+            onCategorySelected = { categoryId ->
+                showCategoryPicker = false
+                viewModel.selectCategory(categoryId)
+            }
+        )
+    }
+
+    if (showSearchOverlay) {
+        GuideSearchOverlay(
+            query = uiState.programSearchQuery,
+            onQueryChange = viewModel::updateProgramSearchQuery,
+            onClear = viewModel::clearProgramSearch,
+            onDismiss = { showSearchOverlay = false }
+        )
+    }
+
+    if (showGuideOptions) {
+        GuideOptionsOverlay(
+            uiState = uiState,
+            onDismiss = { showGuideOptions = false },
+            onShowAppNavigation = {
+                topNavVisible = true
+                showGuideOptions = false
+            },
+            onJumpToPreviousDay = viewModel::jumpToPreviousDay,
+            onPageBackward = viewModel::pageBackward,
+            onJumpBackwardHalfHour = viewModel::jumpBackwardHalfHour,
+            onJumpBackward = viewModel::jumpBackward,
+            onJumpToNow = viewModel::jumpToNow,
+            onJumpForwardHalfHour = viewModel::jumpForwardHalfHour,
+            onJumpForward = viewModel::jumpForward,
+            onPageForward = viewModel::pageForward,
+            onJumpToPrimeTime = viewModel::jumpToPrimeTime,
+            onJumpToTomorrow = viewModel::jumpToTomorrow,
+            onJumpToNextDay = viewModel::jumpToNextDay,
+            onDaySelected = viewModel::jumpToDay,
+            onModeSelected = viewModel::selectChannelMode,
+            onDensitySelected = viewModel::selectDensity,
+            onToggleScheduledOnly = viewModel::toggleScheduledOnly,
+            onToggleFavoritesOnly = viewModel::toggleFavoritesOnly,
+            onRefresh = viewModel::refresh
+        )
+    }
+
     val dialogState = selectedProgram
     if (dialogState != null) {
         val (channel, program) = dialogState
-        val format = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-        val channelPrograms = channel.epgChannelId?.let { uiState.programsByChannel[it].orEmpty() }.orEmpty()
-        val surroundingPrograms = remember(channelPrograms, program) {
-            val index = channelPrograms.indexOfFirst { it.startTime == program.startTime && it.endTime == program.endTime && it.title == program.title }
-            if (index == -1) {
-                channelPrograms.take(4)
+        CompactGuideProgramDialog(
+            channel = channel,
+            program = program,
+            providerLabel = uiState.providerSourceLabel,
+            now = now,
+            onDismiss = { selectedProgram = null },
+            onWatchLive = {
+                selectedProgram = null
+                onPlayChannel(channel, returnRoute)
+            },
+            onWatchArchive = if (program.hasArchive || channel.catchUpSupported) {
+                {
+                    selectedProgram = null
+                    onPlayArchive(channel, program, returnRoute)
+                }
             } else {
-                channelPrograms.subList(max(0, index - 1), minOf(channelPrograms.size, index + 3))
+                null
             }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f))
-                .clickable(onClick = { selectedProgram = null }, indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val isTelevisionDevice = rememberIsTelevisionDevice()
-                val panelModifier = when {
-                    maxWidth < 700.dp -> Modifier
-                        .fillMaxWidth(0.9f)
-                        .fillMaxHeight()
-                        .padding(vertical = 24.dp, horizontal = 24.dp)
-                    !isTelevisionDevice && maxWidth < 1280.dp -> Modifier
-                        .fillMaxWidth(0.54f)
-                        .fillMaxHeight()
-                        .padding(vertical = 24.dp, horizontal = 24.dp)
-                    else -> Modifier
-                        .width(520.dp)
-                        .fillMaxHeight()
-                        .padding(vertical = 24.dp, horizontal = 24.dp)
-                }
-
-                Surface(
-                    modifier = panelModifier,
-                    colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
-                    ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = program.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = OnSurface
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.player_time_range_minutes,
-                                format.format(Date(program.startTime)),
-                                format.format(Date(program.endTime)),
-                                program.durationMinutes
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurfaceDim
-                        )
-                        if (program.description.isNotBlank()) {
-                            Text(
-                                text = program.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = OnSurface
-                            )
-                        }
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GuideProgramMetadataRow(
-                            label = stringResource(R.string.epg_program_channel_label),
-                            value = channel.name
-                        )
-                        uiState.currentProviderName?.let { providerName ->
-                            GuideProgramMetadataRow(
-                                label = stringResource(R.string.epg_program_provider_label),
-                                value = providerName
-                            )
-                        }
-                        if (uiState.providerSourceLabel.isNotBlank()) {
-                            GuideProgramMetadataRow(
-                                label = stringResource(R.string.epg_program_provider_type_label),
-                                value = uiState.providerSourceLabel
-                            )
-                        }
-                        GuideProgramMetadataRow(
-                            label = stringResource(R.string.epg_program_language_label),
-                            value = program.lang.ifBlank { stringResource(R.string.epg_program_unknown_value) }
-                        )
-                        GuideProgramMetadataRow(
-                            label = stringResource(R.string.epg_program_replay_label),
-                            value = when {
-                                program.hasArchive -> stringResource(R.string.epg_program_replay_ready)
-                                channel.catchUpSupported -> stringResource(R.string.epg_program_replay_partial)
-                                else -> stringResource(R.string.epg_program_replay_unavailable)
-                            }
-                        )
-                        if (program.isNowPlaying) {
-                            GuideProgramMetadataRow(
-                                label = stringResource(R.string.epg_program_progress_label),
-                                value = stringResource(
-                                    R.string.epg_program_progress_value,
-                                    (program.progressPercent() * 100f).roundToInt(),
-                                    stringResource(R.string.epg_minutes_remaining, ((program.endTime - now) / 60_000L).coerceAtLeast(0L))
-                                )
-                            )
-                        }
-                    }
-
-                    GuideStatusCard(
-                        isArchiveReady = program.hasArchive,
-                        providerCatchUpSupported = channel.catchUpSupported,
-                        isGuideStale = uiState.isGuideStale
-                    )
-
-                    if (uiState.providerArchiveSummary.isNotBlank()) {
-                        GuideProviderTroubleshootingCard(
-                            summary = uiState.providerArchiveSummary,
-                            channel = channel,
-                            program = program,
-                            isGuideStale = uiState.isGuideStale
-                        )
-                    }
-
-                    if (surroundingPrograms.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = stringResource(R.string.epg_upcoming_schedule),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = OnSurface
-                            )
-                            surroundingPrograms.forEach { scheduleProgram ->
-                                val isSelectedProgram = scheduleProgram === program ||
-                                    (scheduleProgram.startTime == program.startTime &&
-                                        scheduleProgram.endTime == program.endTime &&
-                                        scheduleProgram.title == program.title)
-                                Surface(
-                                    onClick = { selectedProgram = channel to scheduleProgram },
-                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-                                    colors = ClickableSurfaceDefaults.colors(
-                                        containerColor = if (isSelectedProgram) Primary.copy(alpha = 0.18f) else SurfaceHighlight,
-                                        focusedContainerColor = SurfaceHighlight
-                                    )
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text(
-                                            text = scheduleProgram.title,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = if (isSelectedProgram) Primary else OnSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.time_range_format, format.format(Date(scheduleProgram.startTime)), format.format(Date(scheduleProgram.endTime))),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = OnSurfaceDim
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (program.hasArchive || channel.catchUpSupported) {
-                            Button(
-                                onClick = {
-                                    selectedProgram = null
-                                    onPlayArchive(channel, program, returnRoute)
-                                },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = Primary,
-                                    contentColor = Color.White
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(stringResource(R.string.epg_watch_archive))
-                            }
-                        }
-                        Button(
-                            onClick = {
-                                selectedProgram = null
-                                onPlayChannel(channel, returnRoute)
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.epg_watch_live))
-                        }
-                        if (uiState.isGuideStale) {
-                            Button(
-                                onClick = viewModel::refresh,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = SurfaceHighlight,
-                                    contentColor = OnSurface
-                                )
-                            ) {
-                                Text(stringResource(R.string.epg_refresh_guide))
-                            }
-                        }
-                        TextButton(onClick = { selectedProgram = null }) {
-                            Text(stringResource(R.string.settings_cancel))
-                        }
-                    }
-                    }
-                }
-            }
-        }
+        )
     }
 }
 
@@ -653,19 +562,24 @@ private fun GuideDensityRow(
 private fun GuideProgramSearchRow(
     query: String,
     onQueryChange: (String) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    focusRequester: FocusRequester? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+    showLabel: Boolean = true
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .padding(contentPadding)
     ) {
-        Text(
-            text = stringResource(R.string.epg_search_label),
-            style = MaterialTheme.typography.labelMedium,
-            color = OnSurfaceDim
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (showLabel) {
+            Text(
+                text = stringResource(R.string.epg_search_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = OnSurfaceDim
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -675,7 +589,8 @@ private fun GuideProgramSearchRow(
                 value = query,
                 onValueChange = onQueryChange,
                 placeholder = stringResource(R.string.epg_search_placeholder),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                focusRequester = focusRequester ?: remember { FocusRequester() }
             )
             if (query.isNotBlank()) {
                 GuideShortcutChip(
@@ -725,23 +640,30 @@ private fun GuideModeRow(
 private fun GuideFilterRow(
     categories: List<Category>,
     selectedCategoryId: Long,
-    onCategorySelected: (Long) -> Unit
+    onCategorySelected: (Long) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp),
+    showLabel: Boolean = true
 ) {
     if (categories.isEmpty()) return
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
+            .padding(contentPadding)
     ) {
-        Text(
-            text = stringResource(R.string.epg_filter_label),
-            style = MaterialTheme.typography.labelMedium,
-            color = OnSurfaceDim
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (showLabel) {
+            Text(
+                text = stringResource(R.string.epg_filter_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = OnSurfaceDim
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(categories, key = { it.id }) { category ->
+            itemsIndexed(
+                items = categories,
+                key = { index, category -> epgCategoryKey(category, index) }
+            ) { _, category ->
                 Surface(
                     onClick = { onCategorySelected(category.id) },
                     colors = ClickableSurfaceDefaults.colors(
@@ -782,22 +704,28 @@ private fun GuideTimeControlsRow(
     onPageForward: () -> Unit,
     onJumpToPrimeTime: () -> Unit,
     onJumpToTomorrow: () -> Unit,
-    onJumpToNextDay: () -> Unit
+    onJumpToNextDay: () -> Unit,
+    firstChipFocusRequester: FocusRequester? = null,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+    showLabel: Boolean = true
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .padding(contentPadding)
     ) {
-        Text(
-            text = stringResource(R.string.epg_time_controls),
-            style = MaterialTheme.typography.labelMedium,
-            color = OnSurfaceDim
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (showLabel) {
+            Text(
+                text = stringResource(R.string.epg_time_controls),
+                style = MaterialTheme.typography.labelMedium,
+                color = OnSurfaceDim
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 GuideShortcutChip(
+                    modifier = firstChipFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                     label = stringResource(R.string.epg_previous_day),
                     onClick = onJumpToPreviousDay
                 )
@@ -869,7 +797,9 @@ private fun GuideTimeControlsRow(
 @Composable
 private fun GuideDayRow(
     selectedDayStart: Long,
-    onDaySelected: (Long) -> Unit
+    onDaySelected: (Long) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 4.dp),
+    showLabel: Boolean = true
 ) {
     val dayFormat = remember { SimpleDateFormat("EEE d MMM", Locale.getDefault()) }
     val dayAnchors = remember(selectedDayStart) {
@@ -881,14 +811,16 @@ private fun GuideDayRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 4.dp)
+            .padding(contentPadding)
     ) {
-        Text(
-            text = stringResource(R.string.epg_day_selector_label),
-            style = MaterialTheme.typography.labelMedium,
-            color = OnSurfaceDim
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (showLabel) {
+            Text(
+                text = stringResource(R.string.epg_day_selector_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = OnSurfaceDim
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(dayAnchors, key = { it }) { dayStart ->
                 val isSelected = dayStart == selectedDayStart
@@ -1021,15 +953,18 @@ private fun GuideFavoritesRow(
 
 @Composable
 private fun GuideShortcutChip(
+    modifier: Modifier = Modifier,
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isSelected: Boolean = false
 ) {
     Surface(
         onClick = onClick,
+        modifier = modifier,
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = SurfaceElevated,
+            containerColor = if (isSelected) Primary.copy(alpha = 0.18f) else SurfaceElevated,
             focusedContainerColor = SurfaceHighlight,
-            contentColor = OnSurface,
+            contentColor = if (isSelected) Primary else OnSurface,
             focusedContentColor = OnSurface
         ),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
@@ -1042,8 +977,10 @@ private fun GuideShortcutChip(
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -1100,52 +1037,402 @@ private fun GuideSummaryCard(uiState: EpgUiState) {
         windowFormat.format(Date(uiState.guideWindowEnd))
     )
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            GuideSummaryPill(
+                title = stringResource(
                     R.string.epg_showing_channels,
                     uiState.channels.size,
                     uiState.totalChannelCount
                 ),
-                style = MaterialTheme.typography.titleSmall,
-                color = OnSurface
-            )
-            Text(
-                text = stringResource(
-                    R.string.epg_schedule_summary,
+                subtitle = stringResource(
+                    R.string.epg_schedule_summary_short,
                     uiState.channelsWithSchedule,
                     uiState.channels.size
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = OnSurfaceDim
+                )
             )
-            Text(
-                text = windowLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = OnSurfaceDim
+        }
+        item {
+            GuideSummaryPill(
+                title = windowLabel,
+                subtitle = lastUpdatedLabel ?: stringResource(R.string.epg_updated_now)
             )
-            if (lastUpdatedLabel != null) {
-                Text(
-                    text = lastUpdatedLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceDim
+        }
+        if (uiState.isGuideStale) {
+            item {
+                GuideSummaryPill(
+                    title = stringResource(R.string.epg_stale_short),
+                    subtitle = uiState.providerSourceLabel.ifBlank { stringResource(R.string.nav_epg) },
+                    accent = MaterialTheme.colorScheme.error
                 )
             }
-            if (uiState.isGuideStale) {
+        }
+    }
+}
+
+private data class GuideHeroSelection(
+    val channel: Channel,
+    val program: Program?,
+    val isFallbackToChannel: Boolean
+)
+
+private fun resolveGuideHeroSelection(
+    uiState: EpgUiState,
+    focusedChannel: Channel?,
+    focusedProgram: Program?,
+    now: Long
+): GuideHeroSelection? {
+    val resolvedChannel = focusedChannel
+        ?.let { current -> uiState.channels.firstOrNull { it.id == current.id } }
+        ?: uiState.channels.firstOrNull()
+        ?: return null
+    val programs = resolvedChannel.guideLookupKey()?.let { lookupKey ->
+        uiState.programsByChannel[lookupKey].orEmpty()
+    }.orEmpty()
+    val resolvedProgram = focusedProgram?.let { focused ->
+        programs.firstOrNull {
+            it.startTime == focused.startTime &&
+                it.endTime == focused.endTime &&
+                it.title == focused.title
+        }
+    } ?: programs.firstOrNull { now in it.startTime until it.endTime } ?: programs.firstOrNull()
+    return GuideHeroSelection(
+        channel = resolvedChannel,
+        program = resolvedProgram,
+        isFallbackToChannel = resolvedProgram == null
+    )
+}
+
+@Composable
+private fun ImmersiveGuideHero(
+    selection: GuideHeroSelection?,
+    providerLabel: String,
+    selectedCategoryName: String,
+    isGuideStale: Boolean,
+    channelCount: Int,
+    channelsWithSchedule: Int,
+    lastUpdatedAt: Long?,
+    isRefreshing: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val format = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val currentTime = System.currentTimeMillis()
+    val lastUpdatedLabel = remember(lastUpdatedAt, currentTime) {
+        lastUpdatedAt?.let { updatedAt ->
+            val minutes = ((currentTime - updatedAt).coerceAtLeast(0L) / 60_000L).toInt()
+            if (minutes <= 0) {
+                "Updated just now"
+            } else {
+                "$minutes min ago"
+            }
+        }
+    }
+
+    Surface(
+        modifier = modifier.height(108.dp),
+        colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val channel = selection?.channel
+            ChannelLogoBadge(
+                channelName = channel?.name ?: stringResource(R.string.epg_title),
+                logoUrl = channel?.logoUrl,
+                modifier = Modifier
+                    .width(64.dp)
+                    .height(64.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                val program = selection?.program
                 Text(
-                    text = stringResource(R.string.epg_stale_warning),
+                    text = program?.title ?: channel?.name ?: stringResource(R.string.epg_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = OnSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = buildString {
+                        channel?.let { append("${it.number}. ${it.name}") }
+                        if (providerLabel.isNotBlank()) {
+                            if (isNotEmpty()) append("  |  ")
+                            append(providerLabel)
+                        }
+                        if (selectedCategoryName.isNotBlank()) {
+                            if (isNotEmpty()) append("  |  ")
+                            append(selectedCategoryName)
+                        }
+                    },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = OnSurfaceDim,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (program != null) {
+                    Text(
+                        text = "${format.format(Date(program.startTime))} - ${format.format(Date(program.endTime))}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurface
+                    )
+                    if (currentTime in program.startTime until program.endTime) {
+                        LinearProgressIndicator(
+                            progress = { ((currentTime - program.startTime).toFloat() / (program.endTime - program.startTime).toFloat()).coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp),
+                            color = Primary,
+                            trackColor = SurfaceHighlight
+                        )
+                    }
+                    Text(
+                        text = program.description.ifBlank { stringResource(R.string.epg_hero_no_program_description) },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurfaceDim,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.epg_no_schedule),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = OnSurface
+                    )
+                    Text(
+                        text = stringResource(R.string.epg_hero_no_schedule_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurfaceDim,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.widthIn(min = 118.dp, max = 136.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                GuideHeroBadge(text = stringResource(R.string.epg_schedule_summary_short, channelsWithSchedule, channelCount))
+                if (isRefreshing) {
+                    GuideHeroBadge(text = stringResource(R.string.epg_loading))
+                }
+                if (selection?.program?.hasArchive == true || selection?.channel?.catchUpSupported == true) {
+                    GuideHeroBadge(
+                        text = if (selection.program?.hasArchive == true) {
+                            stringResource(R.string.epg_program_replay_ready)
+                        } else {
+                            stringResource(R.string.epg_program_replay_partial)
+                        },
+                        highlight = true
+                    )
+                }
+                if (isGuideStale) {
+                    GuideHeroBadge(
+                        text = stringResource(R.string.epg_stale_short),
+                        accentColor = Color(0xFFFF6B6B)
+                    )
+                }
+                if (!lastUpdatedLabel.isNullOrBlank()) {
+                    Text(
+                        text = lastUpdatedLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurfaceDim
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideHeroBadge(
+    text: String,
+    highlight: Boolean = false,
+    accentColor: Color = Primary
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = if (highlight) accentColor.copy(alpha = 0.18f) else SurfaceHighlight
+        )
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (highlight) accentColor else OnSurface
+        )
+    }
+}
+
+@Composable
+private fun GuideToolbarRow(
+    selectedCategoryName: String,
+    onOpenCategoryPicker: () -> Unit,
+    onJumpToNow: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenOptions: () -> Unit,
+    onGuideInteract: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        GuideToolbarButton(
+            label = selectedCategoryName,
+            modifier = Modifier.widthIn(min = 220.dp, max = 300.dp),
+            onClick = onOpenCategoryPicker,
+            onFocused = onGuideInteract
+        )
+        GuideToolbarButton(
+            label = stringResource(R.string.epg_jump_now),
+            onClick = onJumpToNow,
+            onFocused = onGuideInteract
+        )
+        GuideToolbarButton(
+            label = stringResource(R.string.epg_search_label),
+            onClick = onOpenSearch,
+            onFocused = onGuideInteract
+        )
+        GuideToolbarButton(
+            label = stringResource(R.string.epg_options_short),
+            onClick = onOpenOptions,
+            onFocused = onGuideInteract
+        )
+    }
+}
+
+@Composable
+private fun GuideToolbarButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onFocused: () -> Unit
+) {
+    var focused by remember { mutableStateOf(false) }
+    Surface(
+        onClick = onClick,
+        modifier = modifier.onFocusChanged {
+            if (it.isFocused && !focused) onFocused()
+            focused = it.isFocused
+        },
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = SurfaceElevated,
+            focusedContainerColor = SurfaceHighlight
+        ),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, FocusBorder),
+                shape = RoundedCornerShape(14.dp)
+            )
+        )
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = OnSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun GuideModalDialog(
+    onDismiss: () -> Unit,
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = contentAlignment
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.68f))
+                    .clickable(
+                        onClick = onDismiss,
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    )
+            )
+            content()
+        }
+    }
+}
+
+@Composable
+private fun GuideSearchOverlay(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val searchFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        searchFocusRequester.requestFocus()
+    }
+    GuideModalDialog(
+        onDismiss = onDismiss,
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.72f)
+                .padding(top = 32.dp)
+                .focusGroup(),
+            colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.epg_search_label),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = OnSurface
+                    )
+                    GuideShortcutChip(
+                        label = stringResource(R.string.settings_cancel),
+                        onClick = onDismiss
+                    )
+                }
+                GuideProgramSearchRow(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    onClear = onClear,
+                    focusRequester = searchFocusRequester,
+                    contentPadding = PaddingValues(0.dp),
+                    showLabel = false
                 )
             }
         }
@@ -1153,13 +1440,265 @@ private fun GuideSummaryCard(uiState: EpgUiState) {
 }
 
 @Composable
+private fun GuideOptionsOverlay(
+    uiState: EpgUiState,
+    onDismiss: () -> Unit,
+    onShowAppNavigation: () -> Unit,
+    onJumpToPreviousDay: () -> Unit,
+    onPageBackward: () -> Unit,
+    onJumpBackwardHalfHour: () -> Unit,
+    onJumpBackward: () -> Unit,
+    onJumpToNow: () -> Unit,
+    onJumpForwardHalfHour: () -> Unit,
+    onJumpForward: () -> Unit,
+    onPageForward: () -> Unit,
+    onJumpToPrimeTime: () -> Unit,
+    onJumpToTomorrow: () -> Unit,
+    onJumpToNextDay: () -> Unit,
+    onDaySelected: (Long) -> Unit,
+    onModeSelected: (GuideChannelMode) -> Unit,
+    onDensitySelected: (GuideDensity) -> Unit,
+    onToggleScheduledOnly: () -> Unit,
+    onToggleFavoritesOnly: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    val optionsFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        optionsFocusRequester.requestFocus()
+    }
+    GuideModalDialog(onDismiss = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.68f)
+                .fillMaxHeight(0.78f)
+                .focusGroup(),
+            colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.epg_options_short),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = OnSurface
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GuideShortcutChip(
+                            label = stringResource(R.string.epg_show_app_navigation),
+                            onClick = onShowAppNavigation
+                        )
+                        GuideShortcutChip(
+                            label = stringResource(R.string.settings_cancel),
+                            onClick = onDismiss
+                        )
+                    }
+                }
+                GuideTimeControlsRow(
+                    onJumpToPreviousDay = onJumpToPreviousDay,
+                    onPageBackward = onPageBackward,
+                    onJumpBackwardHalfHour = onJumpBackwardHalfHour,
+                    onJumpBackward = onJumpBackward,
+                    onJumpToNow = onJumpToNow,
+                    onJumpForwardHalfHour = onJumpForwardHalfHour,
+                    onJumpForward = onJumpForward,
+                    onPageForward = onPageForward,
+                    onJumpToPrimeTime = onJumpToPrimeTime,
+                    onJumpToTomorrow = onJumpToTomorrow,
+                    onJumpToNextDay = onJumpToNextDay,
+                    firstChipFocusRequester = optionsFocusRequester
+                )
+                GuideDayRow(
+                    selectedDayStart = startOfDay(uiState.guideWindowStart + EpgViewModel.LOOKBACK_MS),
+                    onDaySelected = onDaySelected
+                )
+                GuideModeRow(
+                    selectedMode = uiState.selectedChannelMode,
+                    onModeSelected = onModeSelected
+                )
+                GuideDensityRow(
+                    selectedDensity = uiState.selectedDensity,
+                    onDensitySelected = onDensitySelected
+                )
+                GuideViewOptionsRow(
+                    showScheduledOnly = uiState.showScheduledOnly,
+                    onToggleScheduledOnly = onToggleScheduledOnly
+                )
+                GuideFavoritesRow(
+                    showFavoritesOnly = uiState.showFavoritesOnly,
+                    onToggleFavoritesOnly = onToggleFavoritesOnly
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    GuideShortcutChip(
+                        label = stringResource(R.string.epg_refresh_guide),
+                        onClick = onRefresh
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactGuideProgramDialog(
+    channel: Channel,
+    program: Program,
+    providerLabel: String,
+    now: Long,
+    onDismiss: () -> Unit,
+    onWatchLive: () -> Unit,
+    onWatchArchive: (() -> Unit)?
+) {
+    var showDetails by rememberSaveable(program.startTime, program.endTime, program.title) { mutableStateOf(false) }
+    val format = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    GuideModalDialog(onDismiss = onDismiss) {
+        Surface(
+            modifier = Modifier.widthIn(min = 420.dp, max = 640.dp),
+            colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = program.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = OnSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${channel.number}. ${channel.name}  |  ${format.format(Date(program.startTime))} - ${format.format(Date(program.endTime))}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceDim,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (providerLabel.isNotBlank()) {
+                    Text(
+                        text = providerLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Primary
+                    )
+                }
+                if (now in program.startTime until program.endTime) {
+                    LinearProgressIndicator(
+                        progress = { ((now - program.startTime).toFloat() / (program.endTime - program.startTime).toFloat()).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp),
+                        color = Primary,
+                        trackColor = SurfaceHighlight
+                    )
+                }
+                if (showDetails) {
+                    Text(
+                        text = program.description.ifBlank { stringResource(R.string.epg_no_info) },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurface,
+                        maxLines = 6,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = onWatchLive,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.epg_watch_live))
+                    }
+                    if (onWatchArchive != null) {
+                        Button(
+                            onClick = onWatchArchive,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.colors(
+                                containerColor = Primary,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(stringResource(R.string.epg_watch_archive))
+                        }
+                    }
+                    Button(
+                        onClick = { showDetails = !showDetails },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.colors(
+                            containerColor = SurfaceHighlight,
+                            contentColor = OnSurface
+                        )
+                    ) {
+                        Text(
+                            if (showDetails) stringResource(R.string.epg_program_details_hide)
+                            else stringResource(R.string.epg_program_details_show)
+                        )
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.settings_cancel))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideSummaryPill(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    accent: Color = Primary
+) {
+    Surface(
+        modifier = modifier,
+        colors = SurfaceDefaults.colors(containerColor = SurfaceHighlight),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = OnSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = accent
+            )
+        }
+    }
+}
+
+@Composable
 private fun GuideMessageState(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String?,
     actionLabel: String?,
     onAction: (() -> Unit)?
 ) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1194,6 +1733,7 @@ private fun GuideMessageState(
 
 @Composable
 fun EpgGrid(
+    modifier: Modifier = Modifier,
     channels: List<Channel>,
     favoriteChannelIds: Set<Long>,
     programsByChannel: Map<String, List<Program>>,
@@ -1202,54 +1742,79 @@ fun EpgGrid(
     density: GuideDensity,
     now: Long,
     onChannelClick: (Channel) -> Unit,
-    onProgramClick: (Channel, Program) -> Unit
+    onProgramClick: (Channel, Program) -> Unit,
+    onChannelFocused: (Channel, Program?) -> Unit,
+    onProgramFocused: (Channel, Program) -> Unit
 ) {
-    val (channelRailWidth, timelineGap, rowHeight) = when (density) {
-        GuideDensity.COMPACT -> Triple(180.dp, 12.dp, 76.dp)
-        GuideDensity.COMFORTABLE -> Triple(220.dp, 16.dp, 92.dp)
-        GuideDensity.CINEMATIC -> Triple(260.dp, 20.dp, 108.dp)
+    val channelRailWidth = 184.dp
+    val timelineGap = 6.dp
+    val rowHeight = when (density) {
+        GuideDensity.COMPACT -> 36.dp
+        GuideDensity.COMFORTABLE -> 42.dp
+        GuideDensity.CINEMATIC -> 50.dp
     }
+    val horizontalScrollState = rememberScrollState()
 
     BoxWithConstraints(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
     ) {
-        val timelineWidth = (maxWidth - channelRailWidth - timelineGap).coerceAtLeast(720.dp)
+        val timelineViewportWidth = (maxWidth - channelRailWidth - timelineGap).coerceAtLeast(640.dp)
+        val totalDuration = (guideWindowEnd - guideWindowStart).coerceAtLeast(1L)
+        val visibleDurationMs = 3 * 60 * 60 * 1000L
+        val calculatedTimelineWidth = timelineViewportWidth * (totalDuration.toFloat() / visibleDurationMs.toFloat())
+        val totalTimelineWidth = if (calculatedTimelineWidth > timelineViewportWidth) {
+            calculatedTimelineWidth
+        } else {
+            timelineViewportWidth
+        }
         val markerStepMs = EpgViewModel.HALF_HOUR_SHIFT_MS
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            item(key = "timeline_header") {
-                GuideTimelineHeader(
-                    windowStart = guideWindowStart,
-                    windowEnd = guideWindowEnd,
-                    now = now,
-                    channelRailWidth = channelRailWidth,
-                    timelineGap = timelineGap,
-                    timelineWidth = timelineWidth,
-                    markerStepMs = markerStepMs
-                )
-            }
-            items(channels, key = { it.id }) { channel ->
-                val programs = channel.epgChannelId?.let { programsByChannel[it] } ?: emptyList()
-                EpgRow(
-                    channel = channel,
-                    isFavorite = channel.id in favoriteChannelIds,
-                    programs = programs,
-                    now = now,
-                    windowStart = guideWindowStart,
-                    windowEnd = guideWindowEnd,
-                    channelRailWidth = channelRailWidth,
-                    timelineGap = timelineGap,
-                    timelineWidth = timelineWidth,
-                    rowHeight = rowHeight,
-                    markerStepMs = markerStepMs,
-                    onChannelClick = { onChannelClick(channel) },
-                    onProgramClick = { program -> onProgramClick(channel, program) }
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            GuideTimelineHeader(
+                windowStart = guideWindowStart,
+                windowEnd = guideWindowEnd,
+                now = now,
+                channelRailWidth = channelRailWidth,
+                timelineGap = timelineGap,
+                timelineViewportWidth = timelineViewportWidth,
+                totalTimelineWidth = totalTimelineWidth,
+                markerStepMs = markerStepMs,
+                scrollState = horizontalScrollState
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                itemsIndexed(
+                    items = channels,
+                    key = { index, channel -> epgChannelKey(channel, index) }
+                ) { _, channel ->
+                    val programs = channel.guideLookupKey()?.let { lookupKey ->
+                        programsByChannel[lookupKey].orEmpty()
+                    }.orEmpty()
+                    EpgRow(
+                        channel = channel,
+                        isFavorite = channel.id in favoriteChannelIds,
+                        programs = programs,
+                        now = now,
+                        windowStart = guideWindowStart,
+                        windowEnd = guideWindowEnd,
+                        channelRailWidth = channelRailWidth,
+                        timelineGap = timelineGap,
+                        timelineViewportWidth = timelineViewportWidth,
+                        totalTimelineWidth = totalTimelineWidth,
+                        rowHeight = rowHeight,
+                        markerStepMs = markerStepMs,
+                        scrollState = horizontalScrollState,
+                        onChannelClick = { onChannelClick(channel) },
+                        onChannelFocused = { onChannelFocused(channel, it) },
+                        onProgramClick = { program -> onProgramClick(channel, program) },
+                        onProgramFocused = { program -> onProgramFocused(channel, program) }
+                    )
+                }
             }
         }
     }
@@ -1262,8 +1827,10 @@ private fun GuideTimelineHeader(
     now: Long,
     channelRailWidth: Dp,
     timelineGap: Dp,
-    timelineWidth: Dp,
-    markerStepMs: Long
+    timelineViewportWidth: Dp,
+    totalTimelineWidth: Dp,
+    markerStepMs: Long,
+    scrollState: androidx.compose.foundation.ScrollState
 ) {
     val hourFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val totalDuration = (windowEnd - windowStart).coerceAtLeast(1L)
@@ -1288,13 +1855,13 @@ private fun GuideTimelineHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 4.dp),
+            .padding(bottom = 2.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         Spacer(modifier = Modifier.width(channelRailWidth + timelineGap))
         Column(
-            modifier = Modifier.width(timelineWidth),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.width(timelineViewportWidth),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1317,57 +1884,55 @@ private fun GuideTimelineHeader(
             }
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
+                    .width(timelineViewportWidth)
+                    .height(22.dp)
             ) {
-                hourMarkers.forEach { marker ->
-                    val markerRatio = ((marker - windowStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
-                    val markerOffset = timelineWidth * markerRatio
-                    Column(
-                        modifier = Modifier.padding(start = markerOffset),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = hourFormat.format(Date(marker)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceDim
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(18.dp)
-                                .background(Color.White.copy(alpha = 0.16f))
-                        )
-                    }
-                }
-                if (now in windowStart..windowEnd) {
+                Row(
+                    modifier = Modifier
+                        .width(totalTimelineWidth)
+                        .horizontalScroll(scrollState)
+                ) {
                     Box(
                         modifier = Modifier
-                            .padding(start = timelineWidth * elapsedRatio)
-                            .width(2.dp)
-                            .fillMaxHeight()
-                            .background(Primary)
-                    )
+                            .width(totalTimelineWidth)
+                            .height(22.dp)
+                    ) {
+                        hourMarkers.forEach { marker ->
+                            val markerRatio = ((marker - windowStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
+                            val markerOffset = totalTimelineWidth * markerRatio
+                            Column(
+                                modifier = Modifier.padding(start = markerOffset),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    text = hourFormat.format(Date(marker)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = OnSurfaceDim
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .height(10.dp)
+                                        .background(Color.White.copy(alpha = 0.16f))
+                                )
+                            }
+                        }
+                        if (now in windowStart..windowEnd) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = totalTimelineWidth * elapsedRatio)
+                                    .width(2.dp)
+                                    .fillMaxHeight()
+                                    .background(Primary)
+                            )
+                        }
+                    }
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = markerLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (now in windowStart..windowEnd) Primary else OnSurfaceDim
-                )
-            }
-            LinearProgressIndicator(
-                progress = { elapsedRatio },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp),
-                color = Primary,
-                trackColor = SurfaceElevated
+            Text(
+                text = markerLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (now in windowStart..windowEnd) Primary else OnSurfaceDim
             )
         }
     }
@@ -1383,11 +1948,15 @@ fun EpgRow(
     windowEnd: Long,
     channelRailWidth: Dp,
     timelineGap: Dp,
-    timelineWidth: Dp,
+    timelineViewportWidth: Dp,
+    totalTimelineWidth: Dp,
     rowHeight: Dp,
     markerStepMs: Long,
+    scrollState: androidx.compose.foundation.ScrollState,
     onChannelClick: () -> Unit,
-    onProgramClick: (Program) -> Unit
+    onChannelFocused: (Program?) -> Unit,
+    onProgramClick: (Program) -> Unit,
+    onProgramFocused: (Program) -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val totalDuration = (windowEnd - windowStart).coerceAtLeast(1L)
@@ -1404,7 +1973,12 @@ fun EpgRow(
             modifier = Modifier
                 .width(channelRailWidth)
                 .fillMaxHeight()
-                .onFocusChanged { isFocused = it.isFocused },
+                .onFocusChanged {
+                    if (it.isFocused && !isFocused) {
+                        onChannelFocused(currentProgram)
+                    }
+                    isFocused = it.isFocused
+                },
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = SurfaceElevated,
                 focusedContainerColor = SurfaceHighlight
@@ -1419,30 +1993,43 @@ fun EpgRow(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(12.dp)
-                .fillMaxSize(),
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (isFavorite) {
-                        Text(
-                            text = stringResource(R.string.epg_favorite_badge),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Primary,
-                            maxLines = 1
-                        )
-                    }
+                ChannelLogoBadge(
+                    channelName = channel.name,
+                    logoUrl = channel.logoUrl,
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(24.dp),
+                    shape = RoundedCornerShape(6.dp)
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
                     Text(
-                        text = stringResource(R.string.channel_number_name_format, channel.number, channel.name),
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "${channel.number}. ${channel.name}",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = if (isFocused) TextPrimary else OnSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = currentProgram?.title ?: stringResource(R.string.epg_no_schedule),
+                        text = currentProgram?.title ?: stringResource(R.string.epg_no_schedule_short),
                         style = MaterialTheme.typography.bodySmall,
                         color = OnSurfaceDim,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (isFavorite || channel.catchUpSupported) {
+                    Text(
+                        text = if (channel.catchUpSupported) stringResource(R.string.player_archive_badge) else stringResource(R.string.epg_favorite_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1452,23 +2039,22 @@ fun EpgRow(
 
         Spacer(modifier = Modifier.width(timelineGap))
 
-        if (programs.isEmpty()) {
-            Box(
+        Box(
+            modifier = Modifier
+                .width(timelineViewportWidth)
+                .fillMaxHeight()
+                .background(SurfaceElevated, RoundedCornerShape(8.dp))
+        ) {
+            Row(
                 modifier = Modifier
-                    .width(timelineWidth)
-                    .fillMaxHeight()
-                    .background(SurfaceElevated, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+                    .width(totalTimelineWidth)
+                    .horizontalScroll(scrollState)
             ) {
-                Text(stringResource(R.string.epg_no_schedule), color = OnSurfaceDim)
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .width(timelineWidth)
-                    .fillMaxHeight()
-                    .background(SurfaceElevated, RoundedCornerShape(8.dp))
-            ) {
+                Box(
+                    modifier = Modifier
+                        .width(totalTimelineWidth)
+                        .fillMaxHeight()
+                ) {
                 val markers = remember(windowStart, windowEnd, markerStepMs) {
                     buildList {
                         var marker = windowStart
@@ -1482,7 +2068,7 @@ fun EpgRow(
                     val markerRatio = ((marker - windowStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
                     Box(
                         modifier = Modifier
-                            .padding(start = timelineWidth * markerRatio)
+                            .padding(start = totalTimelineWidth * markerRatio)
                             .width(1.dp)
                             .fillMaxHeight()
                             .background(Color.White.copy(alpha = 0.08f))
@@ -1492,22 +2078,30 @@ fun EpgRow(
                     val nowRatio = ((now - windowStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
                     Box(
                         modifier = Modifier
-                            .padding(start = timelineWidth * nowRatio)
+                            .padding(start = totalTimelineWidth * nowRatio)
                             .width(2.dp)
                             .fillMaxHeight()
                             .background(Primary)
                     )
                 }
-                programs.forEach { program ->
-                    ProgramItem(
-                        program = program,
-                        isCurrent = now in program.startTime..program.endTime,
-                        now = now,
-                        windowStart = windowStart,
-                        windowEnd = windowEnd,
-                        timelineWidth = timelineWidth,
-                        onClick = { onProgramClick(program) }
-                    )
+                if (programs.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.epg_no_schedule_short), color = OnSurfaceDim)
+                    }
+                } else {
+                    programs.forEach { program ->
+                        ProgramItem(
+                            program = program,
+                            isCurrent = now in program.startTime until program.endTime,
+                            now = now,
+                            windowStart = windowStart,
+                            windowEnd = windowEnd,
+                            totalTimelineWidth = totalTimelineWidth,
+                            onClick = { onProgramClick(program) },
+                            onFocused = { onProgramFocused(program) }
+                        )
+                    }
+                }
                 }
             }
         }
@@ -1521,8 +2115,9 @@ fun ProgramItem(
     now: Long,
     windowStart: Long,
     windowEnd: Long,
-    timelineWidth: Dp,
-    onClick: () -> Unit
+    totalTimelineWidth: Dp,
+    onClick: () -> Unit,
+    onFocused: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -1534,22 +2129,21 @@ fun ProgramItem(
     val visibleEnd = max(visibleStart + 1, minOf(program.endTime, windowEnd))
     val startRatio = ((visibleStart - windowStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
     val widthRatio = ((visibleEnd - visibleStart).toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
-    val itemStart = timelineWidth * startRatio
-    val itemWidth = (timelineWidth * widthRatio).coerceAtLeast(96.dp)
-    val elapsedRatio = if (program.endTime > program.startTime) {
-        ((now - program.startTime).toFloat() / (program.endTime - program.startTime).toFloat()).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val remainingMinutes = ((program.endTime - now) / 60_000L).coerceAtLeast(0L)
+    val itemStart = totalTimelineWidth * startRatio
+    val itemWidth = (totalTimelineWidth * widthRatio).coerceAtLeast(72.dp)
 
     Surface(
         onClick = onClick,
         modifier = Modifier
-            .padding(start = itemStart, top = 6.dp, bottom = 6.dp)
+            .padding(start = itemStart, top = 4.dp, bottom = 4.dp)
             .width(itemWidth)
             .fillMaxHeight()
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged {
+                if (it.isFocused && !isFocused) {
+                    onFocused()
+                }
+                isFocused = it.isFocused
+            },
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (isCurrent) Primary.copy(alpha = 0.2f) else SurfaceElevated,
             focusedContainerColor = SurfaceHighlight
@@ -1564,59 +2158,25 @@ fun ProgramItem(
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
-            if (isCurrent) {
-                Text(
-                    text = stringResource(R.string.epg_now_playing),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Primary,
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
             Text(
                 text = program.title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = if (isFocused) TextPrimary else if (isCurrent) Primary else OnSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "$startStr - $endStr",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isFocused) TextSecondary else OnSurfaceDim
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isFocused) TextSecondary else OnSurfaceDim,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            if (program.hasArchive) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.player_archive_badge),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Primary,
-                    maxLines = 1
-                )
-            }
-            if (isCurrent) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { elapsedRatio },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp),
-                    color = Primary,
-                    trackColor = SurfaceHighlight
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.epg_minutes_remaining, remainingMinutes),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = OnSurfaceDim,
-                    maxLines = 1
-                )
-            }
         }
     }
 }
@@ -1643,6 +2203,380 @@ private fun startOfDay(timestamp: Long): Long {
 }
 
 @Composable
+private fun GuideHeaderDeck(
+    uiState: EpgUiState,
+    showSearchBar: Boolean,
+    showAdvancedOptions: Boolean,
+    onToggleSearch: () -> Unit,
+    onOpenCategoryPicker: () -> Unit,
+    onToggleAdvancedOptions: () -> Unit,
+    onProgramSearchQueryChange: (String) -> Unit,
+    onClearProgramSearch: () -> Unit,
+    onJumpToPreviousDay: () -> Unit,
+    onJumpBackward: () -> Unit,
+    onJumpToNow: () -> Unit,
+    onJumpForward: () -> Unit,
+    onJumpToPrimeTime: () -> Unit,
+    onJumpToNextDay: () -> Unit,
+    onPageBackward: () -> Unit,
+    onJumpBackwardHalfHour: () -> Unit,
+    onJumpForwardHalfHour: () -> Unit,
+    onPageForward: () -> Unit,
+    onJumpToTomorrow: () -> Unit,
+    onDaySelected: (Long) -> Unit,
+    onModeSelected: (GuideChannelMode) -> Unit,
+    onDensitySelected: (GuideDensity) -> Unit,
+    onToggleScheduledOnly: () -> Unit,
+    onToggleFavoritesOnly: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            GuideSummaryCard(uiState = uiState)
+
+            GuidePrimaryControlsRow(
+                categories = uiState.categories,
+                selectedCategoryId = uiState.selectedCategoryId,
+                showSearchBar = showSearchBar,
+                showAdvancedOptions = showAdvancedOptions,
+                onJumpToPreviousDay = onJumpToPreviousDay,
+                onJumpBackward = onJumpBackward,
+                onJumpToNow = onJumpToNow,
+                onJumpForward = onJumpForward,
+                onJumpToPrimeTime = onJumpToPrimeTime,
+                onJumpToNextDay = onJumpToNextDay,
+                onOpenCategoryPicker = onOpenCategoryPicker,
+                onToggleSearch = onToggleSearch,
+                onToggleAdvancedOptions = onToggleAdvancedOptions
+            )
+
+            if (showSearchBar) {
+                GuideProgramSearchRow(
+                    query = uiState.programSearchQuery,
+                    onQueryChange = onProgramSearchQueryChange,
+                    onClear = onClearProgramSearch,
+                    contentPadding = PaddingValues(0.dp),
+                    showLabel = false
+                )
+            }
+
+            if (showAdvancedOptions) {
+                GuideTimeControlsRow(
+                    onJumpToPreviousDay = onJumpToPreviousDay,
+                    onPageBackward = onPageBackward,
+                    onJumpBackwardHalfHour = onJumpBackwardHalfHour,
+                    onJumpBackward = onJumpBackward,
+                    onJumpToNow = onJumpToNow,
+                    onJumpForwardHalfHour = onJumpForwardHalfHour,
+                    onJumpForward = onJumpForward,
+                    onPageForward = onPageForward,
+                    onJumpToPrimeTime = onJumpToPrimeTime,
+                    onJumpToTomorrow = onJumpToTomorrow,
+                    onJumpToNextDay = onJumpToNextDay,
+                    contentPadding = PaddingValues(0.dp),
+                    showLabel = false
+                )
+
+                GuideDayRow(
+                    selectedDayStart = startOfDay(uiState.guideWindowStart + EpgViewModel.LOOKBACK_MS),
+                    onDaySelected = onDaySelected,
+                    contentPadding = PaddingValues(0.dp),
+                    showLabel = false
+                )
+
+                GuideModeRow(
+                    selectedMode = uiState.selectedChannelMode,
+                    onModeSelected = onModeSelected
+                )
+
+                GuideDensityRow(
+                    selectedDensity = uiState.selectedDensity,
+                    onDensitySelected = onDensitySelected
+                )
+
+                GuideViewOptionsRow(
+                    showScheduledOnly = uiState.showScheduledOnly,
+                    onToggleScheduledOnly = onToggleScheduledOnly
+                )
+
+                GuideFavoritesRow(
+                    showFavoritesOnly = uiState.showFavoritesOnly,
+                    onToggleFavoritesOnly = onToggleFavoritesOnly
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuidePrimaryControlsRow(
+    categories: List<Category>,
+    selectedCategoryId: Long,
+    showSearchBar: Boolean,
+    showAdvancedOptions: Boolean,
+    onJumpToPreviousDay: () -> Unit,
+    onJumpBackward: () -> Unit,
+    onJumpToNow: () -> Unit,
+    onJumpForward: () -> Unit,
+    onJumpToPrimeTime: () -> Unit,
+    onJumpToNextDay: () -> Unit,
+    onOpenCategoryPicker: () -> Unit,
+    onToggleSearch: () -> Unit,
+    onToggleAdvancedOptions: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        GuideCategoryLauncherRow(
+            categories = categories,
+            selectedCategoryId = selectedCategoryId,
+            onOpenCategoryPicker = onOpenCategoryPicker,
+            modifier = Modifier.widthIn(min = 220.dp, max = 360.dp)
+        )
+
+        LazyRow(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item { GuideShortcutChip(label = stringResource(R.string.epg_previous_day), onClick = onJumpToPreviousDay) }
+            item { GuideShortcutChip(label = stringResource(R.string.epg_jump_now), onClick = onJumpToNow) }
+            item { GuideShortcutChip(label = stringResource(R.string.epg_next_day), onClick = onJumpToNextDay) }
+            item { GuideShortcutChip(label = stringResource(R.string.epg_jump_back), onClick = onJumpBackward) }
+            item { GuideShortcutChip(label = stringResource(R.string.epg_jump_forward), onClick = onJumpForward) }
+            item { GuideShortcutChip(label = stringResource(R.string.epg_jump_prime_time), onClick = onJumpToPrimeTime) }
+            item {
+                GuideShortcutChip(
+                    label = if (showSearchBar) stringResource(R.string.epg_clear_search) else stringResource(R.string.epg_search_short),
+                    onClick = onToggleSearch
+                )
+            }
+            item {
+                GuideShortcutChip(
+                    label = stringResource(R.string.epg_options_short),
+                    onClick = onToggleAdvancedOptions,
+                    isSelected = showAdvancedOptions
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideCategoryLauncherRow(
+    categories: List<Category>,
+    selectedCategoryId: Long,
+    onOpenCategoryPicker: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selectedCategory = remember(categories, selectedCategoryId) {
+        categories.firstOrNull { it.id == selectedCategoryId }
+    }
+    Surface(
+        onClick = onOpenCategoryPicker,
+        modifier = modifier.widthIn(max = 320.dp),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = SurfaceHighlight,
+            focusedContainerColor = SurfaceElevated,
+            contentColor = OnSurface,
+            focusedContentColor = OnSurface
+        ),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, FocusBorder),
+                shape = RoundedCornerShape(16.dp)
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                Text(
+                    text = selectedCategory?.name ?: stringResource(R.string.epg_filter_label),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = OnSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${categories.size} categories",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OnSurfaceDim
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = stringResource(R.string.epg_filter_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = Primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun GuideCategoryPickerDialog(
+    categories: List<Category>,
+    selectedCategoryId: Long,
+    onDismiss: () -> Unit,
+    onCategorySelected: (Long) -> Unit
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val searchFocusRequester = remember { FocusRequester() }
+    val filteredCategories = remember(categories, query) {
+        val trimmed = query.trim()
+        val baseCategories = if (trimmed.isBlank()) {
+            categories
+        } else {
+            categories.filter { it.name.contains(trimmed, ignoreCase = true) }
+        }
+        val selectedCategory = baseCategories.firstOrNull { it.id == selectedCategoryId }
+        buildList {
+            if (selectedCategory != null) add(selectedCategory)
+            addAll(baseCategories.filterNot { it.id == selectedCategoryId })
+        }
+    }
+    LaunchedEffect(Unit) {
+        searchFocusRequester.requestFocus()
+    }
+
+    GuideModalDialog(onDismiss = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.52f)
+                .fillMaxHeight(0.78f)
+                .focusGroup(),
+            colors = SurfaceDefaults.colors(containerColor = SurfaceElevated),
+            shape = RoundedCornerShape(22.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.epg_filter_label),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = OnSurface
+                        )
+                        Text(
+                            text = "${filteredCategories.size} matches",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurfaceDim
+                        )
+                    }
+                    GuideShortcutChip(
+                        label = stringResource(R.string.settings_cancel),
+                        onClick = onDismiss
+                    )
+                }
+
+                GuideProgramSearchRow(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onClear = { query = "" },
+                    focusRequester = searchFocusRequester,
+                    contentPadding = PaddingValues(0.dp),
+                    showLabel = false
+                )
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(
+                        items = filteredCategories,
+                        key = { index, category -> epgCategoryKey(category, index) }
+                    ) { _, category ->
+                        val isSelected = category.id == selectedCategoryId
+                        Surface(
+                            onClick = { onCategorySelected(category.id) },
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = if (isSelected) Primary.copy(alpha = 0.18f) else SurfaceHighlight,
+                                focusedContainerColor = SurfaceElevated,
+                                contentColor = if (isSelected) Primary else OnSurface,
+                                focusedContentColor = OnSurface
+                            ),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(14.dp)),
+                            border = ClickableSurfaceDefaults.border(
+                                focusedBorder = Border(
+                                    border = BorderStroke(2.dp, FocusBorder),
+                                    shape = RoundedCornerShape(14.dp)
+                                )
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = category.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = if (isSelected) Primary else OnSurface
+                                    )
+                                    if (category.count > 0) {
+                                        Text(
+                                            text = "${category.count} channels",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = OnSurfaceDim
+                                        )
+                                    }
+                                }
+                                if (isSelected) {
+                                    Text(
+                                        text = stringResource(R.string.epg_jump_now),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun epgCategoryKey(category: Category, index: Int): String {
+    return "category:${category.id}:${category.name.trim()}:$index"
+}
+
+private fun epgChannelKey(channel: Channel, index: Int): String {
+    val epgId = channel.guideLookupKey().orEmpty()
+    return "channel:${channel.id}:${channel.streamId}:${epgId}:${channel.name.trim()}:$index"
+}
+
+@Composable
 private fun dayRelativeLabel(dayStart: Long): String {
     val todayStart = remember { startOfDay(System.currentTimeMillis()) }
     return when (dayStart) {
@@ -1655,3 +2589,4 @@ private fun dayRelativeLabel(dayStart: Long): String {
         }
     }
 }
+

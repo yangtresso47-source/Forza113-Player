@@ -229,6 +229,9 @@ interface MovieDao {
     @Query("SELECT id, stream_id AS remote_id FROM movies WHERE provider_id = :providerId")
     suspend fun getIdMappings(providerId: Long): List<RemoteIdMapping>
 
+    @Query("SELECT id, stream_id AS remote_id FROM movies WHERE provider_id = :providerId AND category_id = :categoryId")
+    suspend fun getIdMappingsByCategory(providerId: Long, categoryId: Long): List<RemoteIdMapping>
+
     @Update
     suspend fun update(movie: MovieEntity)
 
@@ -297,8 +300,14 @@ interface MovieDao {
     @Query("DELETE FROM movies WHERE provider_id = :providerId")
     suspend fun deleteByProvider(providerId: Long)
 
+    @Query("DELETE FROM movies WHERE provider_id = :providerId AND category_id = :categoryId")
+    suspend fun deleteByProviderAndCategory(providerId: Long, categoryId: Long)
+
     @Query("DELETE FROM movies WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
+
+    @Query("DELETE FROM movies WHERE provider_id = :providerId AND category_id = :categoryId AND stream_id NOT IN (:remoteIds)")
+    suspend fun deleteMissingByCategory(providerId: Long, categoryId: Long, remoteIds: List<Long>)
 
     @Query("""
         UPDATE movies 
@@ -325,6 +334,23 @@ interface MovieDao {
             .map { entity -> entity.copy(id = existingByRemoteId[entity.streamId] ?: 0L) }
         deleteByProvider(providerId)
         insertAll(remapped)
+        restoreWatchProgress(providerId)
+    }
+
+    @Transaction
+    suspend fun replaceCategory(providerId: Long, categoryId: Long, movies: List<MovieEntity>) {
+        val existingByRemoteId = getIdMappingsByCategory(providerId, categoryId).associate { it.remoteId to it.id }
+        val remapped = movies
+            .distinctBy { it.streamId }
+            .map { entity -> entity.copy(id = existingByRemoteId[entity.streamId] ?: 0L) }
+
+        if (remapped.isEmpty()) {
+            deleteByProviderAndCategory(providerId, categoryId)
+        } else {
+            insertAll(remapped)
+            deleteMissingByCategory(providerId, categoryId, remapped.map { it.streamId })
+        }
+
         restoreWatchProgress(providerId)
     }
 
@@ -394,8 +420,14 @@ interface SeriesDao {
     @Query("SELECT id, series_id AS remote_id FROM series WHERE provider_id = :providerId")
     suspend fun getIdMappings(providerId: Long): List<RemoteIdMapping>
 
+    @Query("SELECT id, series_id AS remote_id FROM series WHERE provider_id = :providerId AND category_id = :categoryId")
+    suspend fun getIdMappingsByCategory(providerId: Long, categoryId: Long): List<RemoteIdMapping>
+
     @Query("DELETE FROM series WHERE provider_id = :providerId")
     suspend fun deleteByProvider(providerId: Long)
+
+    @Query("DELETE FROM series WHERE provider_id = :providerId AND category_id = :categoryId")
+    suspend fun deleteByProviderAndCategory(providerId: Long, categoryId: Long)
 
     @Transaction
     suspend fun replaceAll(providerId: Long, series: List<SeriesEntity>) {
@@ -405,6 +437,24 @@ interface SeriesDao {
             .map { entity -> entity.copy(id = existingByRemoteId[entity.seriesId] ?: 0L) }
         deleteByProvider(providerId)
         insertAll(remapped)
+    }
+
+    @Query("DELETE FROM series WHERE provider_id = :providerId AND category_id = :categoryId AND series_id NOT IN (:remoteIds)")
+    suspend fun deleteMissingByCategory(providerId: Long, categoryId: Long, remoteIds: List<Long>)
+
+    @Transaction
+    suspend fun replaceCategory(providerId: Long, categoryId: Long, series: List<SeriesEntity>) {
+        val existingByRemoteId = getIdMappingsByCategory(providerId, categoryId).associate { it.remoteId to it.id }
+        val remapped = series
+            .distinctBy { it.seriesId }
+            .map { entity -> entity.copy(id = existingByRemoteId[entity.seriesId] ?: 0L) }
+
+        if (remapped.isEmpty()) {
+            deleteByProviderAndCategory(providerId, categoryId)
+        } else {
+            insertAll(remapped)
+            deleteMissingByCategory(providerId, categoryId, remapped.map { it.seriesId })
+        }
     }
 
     @Query("SELECT category_id, COUNT(*) as item_count FROM series WHERE provider_id = :providerId AND category_id IS NOT NULL GROUP BY category_id")
@@ -558,7 +608,7 @@ interface EpisodeDao {
 
 @Dao
 interface CategoryDao {
-    @Query("SELECT * FROM categories WHERE provider_id = :providerId AND type = :type ORDER BY name ASC")
+    @Query("SELECT * FROM categories WHERE provider_id = :providerId AND type = :type ORDER BY id ASC")
     fun getByProviderAndType(providerId: Long, type: String): Flow<List<CategoryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -600,7 +650,10 @@ interface ProgramDao {
         FROM programs
         INNER JOIN channels
             ON channels.provider_id = programs.provider_id
-           AND channels.epg_channel_id = programs.channel_id
+           AND (
+               channels.epg_channel_id = programs.channel_id
+               OR CAST(channels.stream_id AS TEXT) = programs.channel_id
+           )
         WHERE programs.provider_id = :providerId
           AND channels.category_id = :categoryId
           AND programs.end_time > :startTime
@@ -626,7 +679,10 @@ interface ProgramDao {
               OR EXISTS (
                   SELECT 1 FROM channels
                   WHERE channels.provider_id = programs.provider_id
-                    AND channels.epg_channel_id = programs.channel_id
+                    AND (
+                        channels.epg_channel_id = programs.channel_id
+                        OR CAST(channels.stream_id AS TEXT) = programs.channel_id
+                    )
                     AND channels.category_id = :categoryId
               )
           )
@@ -654,6 +710,9 @@ interface ProgramDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(programs: List<ProgramEntity>)
+
+    @Query("SELECT COUNT(*) FROM programs WHERE provider_id = :providerId")
+    suspend fun countByProvider(providerId: Long): Int
 
     @Query("DELETE FROM programs WHERE end_time < :beforeTime")
     suspend fun deleteOld(beforeTime: Long): Int
