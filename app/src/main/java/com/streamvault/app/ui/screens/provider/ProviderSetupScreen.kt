@@ -1,6 +1,7 @@
 package com.streamvault.app.ui.screens.provider
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -20,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,6 +63,7 @@ import com.streamvault.app.ui.components.dialogs.PremiumDialog
 import com.streamvault.app.ui.components.shell.StatusPill
 import com.streamvault.app.ui.theme.*
 import com.streamvault.data.util.ProviderInputSanitizer
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -244,6 +247,7 @@ fun ProviderSetupScreen(
                         onLoginXtream = { viewModel.loginXtream(serverUrl, username, password, name) },
                         onAddM3u = { viewModel.addM3u(m3uUrl, name) },
                         onToggleFastSync = { viewModel.updateXtreamFastSyncEnabled(!uiState.xtreamFastSyncEnabled) },
+                        onSelectEpgSyncMode = viewModel::updateEpgSyncMode,
                         modifier = Modifier.weight(1f).fillMaxHeight()
                     )
                 }
@@ -271,6 +275,7 @@ fun ProviderSetupScreen(
                         onLoginXtream = { viewModel.loginXtream(serverUrl, username, password, name) },
                         onAddM3u = { viewModel.addM3u(m3uUrl, name) },
                         onToggleFastSync = { viewModel.updateXtreamFastSyncEnabled(!uiState.xtreamFastSyncEnabled) },
+                        onSelectEpgSyncMode = viewModel::updateEpgSyncMode,
                         modifier = Modifier.weight(1f).fillMaxWidth()
                     )
                 }
@@ -300,6 +305,7 @@ private fun ProviderFormContent(
     onLoginXtream: () -> Unit,
     onAddM3u: () -> Unit,
     onToggleFastSync: () -> Unit,
+    onSelectEpgSyncMode: (ProviderEpgSyncMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -361,34 +367,12 @@ private fun ProviderFormContent(
                             imeAction = ImeAction.Done
                         )
                     )
-                    // Fast Sync toggle
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Surface, RoundedCornerShape(12.dp))
-                            .border(1.dp, SurfaceHighlight, RoundedCornerShape(12.dp))
-                            .clickable { onToggleFastSync() }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = androidx.compose.ui.res.stringResource(R.string.setup_xtream_fast_sync_label),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = androidx.compose.ui.res.stringResource(R.string.setup_xtream_fast_sync_helper),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OnSurfaceDim
-                            )
-                        }
-                        Switch(
-                            checked = uiState.xtreamFastSyncEnabled,
-                            onCheckedChange = { onToggleFastSync() }
-                        )
-                    }
+                    AdvancedProviderOptionsSection(
+                        sourceType = sourceType,
+                        uiState = uiState,
+                        onToggleFastSync = onToggleFastSync,
+                        onSelectEpgSyncMode = onSelectEpgSyncMode
+                    )
                     FormErrors(uiState.validationError, uiState.error)
                     ActionButton(
                         text = when {
@@ -406,6 +390,12 @@ private fun ProviderFormContent(
                         value = m3uUrl, onValueChange = onM3uUrlChange,
                         placeholder = androidx.compose.ui.res.stringResource(R.string.setup_m3u_hint),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done)
+                    )
+                    AdvancedProviderOptionsSection(
+                        sourceType = sourceType,
+                        uiState = uiState,
+                        onToggleFastSync = onToggleFastSync,
+                        onSelectEpgSyncMode = onSelectEpgSyncMode
                     )
                     FormErrors(uiState.validationError, uiState.error)
                     ActionButton(
@@ -430,6 +420,12 @@ private fun ProviderFormContent(
                     fileImportError?.let {
                         Text(text = it, style = MaterialTheme.typography.bodyMedium, color = ErrorColor)
                     }
+                    AdvancedProviderOptionsSection(
+                        sourceType = sourceType,
+                        uiState = uiState,
+                        onToggleFastSync = onToggleFastSync,
+                        onSelectEpgSyncMode = onSelectEpgSyncMode
+                    )
                     FormErrors(uiState.validationError, uiState.error)
                     ActionButton(
                         text = when {
@@ -441,6 +437,219 @@ private fun ProviderFormContent(
                         onClick = onAddM3u
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdvancedProviderOptionsSection(
+    sourceType: SourceType,
+    uiState: ProviderSetupState,
+    onToggleFastSync: () -> Unit,
+    onSelectEpgSyncMode: (ProviderEpgSyncMode) -> Unit
+) {
+    var showAdvancedOptions by rememberSaveable(sourceType) { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.isEditing, uiState.epgSyncMode, uiState.xtreamFastSyncEnabled, sourceType) {
+        val hasNonDefaultSelection = uiState.epgSyncMode != ProviderEpgSyncMode.UPFRONT ||
+            (sourceType == SourceType.XTREAM && !uiState.xtreamFastSyncEnabled)
+        if (uiState.isEditing && hasNonDefaultSelection) {
+            showAdvancedOptions = true
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(
+            onClick = { showAdvancedOptions = !showAdvancedOptions },
+            modifier = Modifier
+                .fillMaxWidth()
+                .mouseClickable(onClick = { showAdvancedOptions = !showAdvancedOptions }),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = if (showAdvancedOptions) Primary.copy(alpha = 0.12f) else Surface,
+                focusedContainerColor = Primary.copy(alpha = 0.24f)
+            ),
+            border = ClickableSurfaceDefaults.border(
+                border = Border(
+                    BorderStroke(
+                        1.dp,
+                        if (showAdvancedOptions) Primary.copy(alpha = 0.45f) else SurfaceHighlight
+                    )
+                ),
+                focusedBorder = Border(BorderStroke(3.dp, PrimaryLight))
+            ),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(R.string.setup_advanced_options_label),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(R.string.setup_advanced_options_helper),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceDim
+                    )
+                }
+                Text(
+                    text = if (showAdvancedOptions) {
+                        androidx.compose.ui.res.stringResource(R.string.setup_advanced_options_hide)
+                    } else {
+                        androidx.compose.ui.res.stringResource(R.string.setup_advanced_options_show)
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = PrimaryLight
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = showAdvancedOptions) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (sourceType == SourceType.XTREAM) {
+                    Surface(
+                        onClick = onToggleFastSync,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .mouseClickable(onClick = onToggleFastSync),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = if (uiState.xtreamFastSyncEnabled) Primary.copy(alpha = 0.1f) else Surface,
+                            focusedContainerColor = Primary.copy(alpha = 0.22f)
+                        ),
+                        border = ClickableSurfaceDefaults.border(
+                            border = Border(
+                                BorderStroke(
+                                    1.dp,
+                                    if (uiState.xtreamFastSyncEnabled) Primary.copy(alpha = 0.4f) else SurfaceHighlight
+                                )
+                            ),
+                            focusedBorder = Border(BorderStroke(3.dp, PrimaryLight))
+                        ),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(R.string.setup_xtream_fast_sync_label),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(R.string.setup_xtream_fast_sync_helper),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnSurfaceDim
+                                )
+                            }
+                            Switch(
+                                checked = uiState.xtreamFastSyncEnabled,
+                                onCheckedChange = { onToggleFastSync() }
+                            )
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Surface, RoundedCornerShape(12.dp))
+                        .border(1.dp, SurfaceHighlight, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(R.string.setup_epg_sync_mode_label),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(R.string.setup_epg_sync_mode_helper),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceDim
+                    )
+                    ProviderEpgSyncMode.entries.forEach { mode ->
+                        EpgSyncModeOptionRow(
+                            mode = mode,
+                            selected = uiState.epgSyncMode == mode,
+                            onSelect = { onSelectEpgSyncMode(mode) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpgSyncModeOptionRow(
+    mode: ProviderEpgSyncMode,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    val titleRes = when (mode) {
+        ProviderEpgSyncMode.UPFRONT -> R.string.setup_epg_sync_mode_upfront_title
+        ProviderEpgSyncMode.BACKGROUND -> R.string.setup_epg_sync_mode_background_title
+        ProviderEpgSyncMode.SKIP -> R.string.setup_epg_sync_mode_skip_title
+    }
+    val descriptionRes = when (mode) {
+        ProviderEpgSyncMode.UPFRONT -> R.string.setup_epg_sync_mode_upfront_description
+        ProviderEpgSyncMode.BACKGROUND -> R.string.setup_epg_sync_mode_background_description
+        ProviderEpgSyncMode.SKIP -> R.string.setup_epg_sync_mode_skip_description
+    }
+    Surface(
+        onClick = onSelect,
+        modifier = Modifier
+            .fillMaxWidth()
+            .mouseClickable(onClick = onSelect),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) Primary.copy(alpha = 0.12f) else Color.Transparent,
+            focusedContainerColor = if (selected) Primary.copy(alpha = 0.26f) else SurfaceHighlight.copy(alpha = 0.9f)
+        ),
+        border = ClickableSurfaceDefaults.border(
+            border = Border(
+                BorderStroke(
+                    1.dp,
+                    if (selected) Primary.copy(alpha = 0.45f) else Color.Transparent
+                )
+            ),
+            focusedBorder = Border(BorderStroke(3.dp, PrimaryLight))
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = selected,
+                onClick = onSelect
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = androidx.compose.ui.res.stringResource(titleRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = androidx.compose.ui.res.stringResource(descriptionRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceDim
+                )
             }
         }
     }

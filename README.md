@@ -4,37 +4,140 @@ StreamVault is a TV-first IPTV player for Android TV built with Kotlin, Jetpack 
 
 It is designed for large playlists, remote-friendly browsing, fast provider switching, and a polished living-room playback experience. StreamVault supports both `M3U` playlists and `Xtream Codes`, with dedicated flows for `Live TV`, `Movies`, and `Series`.
 
+Built for Android TV first, StreamVault focuses on the things generic IPTV apps usually get wrong: D-pad navigation, quick channel movement, large-library organization, and a player that still feels good to use from the couch. Phone and tablet installs are also supported, but the primary UX target is TV.
+
 ## Highlights
 
 - Android TV-first interface with D-pad-friendly focus, navigation, and playback flows
-- Live TV with favorites, recent channels, custom groups, pinned categories, and fast channel browsing
-- Movie and series libraries with detailed metadata screens, resume support, and category navigation
+- Playlist support for `Xtream Codes` and `M3U` sources, including local playlist files
+- Fast live-TV browsing with preview mode, favorites, recent channels, custom groups, and pinned categories
+- Movie and series libraries with detailed info pages, resume support, episode switching, and auto-play for next episodes
+- Full EPG support with guide search, XMLTV support, and provider archive or catch-up when available
 - Multi-view split-screen playback for watching multiple channels at once
-- Full EPG support with now-playing data and provider archive or catch-up support when available
 - Strong parental controls with PIN-protected categories and automatic adult-category detection
-- Global search across live channels, movies, and series
-- Launcher and TV integrations including Android TV entry points and TV input support
+- TV integrations including Watch Next, launcher recommendations, TV input sync, and Cast support
 
-## Feature Set
+## Features
 
-- Provider onboarding for `M3U` playlists and `Xtream Codes`
-- Resilient sync pipeline for live, movie, series, and EPG data
-- TV-optimized search inputs and provider setup forms
-- Favorites, recent history, continue watching, and playback history
-- Custom favorite groups and personalized live-TV organization
-- Multi-view audio focus management and split-screen planning
-- Subtitle, audio-track, aspect-ratio, playback-speed, and video-track controls
-- Cast integration
-- Provider-scoped settings and category visibility or protection preferences
+### Playlist Support
+
+- `Xtream Codes`
+- `M3U` playlists from URLs plus local files
+- Separate onboarding and sync flows for live channels, movies, series, and guide data
+- Fast switching between providers with provider-scoped settings
+
+### Navigation And TV UX
+
+- Designed for Android TV and D-pad navigation first
+- Fast channel browsing with large-playlist friendly layouts
+- Numeric remote input for direct channel entry
+- Preview mode while browsing channels
+- TV-friendly search and text-entry flows
+
+### Live TV And Channel Management
+
+- Favorites and recently watched channels
+- Custom groups for personal channel collections
+- Pinned categories surfaced near the top of the live guide rail
+- Long-press live categories for actions like pin, hide, lock or unlock, and custom-group management
+- Channel reordering for favorites and custom groups
+- Channel numbering modes by group or across the full provider lineup
+- Predefined filter words to make category search cleaner on noisy provider data
+
+### Guide, Search, And Playback
+
+- Full EPG grid view
+- Program search inside the guide
+- XMLTV guide support with built-in EPG source management
+- Provider archive or catch-up support when the source exposes replay streams
+- Global search across live TV, movies, and series
+- Multi-view for watching multiple live streams at once
+- Player controls for subtitles, audio tracks, aspect ratio, playback speed, video quality, and Cast
+
+### Movies And Series
+
+- Two VOD layouts:
+	- Modern shelf-based browsing
+	- Classic left-sidebar category browsing
+- Detailed info pages for movies and series
+- Continue watching and playback history
+- Long-press VOD categories and custom groups for actions like hide, rename, delete, or reorder when applicable
+- In-player episode switching for series
+- Automatic next-episode playback when another episode is available
+
+### Parental Controls
+
+- Hide categories completely
+- Lock categories behind a PIN
+- Option to hide locked content from browsing views
+- Adult-category detection using provider flags and category naming heuristics
+
+### Languages And Device Support
+
+- English plus 25 translated locale packs currently ship with the app
+- Translation coverage is broad, but some locales are still machine-assisted and may need cleanup
+- Built for TV first; phones and tablets are supported, but not the primary design target
+
+### Platform Integrations
+
+- Android TV Watch Next integration
+- Launcher recommendations and TV entry points
+- Android TV Input Framework channel sync
+- Google Cast sender support
+
+## Quick TV Tips
+
+- Long-press a channel, movie, or series to add it to Favorites or a custom group.
+- Long-press a live category to open category actions such as pin, hide, lock or unlock, and custom-group actions.
+- In Movies and Series, long-press categories or custom groups for hide or group-management actions where available.
+- Long-press a live channel to queue it for Split Screen.
+- Use the number keys on a remote while in the player to jump directly to a channel.
+- While watching a series, open Episodes in the player to switch episodes without backing out to the details page.
 
 ## Screenshots
 
-Add your own screenshots to `docs/images/` and update this section with the final image links when they are ready.
+### Home
+
+![Home](docs/images/Home.png)
+
+### Live TV
+
+![Live TV](docs/images/LiveTV.png)
+
+### Channel Preview
+
+![Channel Preview](docs/images/ChannelView.png)
+
+### Movies
+
+![Movies](docs/images/Movies.png)
+
+### Movie Details
+
+![Movie Details](docs/images/MovieInfo.png)
+
+### Series Episodes
+
+![Series Episodes](docs/images/SeriesEpisodes.png)
+
+### Guide
+
+![Guide](docs/images/Guide.png)
+
+### Settings
+
+![Settings](docs/images/Settings.png)
 
 ## Download
 
 - [Download latest StreamVault.apk](https://github.com/Davidona/StreamVault-IPTV/releases/latest/download/StreamVault.apk)
 - Every push to `master` now triggers GitHub Actions to build a fresh APK and publish it as the latest GitHub Release asset.
+
+## Support
+
+If StreamVault is useful to you, you can support development here:
+
+- [Support on Ko-fi](https://ko-fi.com/davidona)
 
 ## Project Structure
 

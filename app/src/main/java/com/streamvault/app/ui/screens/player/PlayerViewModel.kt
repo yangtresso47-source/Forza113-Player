@@ -20,11 +20,14 @@ import com.streamvault.domain.model.ChannelNumberingMode
 import com.streamvault.domain.model.Program
 import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.DecoderMode
+import com.streamvault.domain.model.Episode
 import com.streamvault.domain.model.PlaybackHistory
 import com.streamvault.domain.model.RecordingItem
 import com.streamvault.domain.model.RecordingRecurrence
 import com.streamvault.domain.model.RecordingRequest
 import com.streamvault.domain.model.RecordingStatus
+import com.streamvault.domain.model.Result
+import com.streamvault.domain.model.Series
 import com.streamvault.domain.model.VirtualCategoryIds
 import com.streamvault.domain.model.VideoFormat
 import com.streamvault.domain.usecase.GetCustomCategories
@@ -35,6 +38,7 @@ import com.streamvault.domain.repository.ChannelRepository
 import com.streamvault.domain.repository.EpgRepository
 import com.streamvault.domain.repository.MovieRepository
 import com.streamvault.domain.repository.PlaybackHistoryRepository
+import com.streamvault.domain.repository.SeriesRepository
 import com.streamvault.player.PlaybackState
 import com.streamvault.player.PlayerEngine
 import com.streamvault.player.PlayerError
@@ -121,6 +125,7 @@ class PlayerViewModel @Inject constructor(
     private val epgRepository: EpgRepository,
     private val channelRepository: ChannelRepository,
     private val movieRepository: MovieRepository,
+    private val seriesRepository: SeriesRepository,
     private val favoriteRepository: com.streamvault.domain.repository.FavoriteRepository,
     private val playbackHistoryRepository: PlaybackHistoryRepository,
     private val providerRepository: com.streamvault.domain.repository.ProviderRepository,
@@ -161,6 +166,18 @@ class PlayerViewModel @Inject constructor(
 
     private val _currentChannel = MutableStateFlow<com.streamvault.domain.model.Channel?>(null)
     val currentChannel: StateFlow<com.streamvault.domain.model.Channel?> = _currentChannel.asStateFlow()
+
+    private val _currentSeries = MutableStateFlow<Series?>(null)
+    val currentSeries: StateFlow<Series?> = _currentSeries.asStateFlow()
+
+    private val _currentEpisode = MutableStateFlow<Episode?>(null)
+    val currentEpisode: StateFlow<Episode?> = _currentEpisode.asStateFlow()
+
+    private val _nextEpisode = MutableStateFlow<Episode?>(null)
+    val nextEpisode: StateFlow<Episode?> = _nextEpisode.asStateFlow()
+
+    private val _playbackTitle = MutableStateFlow("")
+    val playbackTitle: StateFlow<String> = _playbackTitle.asStateFlow()
     
     private val _resumePrompt = MutableStateFlow(ResumePromptState())
     val resumePrompt: StateFlow<ResumePromptState> = _resumePrompt.asStateFlow()
@@ -262,6 +279,10 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             playerEngine.playbackState.collect { state ->
                 _playerDiagnostics.update { it.copy(playbackStateLabel = state.name.replace('_', ' ')) }
+                if (state == PlaybackState.ENDED && lastObservedPlaybackState != PlaybackState.ENDED) {
+                    handlePlaybackEnded()
+                }
+                lastObservedPlaybackState = state
                 if (state == PlaybackState.READY) {
                     zapBufferWatchdogJob?.cancel()
                     dismissRecoveredNoticeIfPresent()
@@ -522,7 +543,11 @@ class PlayerViewModel @Inject constructor(
     private var currentContentId: Long = -1L
     private var currentContentType: ContentType = ContentType.LIVE
     private var currentTitle: String = ""
+    private var currentSeriesId: Long? = null
+    private var currentSeasonNumber: Int? = null
+    private var currentEpisodeNumber: Int? = null
     private var isVirtualCategory: Boolean = false
+    private var lastObservedPlaybackState: PlaybackState = PlaybackState.IDLE
     
     private var epgJob: Job? = null
     private var playlistJob: Job? = null
@@ -640,6 +665,131 @@ class PlayerViewModel @Inject constructor(
         return ++prepareRequestVersion
     }
 
+    private fun clearSeriesEpisodeContext() {
+        currentSeriesId = null
+        currentSeasonNumber = null
+        currentEpisodeNumber = null
+        _currentSeries.value = null
+        _currentEpisode.value = null
+        _nextEpisode.value = null
+    }
+
+    private fun resolveEpisode(
+        series: Series,
+        episodeId: Long,
+        seasonNumber: Int?,
+        episodeNumber: Int?
+    ): Episode? {
+        val episodes = series.seasons
+            .sortedBy { it.seasonNumber }
+            .flatMap { season -> season.episodes.sortedBy { it.episodeNumber } }
+        return episodes.firstOrNull { it.id == episodeId }
+            ?: episodes.firstOrNull { it.seasonNumber == seasonNumber && it.episodeNumber == episodeNumber }
+    }
+
+    private fun findNextEpisode(series: Series, episode: Episode): Episode? {
+        val orderedEpisodes = series.seasons
+            .sortedBy { it.seasonNumber }
+            .flatMap { season -> season.episodes.sortedBy { it.episodeNumber } }
+        val currentIndex = orderedEpisodes.indexOfFirst { it.id == episode.id }
+        return orderedEpisodes.getOrNull(currentIndex + 1)
+    }
+
+    private fun buildEpisodePlaybackTitle(episode: Episode): String =
+        "${episode.title} - S${episode.seasonNumber}E${episode.episodeNumber}"
+
+    private fun loadSeriesEpisodeContext(
+        requestVersion: Long,
+        providerId: Long,
+        seriesId: Long,
+        episodeId: Long,
+        seasonNumber: Int?,
+        episodeNumber: Int?
+    ) {
+        viewModelScope.launch {
+            when (val result = seriesRepository.getSeriesDetails(providerId, seriesId)) {
+                is Result.Success -> {
+                    if (!isActivePlaybackSession(requestVersion)) return@launch
+                    val series = result.data
+                    val resolvedEpisode = resolveEpisode(series, episodeId, seasonNumber, episodeNumber)
+                    _currentSeries.value = series
+                    _currentEpisode.value = resolvedEpisode
+                    _nextEpisode.value = resolvedEpisode?.let { findNextEpisode(series, it) }
+                    currentSeriesId = seriesId
+                    currentSeasonNumber = resolvedEpisode?.seasonNumber ?: seasonNumber
+                    currentEpisodeNumber = resolvedEpisode?.episodeNumber ?: episodeNumber
+                    if (resolvedEpisode != null && currentContentType == ContentType.SERIES_EPISODE) {
+                        currentArtworkUrl = resolvedEpisode.coverUrl
+                            ?: currentArtworkUrl
+                            ?: series.posterUrl
+                            ?: series.backdropUrl
+                        currentTitle = buildEpisodePlaybackTitle(resolvedEpisode)
+                        _playbackTitle.value = currentTitle
+                    }
+                }
+
+                else -> {
+                    if (!isActivePlaybackSession(requestVersion)) return@launch
+                    _currentSeries.value = null
+                    _currentEpisode.value = null
+                    _nextEpisode.value = null
+                    currentSeriesId = seriesId
+                    currentSeasonNumber = seasonNumber
+                    currentEpisodeNumber = episodeNumber
+                }
+            }
+        }
+    }
+
+    private fun buildPlaybackHistorySnapshot(
+        positionMs: Long,
+        durationMs: Long
+    ): PlaybackHistory? {
+        if (positionMs < 0 || durationMs <= 0 || currentContentId == -1L || currentProviderId == -1L) {
+            return null
+        }
+        return PlaybackHistory(
+            contentId = currentContentId,
+            contentType = currentContentType,
+            providerId = currentProviderId,
+            title = currentTitle,
+            posterUrl = currentArtworkUrl,
+            streamUrl = currentStreamUrl,
+            resumePositionMs = positionMs,
+            totalDurationMs = durationMs,
+            lastWatchedAt = System.currentTimeMillis(),
+            seriesId = currentSeriesId,
+            seasonNumber = _currentEpisode.value?.seasonNumber ?: currentSeasonNumber,
+            episodeNumber = _currentEpisode.value?.episodeNumber ?: currentEpisodeNumber
+        )
+    }
+
+    private suspend fun persistPlaybackCompletion() {
+        val durationMs = playerEngine.duration.value
+        val completedHistory = buildPlaybackHistorySnapshot(
+            positionMs = durationMs.coerceAtLeast(playerEngine.currentPosition.value),
+            durationMs = durationMs
+        ) ?: return
+        logRepositoryFailure(
+            operation = "Mark playback watched",
+            result = markAsWatched(completedHistory)
+        )
+        watchNextManager.refreshWatchNext()
+        launcherRecommendationsManager.refreshRecommendations()
+    }
+
+    private fun handlePlaybackEnded() {
+        if (currentContentType == ContentType.LIVE) return
+        viewModelScope.launch {
+            persistPlaybackCompletion()
+            if (currentContentType == ContentType.SERIES_EPISODE) {
+                _nextEpisode.value?.let { episode ->
+                    playEpisode(episode, showResumePrompt = false)
+                }
+            }
+        }
+    }
+
     private fun currentPlaybackIdentityUrl(): String =
         currentResolvedPlaybackUrl.ifBlank { currentStreamUrl }
 
@@ -716,7 +866,11 @@ class PlayerViewModel @Inject constructor(
         artworkUrl: String? = null,
         archiveStartMs: Long? = null,
         archiveEndMs: Long? = null,
-        archiveTitle: String? = null
+        archiveTitle: String? = null,
+        seriesId: Long? = null,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null,
+        showResumePrompt: Boolean = true
     ) {
         val hasArchiveRequest = archiveStartMs != null &&
             archiveEndMs != null &&
@@ -733,12 +887,28 @@ class PlayerViewModel @Inject constructor(
         currentStreamUrl = streamUrl
         currentContentId = internalChannelId
         currentTitle = title
+        _playbackTitle.value = title
         currentArtworkUrl = artworkUrl
         currentContentType = try { ContentType.valueOf(contentType) } catch (e: Exception) { ContentType.LIVE }
         currentProviderId = providerId
+        currentSeriesId = seriesId?.takeIf { it > 0L }
+        currentSeasonNumber = seasonNumber
+        currentEpisodeNumber = episodeNumber
         currentStreamClassLabel = if (hasArchiveRequest) "Catch-up" else "Primary"
         if (!hasArchiveRequest) {
             pendingCatchUpUrls = emptyList()
+        }
+        if (currentContentType == ContentType.SERIES_EPISODE && providerId > 0 && currentSeriesId != null) {
+            loadSeriesEpisodeContext(
+                requestVersion = requestVersion,
+                providerId = providerId,
+                seriesId = currentSeriesId ?: -1L,
+                episodeId = internalChannelId,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber
+            )
+        } else {
+            clearSeriesEpisodeContext()
         }
         if (currentContentType != ContentType.LIVE) {
             lastRecordedLivePlaybackKey = null
@@ -798,7 +968,7 @@ class PlayerViewModel @Inject constructor(
         }
         
         // 1. Check for Resume Position for VODs
-        if (currentContentType != ContentType.LIVE && currentContentId != -1L && currentProviderId != -1L) {
+        if (showResumePrompt && currentContentType != ContentType.LIVE && currentContentId != -1L && currentProviderId != -1L) {
             viewModelScope.launch {
                 val history = playbackHistoryRepository.getPlaybackHistory(currentContentId, currentContentType, currentProviderId)
                 if (!isActivePlaybackSession(requestVersion, streamUrl)) return@launch
@@ -898,6 +1068,7 @@ class PlayerViewModel @Inject constructor(
                 refreshCurrentChannelRecording()
                 if (channel != null) {
                     currentTitle = channel.name.ifBlank { currentTitle }
+                    _playbackTitle.value = currentTitle
                     currentStreamUrl = if (currentStreamClassLabel == "Catch-up") currentStreamUrl else channel.streamUrl
                     updateStreamClass(
                         when {
@@ -937,18 +1108,8 @@ class PlayerViewModel @Inject constructor(
         val pos = playerEngine.currentPosition.value
         val dur = playerEngine.duration.value
 
-        if (pos > 0 && dur > 0 && currentContentId != -1L && currentProviderId != -1L) {
-            val history = PlaybackHistory(
-                contentId = currentContentId,
-                contentType = currentContentType,
-                providerId = currentProviderId,
-                title = currentTitle,
-                posterUrl = currentArtworkUrl,
-                streamUrl = currentStreamUrl,
-                resumePositionMs = pos,
-                totalDurationMs = dur,
-                lastWatchedAt = System.currentTimeMillis()
-            )
+        if (pos > 0 && dur > 0) {
+            val history = buildPlaybackHistorySnapshot(pos, dur) ?: return
             logRepositoryFailure(
                 operation = "Persist playback resume position",
                 result = playbackHistoryRepository.updateResumePosition(history)
@@ -1427,6 +1588,7 @@ class PlayerViewModel @Inject constructor(
         currentChannelIndex = index
         currentContentId = channel.id
         currentTitle = channel.name
+        _playbackTitle.value = currentTitle
         currentStreamUrl = channel.streamUrl
         pendingCatchUpUrls = emptyList()
         updateStreamClass("Primary")
@@ -1783,6 +1945,25 @@ class PlayerViewModel @Inject constructor(
     fun pause() = playerEngine.pause()
     fun seekForward() = playerEngine.seekForward()
     fun seekBackward() = playerEngine.seekBackward()
+
+    fun playEpisode(episode: Episode, showResumePrompt: Boolean = true) {
+        prepare(
+            streamUrl = episode.streamUrl,
+            epgChannelId = null,
+            internalChannelId = episode.id,
+            categoryId = -1,
+            providerId = episode.providerId,
+            isVirtual = false,
+            contentType = ContentType.SERIES_EPISODE.name,
+            title = buildEpisodePlaybackTitle(episode),
+            artworkUrl = episode.coverUrl ?: _currentSeries.value?.posterUrl ?: _currentSeries.value?.backdropUrl,
+            seriesId = currentSeriesId ?: episode.seriesId.takeIf { it > 0L },
+            seasonNumber = episode.seasonNumber,
+            episodeNumber = episode.episodeNumber,
+            showResumePrompt = showResumePrompt
+        )
+    }
+
     fun toggleMute() {
         val now = SystemClock.elapsedRealtime()
         if (now - lastMuteToggleAtMs < MUTE_TOGGLE_DEBOUNCE_MS) return

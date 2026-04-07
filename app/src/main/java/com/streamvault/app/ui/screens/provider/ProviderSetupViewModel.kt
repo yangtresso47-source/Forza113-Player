@@ -2,6 +2,7 @@ package com.streamvault.app.ui.screens.provider
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.ProviderType
 import com.streamvault.domain.repository.ProviderRepository
 import com.streamvault.domain.usecase.M3uProviderSetupCommand
@@ -59,6 +60,7 @@ class ProviderSetupViewModel @Inject constructor(
                         username = provider.username,
                         password = "",
                         m3uUrl = provider.m3uUrl,
+                        epgSyncMode = provider.epgSyncMode,
                         xtreamFastSyncEnabled = provider.xtreamFastSyncEnabled,
                         selectedTab = if (provider.type == ProviderType.M3U) 1 else 0,
                         m3uTab = if (provider.m3uUrl.startsWith("file://")) 1 else 0
@@ -76,6 +78,10 @@ class ProviderSetupViewModel @Inject constructor(
         _uiState.update { it.copy(xtreamFastSyncEnabled = enabled) }
     }
 
+    fun updateEpgSyncMode(mode: ProviderEpgSyncMode) {
+        _uiState.update { it.copy(epgSyncMode = mode) }
+    }
+
     fun loginXtream(serverUrl: String, username: String, password: String, name: String) {
         _uiState.update { it.copy(validationError = null, error = null) }
 
@@ -90,6 +96,7 @@ class ProviderSetupViewModel @Inject constructor(
                     password = password,
                     name = name,
                     xtreamFastSyncEnabled = _uiState.value.xtreamFastSyncEnabled,
+                    epgSyncMode = _uiState.value.epgSyncMode,
                     existingProviderId = existingId
                 ),
                 onProgress = { msg -> _uiState.update { it.copy(syncProgress = msg) } }
@@ -157,6 +164,7 @@ class ProviderSetupViewModel @Inject constructor(
                 M3uProviderSetupCommand(
                     url = url,
                     name = name,
+                    epgSyncMode = _uiState.value.epgSyncMode,
                     existingProviderId = existingId
                 ),
                 onProgress = { msg -> _uiState.update { it.copy(syncProgress = msg) } }
@@ -208,5 +216,6 @@ data class ProviderSetupState(
     val username: String = "",
     val password: String = "",
     val m3uUrl: String = "",
+    val epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT,
     val xtreamFastSyncEnabled: Boolean = true
 )

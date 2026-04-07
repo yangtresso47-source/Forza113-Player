@@ -45,7 +45,10 @@ data class PlayerNavigationRequest(
     val archiveStartMs: Long? = null,
     val archiveEndMs: Long? = null,
     val archiveTitle: String? = null,
-    val returnRoute: String? = null
+    val returnRoute: String? = null,
+    val seriesId: Long? = null,
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null
 ) : Serializable
 
 object Routes {
@@ -120,7 +123,10 @@ object Routes {
             internalId = episode.id,
             providerId = episode.providerId,
             contentType = "SERIES_EPISODE",
-            artworkUrl = episode.coverUrl
+            artworkUrl = episode.coverUrl,
+            seriesId = episode.seriesId.takeIf { it > 0L },
+            seasonNumber = episode.seasonNumber,
+            episodeNumber = episode.episodeNumber
         )
     }
 
@@ -140,7 +146,10 @@ object Routes {
         archiveStartMs: Long? = null,
         archiveEndMs: Long? = null,
         archiveTitle: String? = null,
-        returnRoute: String? = null
+        returnRoute: String? = null,
+        seriesId: Long? = null,
+        seasonNumber: Int? = null,
+        episodeNumber: Int? = null
     ): PlayerNavigationRequest {
         return PlayerNavigationRequest(
             streamUrl = streamUrl,
@@ -155,7 +164,10 @@ object Routes {
             archiveStartMs = archiveStartMs,
             archiveEndMs = archiveEndMs,
             archiveTitle = archiveTitle,
-            returnRoute = returnRoute
+            returnRoute = returnRoute,
+            seriesId = seriesId,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber
         )
     }
 
@@ -342,7 +354,10 @@ fun AppNavigation(mainActivity: MainActivity) {
                                 internalId = history.contentId,
                                 providerId = history.providerId,
                                 contentType = history.contentType.name,
-                                returnRoute = Routes.HOME
+                                returnRoute = Routes.HOME,
+                                seriesId = history.seriesId,
+                                seasonNumber = history.seasonNumber,
+                                episodeNumber = history.episodeNumber
                             )
                         }
                     }
@@ -534,9 +549,14 @@ fun AppNavigation(mainActivity: MainActivity) {
                 archiveEndMs = playerRequest?.archiveEndMs,
                 archiveTitle = playerRequest?.archiveTitle,
                 returnRoute = playerRequest?.returnRoute,
+                seriesId = playerRequest?.seriesId,
+                seasonNumber = playerRequest?.seasonNumber,
+                episodeNumber = playerRequest?.episodeNumber,
                 onBack = {
                     val route = playerRequest?.returnRoute
-                    if (!route.isNullOrBlank()) {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    } else if (!route.isNullOrBlank()) {
                         navController.navigate(route) {
                             popUpTo(Routes.PLAYER) { inclusive = true }
                             launchSingleTop = true

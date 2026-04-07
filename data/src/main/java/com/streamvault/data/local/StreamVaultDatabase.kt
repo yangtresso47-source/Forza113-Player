@@ -37,7 +37,7 @@ import com.streamvault.data.local.entity.*
         EpgProgrammeEntity::class,
         ChannelEpgMappingEntity::class
     ],
-    version = 26,
+    version = 27,
     exportSchema = true   // ← was false; schema JSON now tracked in version control
 )
 @TypeConverters(RoomEnumConverters::class)
@@ -1197,6 +1197,12 @@ abstract class StreamVaultDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_series_category_hydration_provider_id ON series_category_hydration(provider_id)")
+            }
+        }
+
+        val MIGRATION_26_27 = object : Migration(26, 27) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE providers ADD COLUMN epg_sync_mode TEXT NOT NULL DEFAULT 'UPFRONT'")
             }
         }
 

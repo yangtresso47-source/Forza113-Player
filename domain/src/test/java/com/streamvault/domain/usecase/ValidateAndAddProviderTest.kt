@@ -5,6 +5,7 @@ import com.streamvault.domain.manager.ProviderSetupInputValidator
 import com.streamvault.domain.model.Program
 import com.streamvault.domain.manager.ValidatedM3uProviderInput
 import com.streamvault.domain.manager.ValidatedXtreamProviderInput
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.Provider
 import com.streamvault.domain.model.ProviderStatus
 import com.streamvault.domain.model.ProviderType
@@ -64,6 +65,7 @@ class ValidateAndAddProviderTest {
                 password = "secret",
                 name = " Premium ",
                 xtreamFastSyncEnabled = true,
+                epgSyncMode = ProviderEpgSyncMode.BACKGROUND,
                 existingProviderId = 7L
             )
         )
@@ -76,6 +78,7 @@ class ValidateAndAddProviderTest {
                 password = "secret",
                 name = "Premium",
                 xtreamFastSyncEnabled = true,
+                epgSyncMode = ProviderEpgSyncMode.BACKGROUND,
                 id = 7L
             )
         )
@@ -100,6 +103,7 @@ class ValidateAndAddProviderTest {
             M3uProviderSetupCommand(
                 url = "file://playlist.m3u",
                 name = "Local Playlist",
+                epgSyncMode = ProviderEpgSyncMode.SKIP,
                 existingProviderId = 11L
             )
         )
@@ -109,6 +113,7 @@ class ValidateAndAddProviderTest {
             M3uCall(
                 url = "file://playlist.m3u",
                 name = "Local Playlist",
+                epgSyncMode = ProviderEpgSyncMode.SKIP,
                 id = 11L
             )
         )
@@ -148,12 +153,14 @@ private data class XtreamCall(
     val password: String,
     val name: String,
     val xtreamFastSyncEnabled: Boolean,
+    val epgSyncMode: ProviderEpgSyncMode,
     val id: Long?
 )
 
 private data class M3uCall(
     val url: String,
     val name: String,
+    val epgSyncMode: ProviderEpgSyncMode,
     val id: Long?
 )
 
@@ -181,20 +188,22 @@ private class FakeProviderRepository : ProviderRepository {
         password: String,
         name: String,
         xtreamFastSyncEnabled: Boolean,
+        epgSyncMode: ProviderEpgSyncMode,
         onProgress: ((String) -> Unit)?,
         id: Long?
     ): Result<Provider> {
-        lastXtreamCall = XtreamCall(serverUrl, username, password, name, xtreamFastSyncEnabled, id)
+        lastXtreamCall = XtreamCall(serverUrl, username, password, name, xtreamFastSyncEnabled, epgSyncMode, id)
         return Result.success(provider(id = id ?: 1L, name = name, type = ProviderType.XTREAM_CODES))
     }
 
     override suspend fun validateM3u(
         url: String,
         name: String,
+        epgSyncMode: ProviderEpgSyncMode,
         onProgress: ((String) -> Unit)?,
         id: Long?
     ): Result<Provider> {
-        lastM3uCall = M3uCall(url, name, id)
+        lastM3uCall = M3uCall(url, name, epgSyncMode, id)
         return Result.success(provider(id = id ?: 2L, name = name, type = ProviderType.M3U, m3uUrl = url))
     }
 

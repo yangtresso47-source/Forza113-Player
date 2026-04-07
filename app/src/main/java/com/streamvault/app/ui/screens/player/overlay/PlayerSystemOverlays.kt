@@ -7,38 +7,54 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import com.streamvault.app.R
+import com.streamvault.app.ui.design.AppColors
 import com.streamvault.app.ui.design.requestFocusSafely
 import com.streamvault.app.ui.screens.player.PlayerNoticeAction
 import com.streamvault.app.ui.screens.player.PlayerNoticeState
@@ -53,6 +69,8 @@ import com.streamvault.app.ui.theme.SurfaceElevated
 import com.streamvault.app.ui.theme.SurfaceHighlight
 import com.streamvault.app.ui.theme.PrimaryLight
 import com.streamvault.app.ui.theme.TextSecondary
+import com.streamvault.domain.model.Episode
+import com.streamvault.domain.model.Season
 import com.streamvault.player.PlayerError
 import com.streamvault.player.PlayerTrack
 import com.streamvault.player.TrackType
@@ -388,6 +406,401 @@ fun PlayerSpeedSelectionDialog(
     }
 }
 
+@Composable
+fun PlayerEpisodeSelectionDialog(
+    visible: Boolean,
+    seriesTitle: String,
+    seasons: List<Season>,
+    currentEpisodeId: Long,
+    currentSeasonNumber: Int?,
+    onDismiss: () -> Unit,
+    onSelectEpisode: (Episode) -> Unit
+) {
+    if (!visible) return
+
+    val availableSeasons = remember(seasons) { seasons.filter { it.episodes.isNotEmpty() } }
+    if (availableSeasons.isEmpty()) return
+
+    val totalEpisodeCount = remember(availableSeasons) { availableSeasons.sumOf { it.episodes.size } }
+
+    var selectedSeasonNumber by remember(visible, currentSeasonNumber, availableSeasons) {
+        mutableStateOf(currentSeasonNumber ?: availableSeasons.first().seasonNumber)
+    }
+    val selectedSeason = availableSeasons.firstOrNull { it.seasonNumber == selectedSeasonNumber }
+        ?: availableSeasons.first()
+    val selectedEpisode = remember(selectedSeason, currentEpisodeId) {
+        selectedSeason.episodes.firstOrNull { it.id == currentEpisodeId }
+    }
+    val selectedSeasonFocusRequester = remember(visible, selectedSeason.seasonNumber) { FocusRequester() }
+    val episodeEntryFocusRequester = remember(visible, selectedSeason.seasonNumber, currentEpisodeId) { FocusRequester() }
+
+    LaunchedEffect(availableSeasons, selectedSeasonNumber) {
+        if (availableSeasons.none { it.seasonNumber == selectedSeasonNumber }) {
+            selectedSeasonNumber = availableSeasons.first().seasonNumber
+        }
+    }
+
+    LaunchedEffect(visible, selectedSeason.seasonNumber) {
+        episodeEntryFocusRequester.requestFocusSafely(
+            tag = "PlayerEpisodeSelectionDialog",
+            target = "Selected episode option"
+        )
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.68f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 680.dp, max = 940.dp)
+                    .fillMaxWidth(0.88f)
+                    .heightIn(max = 640.dp)
+                    .onPreviewKeyEvent { event ->
+                        if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                        when (event.nativeKeyEvent.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_UP,
+                            KeyEvent.KEYCODE_DPAD_DOWN,
+                            KeyEvent.KEYCODE_DPAD_LEFT,
+                            KeyEvent.KEYCODE_DPAD_RIGHT,
+                            KeyEvent.KEYCODE_DPAD_CENTER,
+                            KeyEvent.KEYCODE_ENTER,
+                            KeyEvent.KEYCODE_NUMPAD_ENTER,
+                            KeyEvent.KEYCODE_BACK -> false
+                            else -> true
+                        }
+                    },
+                shape = RoundedCornerShape(20.dp),
+                colors = SurfaceDefaults.colors(containerColor = AppColors.CanvasElevated.copy(alpha = 0.98f)),
+                border = Border(
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Outline)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    AppColors.BrandMuted.copy(alpha = 0.10f),
+                                    AppColors.CanvasElevated,
+                                    AppColors.Canvas
+                                )
+                            )
+                        )
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = stringResource(R.string.player_episodes),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = seriesTitle,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PlayerEpisodeStatPill(text = "${availableSeasons.size} seasons")
+                            PlayerEpisodeStatPill(text = "$totalEpisodeCount episodes")
+                            PlayerEpisodeStatPill(
+                                text = selectedEpisode?.let { "Now on S${it.seasonNumber}E${it.episodeNumber}" }
+                                    ?: selectedSeason.name,
+                                accent = true
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .width(190.dp)
+                                .fillMaxHeight(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = SurfaceDefaults.colors(containerColor = AppColors.Surface.copy(alpha = 0.78f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.series_seasons),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Choose a season, then move right for episodes.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColors.TextTertiary
+                                )
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(availableSeasons, key = { it.seasonNumber }) { season ->
+                                        val isSelectedSeason = season.seasonNumber == selectedSeason.seasonNumber
+                                        TvClickableSurface(
+                                            onClick = { selectedSeasonNumber = season.seasonNumber },
+                                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
+                                            colors = ClickableSurfaceDefaults.colors(
+                                                containerColor = if (isSelectedSeason) AppColors.BrandMuted.copy(alpha = 0.72f) else AppColors.SurfaceElevated.copy(alpha = 0.62f),
+                                                focusedContainerColor = AppColors.Surface.copy(alpha = 0.76f),
+                                                contentColor = Color.White,
+                                                focusedContentColor = Color.White
+                                            ),
+                                            border = ClickableSurfaceDefaults.border(
+                                                border = Border(
+                                                    border = androidx.compose.foundation.BorderStroke(
+                                                        1.dp,
+                                                        if (isSelectedSeason) AppColors.Brand else AppColors.Outline
+                                                    )
+                                                ),
+                                                focusedBorder = Border(
+                                                    border = androidx.compose.foundation.BorderStroke(2.dp, AppColors.Focus)
+                                                )
+                                            ),
+                                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                                            modifier = Modifier
+                                                .then(
+                                                    if (isSelectedSeason) Modifier.focusRequester(selectedSeasonFocusRequester) else Modifier
+                                                )
+                                                .focusProperties { right = episodeEntryFocusRequester }
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = season.name,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = "${season.episodes.size} episodes",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (isSelectedSeason) AppColors.TextPrimary else AppColors.TextSecondary
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = SurfaceDefaults.colors(containerColor = AppColors.Surface.copy(alpha = 0.70f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            text = selectedSeason.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${selectedSeason.episodes.size} episodes ready to play",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    selectedEpisode?.let { episode ->
+                                        PlayerEpisodeStatPill(
+                                            text = buildEpisodeCodeLabel(episode),
+                                            accent = true
+                                        )
+                                    }
+                                }
+
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 440.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    itemsIndexed(selectedSeason.episodes, key = { _, episode -> episode.id }) { index, episode ->
+                                        val isSelectedEpisode = episode.id == currentEpisodeId
+                                        TvClickableSurface(
+                                            onClick = { onSelectEpisode(episode) },
+                                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp)),
+                                            colors = ClickableSurfaceDefaults.colors(
+                                                containerColor = if (isSelectedEpisode) AppColors.BrandMuted.copy(alpha = 0.62f) else AppColors.SurfaceElevated.copy(alpha = 0.44f),
+                                                focusedContainerColor = AppColors.Surface.copy(alpha = 0.74f)
+                                            ),
+                                            border = ClickableSurfaceDefaults.border(
+                                                border = Border(
+                                                    border = androidx.compose.foundation.BorderStroke(
+                                                        1.dp,
+                                                        if (isSelectedEpisode) AppColors.Brand else AppColors.Outline
+                                                    )
+                                                ),
+                                                focusedBorder = Border(
+                                                    border = androidx.compose.foundation.BorderStroke(2.dp, AppColors.Focus)
+                                                )
+                                            ),
+                                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .then(
+                                                    if ((selectedEpisode == null && index == 0) || episode.id == selectedEpisode?.id) {
+                                                        Modifier.focusRequester(episodeEntryFocusRequester)
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                )
+                                                .focusProperties {
+                                                    if (index == 0) {
+                                                        left = selectedSeasonFocusRequester
+                                                    }
+                                                }
+                                        ) {
+                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                PlayerEpisodeListItem(
+                                                    episode = episode,
+                                                    selected = isSelectedEpisode,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                                if (isSelectedEpisode) {
+                                                    Text(
+                                                        text = stringResource(R.string.player_selected),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = AppColors.BrandStrong,
+                                                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 8.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerEpisodeStatPill(
+    text: String,
+    accent: Boolean = false
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        colors = SurfaceDefaults.colors(
+            containerColor = if (accent) AppColors.BrandMuted.copy(alpha = 0.78f) else AppColors.SurfaceElevated.copy(alpha = 0.70f)
+        )
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (accent) AppColors.BrandStrong else AppColors.TextSecondary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+private fun PlayerEpisodeListItem(
+    episode: Episode,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(120.dp)
+                .height(68.dp)
+                .background(AppColors.SurfaceEmphasis.copy(alpha = 0.72f), RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!episode.coverUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = episode.coverUrl,
+                    contentDescription = episode.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text(
+                    text = buildEpisodeCodeLabel(episode),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AppColors.TextSecondary
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = episode.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = buildEpisodeMetaLabel(episode),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            episode.plot?.takeIf { it.isNotBlank() }?.let { plot ->
+                Text(
+                    text = plot,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AppColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
 private fun formatPlaybackSpeedLabel(speed: Float): String {
     return if (speed % 1f == 0f) {
         "${speed.toInt()}x"
@@ -432,6 +845,23 @@ private fun TrackSelectionItem(
         }
     }
 }
+
+private fun buildEpisodeCodeLabel(episode: Episode): String = buildString {
+    append("S")
+    append(episode.seasonNumber)
+    append("E")
+    append(episode.episodeNumber)
+}
+
+private fun buildEpisodeMetaLabel(episode: Episode): String = buildString {
+    append(stringResourceFallbackEpisode(episode.episodeNumber))
+    episode.duration?.takeIf { it.isNotBlank() }?.let {
+        append(" • ")
+        append(it)
+    }
+}
+
+private fun stringResourceFallbackEpisode(episodeNumber: Int): String = "Episode $episodeNumber"
 
 @Composable
 fun PlayerResumePrompt(

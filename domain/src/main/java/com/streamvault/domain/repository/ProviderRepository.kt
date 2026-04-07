@@ -2,6 +2,7 @@ package com.streamvault.domain.repository
 
 import com.streamvault.domain.model.Program
 import com.streamvault.domain.model.Provider
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
@@ -13,8 +14,8 @@ interface ProviderRepository {
     suspend fun updateProvider(provider: Provider): Result<Unit>
     suspend fun deleteProvider(id: Long): Result<Unit>
     suspend fun setActiveProvider(id: Long): Result<Unit>
-    suspend fun loginXtream(serverUrl: String, username: String, password: String, name: String, xtreamFastSyncEnabled: Boolean, onProgress: ((String) -> Unit)? = null, id: Long? = null): Result<Provider>
-    suspend fun validateM3u(url: String, name: String, onProgress: ((String) -> Unit)? = null, id: Long? = null): Result<Provider>
+    suspend fun loginXtream(serverUrl: String, username: String, password: String, name: String, xtreamFastSyncEnabled: Boolean, epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT, onProgress: ((String) -> Unit)? = null, id: Long? = null): Result<Provider>
+    suspend fun validateM3u(url: String, name: String, epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT, onProgress: ((String) -> Unit)? = null, id: Long? = null): Result<Provider>
     suspend fun refreshProviderData(
         providerId: Long,
         force: Boolean = false,

@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.streamvault.domain.manager.ProviderSyncStateReader
 import com.streamvault.domain.model.Program
 import com.streamvault.domain.model.Provider
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.ProviderStatus
 import com.streamvault.domain.model.ProviderType
 import com.streamvault.domain.model.Result
@@ -107,6 +108,7 @@ private class FakeSyncProviderRepository(
         password: String,
         name: String,
         xtreamFastSyncEnabled: Boolean,
+        epgSyncMode: ProviderEpgSyncMode,
         onProgress: ((String) -> Unit)?,
         id: Long?
     ): Result<Provider> = error("Not used in test")
@@ -114,6 +116,7 @@ private class FakeSyncProviderRepository(
     override suspend fun validateM3u(
         url: String,
         name: String,
+        epgSyncMode: ProviderEpgSyncMode,
         onProgress: ((String) -> Unit)?,
         id: Long?
     ): Result<Provider> = error("Not used in test")

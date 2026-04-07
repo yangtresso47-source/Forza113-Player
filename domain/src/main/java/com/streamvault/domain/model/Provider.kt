@@ -14,6 +14,7 @@ data class Provider(
     val expirationDate: Long? = null,
     val apiVersion: String? = null,
     val allowedOutputFormats: List<String> = emptyList(),
+    val epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT,
     val xtreamFastSyncEnabled: Boolean = true,
     val status: ProviderStatus = ProviderStatus.UNKNOWN,
     val lastSyncedAt: Long = 0L,
@@ -32,6 +33,12 @@ data class Provider(
 enum class ProviderType {
     XTREAM_CODES,
     M3U
+}
+
+enum class ProviderEpgSyncMode {
+    UPFRONT,
+    BACKGROUND,
+    SKIP
 }
 
 enum class ProviderStatus {

@@ -1,6 +1,7 @@
 package com.streamvault.app.ui.screens.home
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -32,9 +33,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.tv.material3.*
 import androidx.compose.material3.SnackbarHost
@@ -86,7 +86,6 @@ import java.util.Date
 import java.util.Locale
 import com.streamvault.app.ui.interaction.TvClickableSurface
 import com.streamvault.app.ui.interaction.TvButton
-import com.streamvault.app.ui.interaction.TvIconButton
 
 private enum class FocusRestoreTarget {
     CATEGORY,
@@ -827,62 +826,6 @@ fun HomeScreen(
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
 
-                        // ── Split Screen entry (under search bar) ──
-                        if (hasSplitChannels) {
-                            item {
-                                Spacer(Modifier.height(8.dp))
-                                var isFocused by remember { mutableStateOf(false) }
-                                TvClickableSurface(
-                                    onClick = { showSplitManagerDialog = true },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .onFocusChanged { isFocused = it.isFocused },
-                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
-                                    colors = ClickableSurfaceDefaults.colors(
-                                        containerColor = Color(0xFF0D2E16),
-                                        focusedContainerColor = Color(0xFF1B5E20)
-                                    ),
-                                    border = ClickableSurfaceDefaults.border(
-                                        border = androidx.tv.material3.Border(
-                                            border = androidx.compose.foundation.BorderStroke(
-                                                1.dp,
-                                                Color(0xFF2E7D32)
-                                            )
-                                        )
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.action_split),
-                                            fontSize = 14.sp
-                                        )
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = stringResource(R.string.multiview_nav),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.label_slots_count, uiState.multiviewChannelCount),
-                                                style = androidx.compose.ui.text.TextStyle(
-                                                    fontSize = 9.sp,
-                                                    color = Color(0xFF81C784)
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(Modifier.height(12.dp))
-                            }
-                        }
-
                         items(
                             items = visibleCategories,
                             key = { it.id }
@@ -956,15 +899,39 @@ fun HomeScreen(
                                 .padding(start = 8.dp, top = 2.dp, bottom = if (isDenseMode) 4.dp else 6.dp, end = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(if (isDenseMode) 2.dp else 4.dp)
                         ) {
-                            Text(
-                                text = displayedCategory?.name ?: if (hasBlockedCategorySearch) {
-                                    stringResource(R.string.home_locked_short)
-                                } else {
-                                    stringResource(R.string.home_all_channels)
-                                },
-                                style = if (isDenseMode) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                                color = OnBackground
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = displayedCategory?.name ?: if (hasBlockedCategorySearch) {
+                                        stringResource(R.string.home_locked_short)
+                                    } else {
+                                        stringResource(R.string.home_all_channels)
+                                    },
+                                    style = if (isDenseMode) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                                    color = OnBackground,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Clip,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp)
+                                        .basicMarquee(
+                                            iterations = Int.MAX_VALUE,
+                                            initialDelayMillis = 900,
+                                            repeatDelayMillis = 1200,
+                                            velocity = 24.dp
+                                        )
+                                )
+                                if (hasSplitChannels) {
+                                    CompactSplitLauncherButton(
+                                        slotCount = uiState.multiviewChannelCount,
+                                        onClick = { showSplitManagerDialog = true },
+                                        modifier = Modifier.padding(start = 12.dp)
+                                    )
+                                }
+                            }
                             if (isDenseMode) {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -994,29 +961,19 @@ fun HomeScreen(
                                     }
                                 )
                             }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(if (isDenseMode) 8.dp else 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                SearchInput(
-                                    value = uiState.channelSearchQuery,
-                                    onValueChange = {
-                                        if (!isReorderMode) {
-                                            viewModel.updateChannelSearchQuery(it)
-                                        }
-                                    },
-                                    placeholder = stringResource(R.string.home_search_channels),
-                                    onSearch = {},
-                                    focusRequester = channelSearchFocusRequester,
-                                    modifier = Modifier.width(channelSearchWidth),
-                                    enabled = !isReorderMode
-                                )
-                                if (hasSplitChannels) {
-                                    StatusPill(
-                                        label = stringResource(R.string.split_count_format, stringResource(R.string.live_shell_split), uiState.multiviewChannelCount)
-                                    )
-                                }
-                            }
+                            SearchInput(
+                                value = uiState.channelSearchQuery,
+                                onValueChange = {
+                                    if (!isReorderMode) {
+                                        viewModel.updateChannelSearchQuery(it)
+                                    }
+                                },
+                                placeholder = stringResource(R.string.home_search_channels),
+                                onSearch = {},
+                                focusRequester = channelSearchFocusRequester,
+                                modifier = Modifier.width(channelSearchWidth),
+                                enabled = !isReorderMode
+                            )
                         }
 
                         Crossfade(
@@ -1383,6 +1340,52 @@ fun HomeScreen(
         )
     }
 
+}
+
+@Composable
+private fun CompactSplitLauncherButton(
+    slotCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TvClickableSurface(
+        onClick = onClick,
+        modifier = modifier
+            .widthIn(min = 112.dp)
+            .height(34.dp),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(999.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Primary.copy(alpha = 0.18f),
+            focusedContainerColor = Primary.copy(alpha = 0.3f),
+            contentColor = OnBackground
+        ),
+        border = ClickableSurfaceDefaults.border(
+            border = androidx.tv.material3.Border(
+                border = BorderStroke(1.dp, Primary.copy(alpha = 0.55f))
+            )
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.action_split),
+                style = MaterialTheme.typography.labelSmall,
+                color = OnBackground,
+                maxLines = 1
+            )
+            Text(
+                text = stringResource(R.string.label_slots_count, slotCount),
+                style = MaterialTheme.typography.labelSmall,
+                color = PrimaryLight,
+                maxLines = 1
+            )
+        }
+    }
 }
 
 @Composable

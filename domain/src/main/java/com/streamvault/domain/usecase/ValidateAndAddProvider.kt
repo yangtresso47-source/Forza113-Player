@@ -2,6 +2,7 @@ package com.streamvault.domain.usecase
 
 import com.streamvault.domain.manager.ProviderSetupInputValidator
 import com.streamvault.domain.model.Provider
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.Result
 import com.streamvault.domain.repository.ProviderRepository
 import javax.inject.Inject
@@ -12,12 +13,14 @@ data class XtreamProviderSetupCommand(
     val password: String,
     val name: String,
     val xtreamFastSyncEnabled: Boolean = true,
+    val epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT,
     val existingProviderId: Long? = null
 )
 
 data class M3uProviderSetupCommand(
     val url: String,
     val name: String,
+    val epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT,
     val existingProviderId: Long? = null
 )
 
@@ -48,6 +51,7 @@ class ValidateAndAddProvider @Inject constructor(
                 password = command.password,
                 name = validated.data.name,
                 xtreamFastSyncEnabled = command.xtreamFastSyncEnabled,
+                epgSyncMode = command.epgSyncMode,
                 onProgress = onProgress,
                 id = command.existingProviderId
             ).toUseCaseResult()
@@ -70,6 +74,7 @@ class ValidateAndAddProvider @Inject constructor(
             is Result.Success -> providerRepository.validateM3u(
                 url = validated.data.url,
                 name = validated.data.name,
+                epgSyncMode = command.epgSyncMode,
                 onProgress = onProgress,
                 id = command.existingProviderId
             ).toUseCaseResult()

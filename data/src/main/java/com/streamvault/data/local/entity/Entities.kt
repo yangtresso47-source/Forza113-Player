@@ -7,6 +7,7 @@ import androidx.room.Fts4
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.streamvault.domain.model.ContentType
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.ProviderStatus
 import com.streamvault.domain.model.ProviderType
 
@@ -29,6 +30,7 @@ data class ProviderEntity(
     @ColumnInfo(name = "expiration_date") val expirationDate: Long? = null,
     @ColumnInfo(name = "api_version") val apiVersion: String? = null,
     @ColumnInfo(name = "allowed_output_formats_json") val allowedOutputFormatsJson: String = "[]",
+    @ColumnInfo(name = "epg_sync_mode") val epgSyncMode: ProviderEpgSyncMode = ProviderEpgSyncMode.UPFRONT,
     @ColumnInfo(name = "xtream_fast_sync_enabled") val xtreamFastSyncEnabled: Boolean = false,
     val status: ProviderStatus = ProviderStatus.UNKNOWN,
     @ColumnInfo(name = "last_synced_at") val lastSyncedAt: Long = 0,

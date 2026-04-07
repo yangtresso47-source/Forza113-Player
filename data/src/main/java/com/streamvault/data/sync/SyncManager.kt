@@ -34,6 +34,7 @@ import com.streamvault.data.util.UrlSecurityPolicy
 import com.streamvault.domain.model.Channel
 import com.streamvault.domain.model.ContentType
 import com.streamvault.domain.model.Movie
+import com.streamvault.domain.model.ProviderEpgSyncMode
 import com.streamvault.domain.model.Provider
 import com.streamvault.domain.model.ProviderType
 import com.streamvault.domain.model.Series
@@ -45,6 +46,9 @@ import com.streamvault.domain.repository.EpgSourceRepository
 import com.streamvault.domain.repository.SyncMetadataRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -53,6 +57,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
@@ -296,6 +301,8 @@ class SyncManager @Inject constructor(
     val syncState: StateFlow<SyncState> = syncStateTracker.aggregateState
     val syncStatesByProvider: StateFlow<Map<Long, SyncState>> = syncStateTracker.statesByProvider
     private val providerSyncMutexes = ConcurrentHashMap<Long, Mutex>()
+    private val backgroundEpgScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val backgroundEpgJobs = ConcurrentHashMap<Long, Job>()
     private val xtreamCatalogHttpService: OkHttpXtreamApiService by lazy {
         OkHttpXtreamApiService(
             client = okHttpClient,
@@ -316,11 +323,65 @@ class SyncManager @Inject constructor(
     }
 
     suspend fun onProviderDeleted(providerId: Long) {
+        backgroundEpgJobs.remove(providerId)?.cancel()
         syncStateTracker.reset(providerId)
         providerSyncMutexes.remove(providerId)
         xtreamAdaptiveSyncPolicy.forgetProvider(providerId)
         syncCatalogStore.clearProviderStaging(providerId)
     }
+
+    fun scheduleBackgroundEpgSync(providerId: Long) {
+        backgroundEpgJobs.remove(providerId)?.cancel()
+        val job = backgroundEpgScope.launch {
+            withProviderLock(providerId) {
+                val providerEntity = providerDao.getById(providerId) ?: return@withProviderLock
+                val provider = providerEntity
+                    .copy(password = CredentialCrypto.decryptIfNeeded(providerEntity.password))
+                    .toDomain()
+                try {
+                    publishSyncState(providerId, SyncState.Syncing("Downloading EPG..."))
+                    val warnings = syncProviderEpg(
+                        provider = provider,
+                        metadata = syncMetadataRepository.getMetadata(provider.id) ?: SyncMetadata(provider.id),
+                        now = System.currentTimeMillis(),
+                        force = true,
+                        onProgress = null
+                    )
+                    publishSyncState(
+                        providerId,
+                        if (warnings.isEmpty()) {
+                            SyncState.Success()
+                        } else {
+                            SyncState.Partial("Background EPG sync completed with warnings", warnings)
+                        }
+                    )
+                    updateSyncStatusMetadata(
+                        providerId = providerId,
+                        status = if (warnings.isEmpty()) "SUCCESS" else "PARTIAL"
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Background EPG sync failed for provider $providerId: ${syncErrorSanitizer.throwableMessage(e)}")
+                    publishSyncState(
+                        providerId,
+                        SyncState.Partial(
+                            message = "Background EPG sync completed with warnings",
+                            warnings = listOf(syncErrorSanitizer.userMessage(e, "EPG sync failed"))
+                        )
+                    )
+                    updateSyncStatusMetadata(providerId = providerId, status = "PARTIAL")
+                }
+            }
+        }
+        job.invokeOnCompletion {
+            backgroundEpgJobs.remove(providerId, job)
+        }
+        backgroundEpgJobs[providerId] = job
+    }
+
+    private fun shouldSyncEpgUpfront(provider: Provider): Boolean =
+        provider.epgSyncMode == ProviderEpgSyncMode.UPFRONT
 
     suspend fun sync(
         providerId: Long,
@@ -804,45 +865,14 @@ class SyncManager @Inject constructor(
             syncMetadataRepository.updateMetadata(metadata)
         }
 
-        if (force || ContentCachePolicy.shouldRefresh(metadata.lastEpgSync, ContentCachePolicy.EPG_TTL_MILLIS, now)) {
-            try {
-                progress(provider.id, onProgress, "Downloading EPG...")
-                val base = provider.serverUrl.trimEnd('/')
-                val xmltvUrl = provider.epgUrl.ifBlank {
-                    XtreamUrlFactory.buildXmltvUrl(base, provider.username, provider.password)
-                }
-                UrlSecurityPolicy.validateXtreamEpgUrl(xmltvUrl)?.let { message ->
-                    throw IllegalStateException(message)
-                }
-                retryTransient { epgRepository.refreshEpg(provider.id, xmltvUrl) }
-                val epgCount = programDao.countByProvider(provider.id)
-                metadata = metadata.copy(
-                    lastEpgSync = now,
-                    epgCount = epgCount
-                )
-                syncMetadataRepository.updateMetadata(metadata)
-                if (epgCount == 0) {
-                    warnings.add("EPG imported zero programs; live guide will fall back to on-demand Xtream data.")
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "EPG sync failed (non-fatal): ${sanitizeThrowableMessage(e)}")
-                warnings.add("EPG XMLTV sync failed; live guide will fall back to on-demand Xtream data.")
-            }
-        }
-
-        // Refresh external EPG sources assigned to this provider, then run resolution
-        try {
-            progress(provider.id, onProgress, "Refreshing external EPG sources...")
-            epgSourceRepository.refreshAllForProvider(provider.id)
-            progress(provider.id, onProgress, "Resolving EPG mappings...")
-            epgSourceRepository.resolveForProvider(provider.id)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.e(TAG, "External EPG resolution failed (non-fatal): ${sanitizeThrowableMessage(e)}")
-            warnings.add("External EPG source refresh/resolution failed.")
+        if (shouldSyncEpgUpfront(provider)) {
+            warnings += syncProviderEpg(
+                provider = provider,
+                metadata = metadata,
+                now = now,
+                force = force,
+                onProgress = onProgress
+            )
         }
 
         return if (warnings.isEmpty()) SyncOutcome() else SyncOutcome(partial = true, warnings = warnings)
@@ -882,30 +912,86 @@ class SyncManager @Inject constructor(
             syncMetadataRepository.updateMetadata(metadata)
         }
 
-        val currentEpgUrl = providerDao.getById(provider.id)?.epgUrl ?: provider.epgUrl
-        if (!currentEpgUrl.isNullOrBlank() && (force || ContentCachePolicy.shouldRefresh(metadata.lastEpgSync, ContentCachePolicy.EPG_TTL_MILLIS, now))) {
-            val epgValidationError = UrlSecurityPolicy.validateOptionalEpgUrl(currentEpgUrl)
-            if (epgValidationError != null) {
-                warnings.add(epgValidationError)
-            } else {
-                try {
-                    progress(provider.id, onProgress, "Downloading EPG...")
-                    retryTransient { epgRepository.refreshEpg(provider.id, currentEpgUrl) }
-                    metadata = metadata.copy(
-                        lastEpgSync = now,
-                        epgCount = programDao.countByProvider(provider.id)
-                    )
-                    syncMetadataRepository.updateMetadata(metadata)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.e(TAG, "EPG sync failed (non-fatal): ${sanitizeThrowableMessage(e)}")
-                    warnings.add("EPG sync failed")
+        if (shouldSyncEpgUpfront(provider)) {
+            warnings += syncProviderEpg(
+                provider = provider,
+                metadata = metadata,
+                now = now,
+                force = force,
+                onProgress = onProgress
+            )
+        }
+
+        return if (warnings.isEmpty()) SyncOutcome() else SyncOutcome(partial = true, warnings = warnings)
+    }
+
+    private suspend fun syncProviderEpg(
+        provider: Provider,
+        metadata: SyncMetadata,
+        now: Long,
+        force: Boolean,
+        onProgress: ((String) -> Unit)?
+    ): List<String> {
+        var updatedMetadata = metadata
+        val warnings = mutableListOf<String>()
+
+        when (provider.type) {
+            ProviderType.XTREAM_CODES -> {
+                if (force || ContentCachePolicy.shouldRefresh(updatedMetadata.lastEpgSync, ContentCachePolicy.EPG_TTL_MILLIS, now)) {
+                    try {
+                        progress(provider.id, onProgress, "Downloading EPG...")
+                        val base = provider.serverUrl.trimEnd('/')
+                        val xmltvUrl = provider.epgUrl.ifBlank {
+                            XtreamUrlFactory.buildXmltvUrl(base, provider.username, provider.password)
+                        }
+                        UrlSecurityPolicy.validateXtreamEpgUrl(xmltvUrl)?.let { message ->
+                            throw IllegalStateException(message)
+                        }
+                        retryTransient { epgRepository.refreshEpg(provider.id, xmltvUrl) }
+                        val epgCount = programDao.countByProvider(provider.id)
+                        updatedMetadata = updatedMetadata.copy(
+                            lastEpgSync = now,
+                            epgCount = epgCount
+                        )
+                        syncMetadataRepository.updateMetadata(updatedMetadata)
+                        if (epgCount == 0) {
+                            warnings.add("EPG imported zero programs; live guide will fall back to on-demand Xtream data.")
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(TAG, "EPG sync failed (non-fatal): ${sanitizeThrowableMessage(e)}")
+                        warnings.add("EPG XMLTV sync failed; live guide will fall back to on-demand Xtream data.")
+                    }
+                }
+            }
+
+            ProviderType.M3U -> {
+                val currentEpgUrl = providerDao.getById(provider.id)?.epgUrl ?: provider.epgUrl
+                if (!currentEpgUrl.isNullOrBlank() && (force || ContentCachePolicy.shouldRefresh(updatedMetadata.lastEpgSync, ContentCachePolicy.EPG_TTL_MILLIS, now))) {
+                    val epgValidationError = UrlSecurityPolicy.validateOptionalEpgUrl(currentEpgUrl)
+                    if (epgValidationError != null) {
+                        warnings.add(epgValidationError)
+                    } else {
+                        try {
+                            progress(provider.id, onProgress, "Downloading EPG...")
+                            retryTransient { epgRepository.refreshEpg(provider.id, currentEpgUrl) }
+                            updatedMetadata = updatedMetadata.copy(
+                                lastEpgSync = now,
+                                epgCount = programDao.countByProvider(provider.id)
+                            )
+                            syncMetadataRepository.updateMetadata(updatedMetadata)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.e(TAG, "EPG sync failed (non-fatal): ${sanitizeThrowableMessage(e)}")
+                            warnings.add("EPG sync failed")
+                        }
+                    }
                 }
             }
         }
 
-        // Refresh external EPG sources assigned to this provider, then run resolution
         try {
             progress(provider.id, onProgress, "Refreshing external EPG sources...")
             epgSourceRepository.refreshAllForProvider(provider.id)
@@ -918,7 +1004,7 @@ class SyncManager @Inject constructor(
             warnings.add("External EPG source refresh/resolution failed.")
         }
 
-        return if (warnings.isEmpty()) SyncOutcome() else SyncOutcome(partial = true, warnings = warnings)
+        return warnings
     }
 
     private suspend fun syncEpgOnly(

@@ -1312,7 +1312,7 @@ data class HomeUiState(
     val selectedCategoryForOptions: Category? = null,
     val isChannelReorderMode: Boolean = false,
     val reorderCategory: Category? = null,
-    val liveTvChannelMode: LiveTvChannelMode = LiveTvChannelMode.COMFORTABLE,
+    val liveTvChannelMode: LiveTvChannelMode = LiveTvChannelMode.PRO,
     val previewChannelId: Long? = null,
     val previewPlayerEngine: PlayerEngine? = null,
     val isPreviewLoading: Boolean = false,

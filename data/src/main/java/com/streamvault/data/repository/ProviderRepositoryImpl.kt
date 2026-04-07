@@ -14,8 +14,12 @@ import com.streamvault.domain.model.*
 import com.streamvault.domain.provider.IptvProvider
 import com.streamvault.domain.repository.ProviderRepository
 import com.streamvault.domain.repository.SyncMetadataRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,6 +32,8 @@ class ProviderRepositoryImpl @Inject constructor(
     private val syncManager: SyncManager,
     private val syncMetadataRepository: SyncMetadataRepository
 ) : ProviderRepository {
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun getProviders(): Flow<List<Provider>> =
         providerDao.getAll().map { entities -> entities.map { it.toPublicDomain() } }
 
@@ -74,6 +80,7 @@ class ProviderRepositoryImpl @Inject constructor(
         password: String,
         name: String,
         xtreamFastSyncEnabled: Boolean,
+        epgSyncMode: ProviderEpgSyncMode,
         onProgress: ((String) -> Unit)?,
         id: Long?
     ): Result<Provider> {
@@ -111,6 +118,7 @@ class ProviderRepositoryImpl @Inject constructor(
                         serverUrl = normalizedServerUrl,
                         username = normalizedUsername,
                         password = effectivePassword,
+                        epgSyncMode = epgSyncMode,
                         xtreamFastSyncEnabled = xtreamFastSyncEnabled,
                         isActive = true,
                         lastSyncedAt = 0,
@@ -121,6 +129,7 @@ class ProviderRepositoryImpl @Inject constructor(
                 } else {
                     val newData = authResult.data.copy(
                         name = normalizedName.ifBlank { authResult.data.name },
+                        epgSyncMode = epgSyncMode,
                         xtreamFastSyncEnabled = xtreamFastSyncEnabled
                     )
                     val newId = providerDao.insert(newData.toSecureEntity())
@@ -136,6 +145,7 @@ class ProviderRepositoryImpl @Inject constructor(
                             ProviderStatus.ACTIVE
                         }
                         updateProviderSyncStatus(providerData.id, finalStatus, System.currentTimeMillis())
+                        maybeScheduleBackgroundEpgSync(providerData.id)
                         Result.success(providerData.copy(status = finalStatus))
                     }
                     is Result.Error -> {
@@ -156,6 +166,7 @@ class ProviderRepositoryImpl @Inject constructor(
     override suspend fun validateM3u(
         url: String,
         name: String,
+        epgSyncMode: ProviderEpgSyncMode,
         onProgress: ((String) -> Unit)?,
         id: Long?
     ): Result<Provider> = try {
@@ -184,6 +195,7 @@ class ProviderRepositoryImpl @Inject constructor(
                 name = if (normalizedName.isNotBlank()) normalizedName else existingProvider.name,
                 serverUrl = normalizedUrl,
                 m3uUrl = normalizedUrl,
+                epgSyncMode = epgSyncMode,
                 isActive = true,
                 lastSyncedAt = 0
             )
@@ -195,6 +207,7 @@ class ProviderRepositoryImpl @Inject constructor(
                 type = ProviderType.M3U,
                 serverUrl = normalizedUrl,
                 m3uUrl = normalizedUrl,
+                epgSyncMode = epgSyncMode,
                 status = ProviderStatus.ACTIVE
             )
             val newId = providerDao.insert(provider.toSecureEntity())
@@ -211,6 +224,7 @@ class ProviderRepositoryImpl @Inject constructor(
                     ProviderStatus.ACTIVE
                 }
                 updateProviderSyncStatus(providerData.id, finalStatus, System.currentTimeMillis())
+                maybeScheduleBackgroundEpgSync(providerData.id)
                 Result.success(providerData.copy(status = finalStatus))
             }
             is Result.Error -> {
@@ -250,6 +264,7 @@ class ProviderRepositoryImpl @Inject constructor(
                     ProviderStatus.ACTIVE
                 }
                 updateProviderSyncStatus(providerId, finalStatus, System.currentTimeMillis())
+                maybeScheduleBackgroundEpgSync(providerId)
                 syncResult
             }
             is Result.Error -> {
@@ -406,6 +421,16 @@ class ProviderRepositoryImpl @Inject constructor(
             lastSyncedAt = lastSyncedAt ?: current.lastSyncedAt
         )
         providerDao.update(updated)
+    }
+
+    private suspend fun maybeScheduleBackgroundEpgSync(providerId: Long) {
+        val provider = providerDao.getById(providerId) ?: return
+        if (provider.epgSyncMode != ProviderEpgSyncMode.BACKGROUND) {
+            return
+        }
+        repositoryScope.launch {
+            syncManager.scheduleBackgroundEpgSync(providerId)
+        }
     }
 
     private fun normalizeXtreamPrograms(

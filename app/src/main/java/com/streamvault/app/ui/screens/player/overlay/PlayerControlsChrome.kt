@@ -126,6 +126,8 @@ fun PlayerControlsOverlay(
     onOpenAudioTracks: () -> Unit,
     onOpenVideoTracks: () -> Unit,
     onOpenPlaybackSpeed: () -> Unit = {},
+    showEpisodesAction: Boolean = false,
+    onOpenEpisodes: () -> Unit = {},
     onOpenSplitScreen: () -> Unit,
     onEnterPictureInPicture: () -> Unit = {},
     onToggleMute: () -> Unit,
@@ -203,6 +205,8 @@ fun PlayerControlsOverlay(
                 onOpenAudioTracks = onOpenAudioTracks,
                 onOpenVideoTracks = onOpenVideoTracks,
                 onOpenPlaybackSpeed = onOpenPlaybackSpeed,
+                showEpisodesAction = showEpisodesAction,
+                onOpenEpisodes = onOpenEpisodes,
                 onOpenSplitScreen = onOpenSplitScreen,
                 onEnterPictureInPicture = onEnterPictureInPicture,
                 onToggleMute = onToggleMute,
@@ -518,6 +522,8 @@ private fun PlayerBottomBar(
     onOpenAudioTracks: () -> Unit,
     onOpenVideoTracks: () -> Unit,
     onOpenPlaybackSpeed: () -> Unit,
+    showEpisodesAction: Boolean,
+    onOpenEpisodes: () -> Unit,
     onOpenSplitScreen: () -> Unit,
     onEnterPictureInPicture: () -> Unit,
     onToggleMute: () -> Unit,
@@ -533,6 +539,7 @@ private fun PlayerBottomBar(
     onSeekPreviewPositionChanged: (Long?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isVod = contentType != "LIVE"
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -541,11 +548,20 @@ private fun PlayerBottomBar(
                     colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.84f))
                 )
             )
-            .padding(horizontal = 32.dp, vertical = 24.dp)
+            .padding(
+                horizontal = if (isVod) 18.dp else 32.dp,
+                vertical = if (isVod) 14.dp else 24.dp
+            )
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
+            modifier = if (isVod) {
+                Modifier
+                    .fillMaxWidth(0.88f)
+                    .align(Alignment.Center)
+            } else {
+                Modifier.fillMaxWidth()
+            },
+            shape = RoundedCornerShape(if (isVod) 22.dp else 28.dp),
             colors = SurfaceDefaults.colors(containerColor = Color(0xFF0C1624).copy(alpha = 0.92f))
         ) {
             Column(
@@ -559,7 +575,10 @@ private fun PlayerBottomBar(
                             )
                         )
                     )
-                    .padding(horizontal = 24.dp, vertical = 22.dp)
+                    .padding(
+                        horizontal = if (isVod) 18.dp else 24.dp,
+                        vertical = if (isVod) 14.dp else 22.dp
+                    )
             ) {
                 if (contentType == "LIVE") {
                     PlayerLiveInfo(
@@ -615,6 +634,8 @@ private fun PlayerBottomBar(
                         onOpenAudioTracks = onOpenAudioTracks,
                         onOpenVideoTracks = onOpenVideoTracks,
                         onOpenPlaybackSpeed = onOpenPlaybackSpeed,
+                        showEpisodesAction = showEpisodesAction,
+                        onOpenEpisodes = onOpenEpisodes,
                         onEnterPictureInPicture = onEnterPictureInPicture,
                         onToggleMute = onToggleMute,
                         isCastConnected = isCastConnected,
@@ -807,6 +828,8 @@ private fun PlayerVodInfo(
     onOpenAudioTracks: () -> Unit,
     onOpenVideoTracks: () -> Unit,
     onOpenPlaybackSpeed: () -> Unit,
+    showEpisodesAction: Boolean,
+    onOpenEpisodes: () -> Unit,
     onEnterPictureInPicture: () -> Unit,
     onToggleMute: () -> Unit,
     isCastConnected: Boolean,
@@ -823,34 +846,34 @@ private fun PlayerVodInfo(
     val compactControls = screenWidth < 700.dp
     val tabletControls = !isTelevisionDevice && screenWidth >= 700.dp && screenWidth < 1280.dp
     val transportButtonSize = when {
-        compactControls -> 48.dp
-        tabletControls -> 52.dp
-        else -> 56.dp
+        compactControls -> 42.dp
+        tabletControls -> 46.dp
+        else -> 50.dp
     }
     val playButtonSize = when {
-        compactControls -> 60.dp
-        tabletControls -> 66.dp
-        else -> 72.dp
+        compactControls -> 54.dp
+        tabletControls -> 58.dp
+        else -> 62.dp
     }
     val playIconSize = when {
-        compactControls -> 28.dp
-        tabletControls -> 30.dp
-        else -> 34.dp
+        compactControls -> 24.dp
+        tabletControls -> 26.dp
+        else -> 30.dp
     }
     val seekPreviewWidth = when {
-        compactControls -> 180.dp
-        tabletControls -> 200.dp
-        else -> 220.dp
+        compactControls -> 148.dp
+        tabletControls -> 168.dp
+        else -> 188.dp
     }
     val outerSpacing = when {
-        compactControls -> 12.dp
-        tabletControls -> 14.dp
-        else -> 18.dp
+        compactControls -> 10.dp
+        tabletControls -> 12.dp
+        else -> 14.dp
     }
     val transportGroupHorizontalPadding = when {
-        compactControls -> 8.dp
-        tabletControls -> 9.dp
-        else -> 10.dp
+        compactControls -> 6.dp
+        tabletControls -> 7.dp
+        else -> 8.dp
     }
 
     val playbackLabel = stringResource(R.string.player_playback_label)
@@ -862,11 +885,14 @@ private fun PlayerVodInfo(
         if (subtitleTrackCount > 0) {
             add(PlayerActionSpec(stringResource(R.string.player_subs), onOpenSubtitleTracks))
         }
-        if (audioTrackCount > 0) {
-            add(PlayerActionSpec(stringResource(R.string.player_audio), onOpenAudioTracks))
-        }
         if (videoQualityCount > 0) {
             add(PlayerActionSpec(stringResource(R.string.player_video_quality), onOpenVideoTracks))
+        }
+        if (showEpisodesAction) {
+            add(PlayerActionSpec(stringResource(R.string.player_episodes), onOpenEpisodes))
+        }
+        if (audioTrackCount > 0) {
+            add(PlayerActionSpec(stringResource(R.string.player_audio), onOpenAudioTracks))
         }
         add(
             PlayerActionSpec(
@@ -927,13 +953,13 @@ private fun PlayerVodInfo(
     Spacer(modifier = Modifier.height(14.dp))
 
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = SurfaceDefaults.colors(containerColor = Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(outerSpacing),
             verticalAlignment = Alignment.CenterVertically
         ) {

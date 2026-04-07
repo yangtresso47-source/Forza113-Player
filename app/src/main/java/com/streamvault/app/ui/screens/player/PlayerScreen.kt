@@ -81,6 +81,7 @@ import com.streamvault.app.ui.screens.player.overlay.DiagnosticsOverlay
 import com.streamvault.app.ui.screens.player.overlay.EpgOverlay
 import com.streamvault.app.ui.screens.player.overlay.PlayerErrorOverlay
 import com.streamvault.app.ui.screens.player.overlay.PlayerNoticeBanner
+import com.streamvault.app.ui.screens.player.overlay.PlayerEpisodeSelectionDialog
 import com.streamvault.app.ui.screens.player.overlay.PlayerResumePrompt
 import com.streamvault.app.ui.screens.player.overlay.PlayerTrackSelectionDialog
 import com.streamvault.app.ui.screens.player.overlay.PlayerAspectRatioToast
@@ -110,6 +111,9 @@ fun PlayerScreen(
     archiveStartMs: Long? = null,
     archiveEndMs: Long? = null,
     archiveTitle: String? = null,
+    seriesId: Long? = null,
+    seasonNumber: Int? = null,
+    episodeNumber: Int? = null,
     returnRoute: String? = null,
     onBack: () -> Unit,
     onNavigate: ((String) -> Unit)? = null,
@@ -147,7 +151,11 @@ fun PlayerScreen(
     val nextProgram by viewModel.nextProgram.collectAsStateWithLifecycle()
     val programHistory by viewModel.programHistory.collectAsStateWithLifecycle()
     val currentChannel by viewModel.currentChannel.collectAsStateWithLifecycle()
+    val currentSeries by viewModel.currentSeries.collectAsStateWithLifecycle()
+    val currentEpisode by viewModel.currentEpisode.collectAsStateWithLifecycle()
+    val playbackTitle by viewModel.playbackTitle.collectAsStateWithLifecycle()
     val resumePrompt by viewModel.resumePrompt.collectAsStateWithLifecycle()
+    val canOpenEpisodePicker = contentType == "SERIES_EPISODE" && currentSeries?.seasons?.any { it.episodes.isNotEmpty() } == true
     
     val showChannelListOverlay by viewModel.showChannelListOverlay.collectAsStateWithLifecycle()
     val showCategoryListOverlay by viewModel.showCategoryListOverlay.collectAsStateWithLifecycle()
@@ -181,6 +189,7 @@ fun PlayerScreen(
     var showSpeedSelection by remember { mutableStateOf(false) }
     var showProgramHistory by remember { mutableStateOf(false) }
     var showSplitDialog by remember { mutableStateOf(false) }
+    var showEpisodePicker by remember { mutableStateOf(false) }
     
     val focusRequester = remember { FocusRequester() }
     val channelListFocusRequester = remember { FocusRequester() }
@@ -259,7 +268,7 @@ fun PlayerScreen(
 
     // Consolidated focus management for all overlays
     val liveOverlayVisible = contentType == "LIVE" && (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay || showChannelInfoOverlay)
-    val anyOverlayVisible = liveOverlayVisible || showTrackSelection != null || showSpeedSelection || showProgramHistory || showSplitDialog || showDiagnostics
+    val anyOverlayVisible = liveOverlayVisible || showTrackSelection != null || showSpeedSelection || showProgramHistory || showSplitDialog || showEpisodePicker || showDiagnostics
 
     LaunchedEffect(contentType, showCategoryListOverlay, showChannelListOverlay, showEpgOverlay, showChannelInfoOverlay) {
         if (contentType == "LIVE" && (showCategoryListOverlay || showChannelListOverlay || showEpgOverlay || showChannelInfoOverlay)) {
@@ -331,7 +340,7 @@ fun PlayerScreen(
         )
     }
 
-    LaunchedEffect(streamUrl, epgChannelId, title, artworkUrl, internalChannelId, categoryId, providerId, isVirtual, contentType, archiveStartMs, archiveEndMs, archiveTitle) {
+    LaunchedEffect(streamUrl, epgChannelId, title, artworkUrl, internalChannelId, categoryId, providerId, isVirtual, contentType, archiveStartMs, archiveEndMs, archiveTitle, seriesId, seasonNumber, episodeNumber) {
         viewModel.prepare(
             streamUrl = streamUrl,
             epgChannelId = epgChannelId,
@@ -344,7 +353,10 @@ fun PlayerScreen(
             artworkUrl = artworkUrl,
             archiveStartMs = archiveStartMs,
             archiveEndMs = archiveEndMs,
-            archiveTitle = archiveTitle
+            archiveTitle = archiveTitle,
+            seriesId = seriesId,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber
         )
     }
 
@@ -362,10 +374,10 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(showControls, showTrackSelection, showSpeedSelection, showProgramHistory, showSplitDialog) {
+    LaunchedEffect(showControls, showTrackSelection, showSpeedSelection, showProgramHistory, showSplitDialog, showEpisodePicker) {
         if (!showControls) {
             viewModel.cancelControlsAutoHide()
-        } else if (showTrackSelection != null || showSpeedSelection || showProgramHistory || showSplitDialog) {
+        } else if (showTrackSelection != null || showSpeedSelection || showProgramHistory || showSplitDialog || showEpisodePicker) {
             viewModel.cancelControlsAutoHide()
         } else {
             viewModel.hideControlsAfterDelay()
@@ -387,6 +399,7 @@ fun PlayerScreen(
         playerNotice,
         showProgramHistory,
         showSplitDialog,
+        showEpisodePicker,
         showSpeedSelection,
         showTrackSelection,
         showDiagnostics,
@@ -403,6 +416,7 @@ fun PlayerScreen(
                 playerNotice != null -> viewModel.dismissPlayerNotice()
                 showProgramHistory -> showProgramHistory = false
                 showSplitDialog -> showSplitDialog = false
+                showEpisodePicker -> showEpisodePicker = false
                 showSpeedSelection -> showSpeedSelection = false
                 showTrackSelection != null -> showTrackSelection = null
                 showDiagnostics -> viewModel.toggleDiagnostics()
@@ -448,7 +462,7 @@ fun PlayerScreen(
                 if (showChannelListOverlay || showCategoryListOverlay || showEpgOverlay) {
                     return@onPreviewKeyEvent false
                 }
-                if (showTrackSelection != null || showSpeedSelection || showProgramHistory || showSplitDialog) {
+                if (showTrackSelection != null || showSpeedSelection || showProgramHistory || showSplitDialog || showEpisodePicker) {
                     return@onPreviewKeyEvent false
                 }
 
@@ -571,6 +585,8 @@ fun PlayerScreen(
 
                             if (contentType == "LIVE") {
                                 viewModel.playNext()
+                            } else if (canOpenEpisodePicker) {
+                                showEpisodePicker = true
                             } else {
                                 viewModel.toggleControls()
                             }
@@ -759,7 +775,7 @@ fun PlayerScreen(
         PlayerControlsOverlayHost(
             playerEngine = viewModel.playerEngine,
             visible = showControls,
-            title = title,
+            title = playbackTitle.ifBlank { title },
             contentType = contentType,
             isPlaying = isPlaying,
             currentProgram = currentProgram,
@@ -792,6 +808,8 @@ fun PlayerScreen(
             onOpenAudioTracks = { showTrackSelection = TrackType.AUDIO },
             onOpenVideoTracks = { showTrackSelection = TrackType.VIDEO },
             onOpenPlaybackSpeed = { showSpeedSelection = true },
+            showEpisodesAction = canOpenEpisodePicker,
+            onOpenEpisodes = { showEpisodePicker = true },
             onOpenSplitScreen = { showSplitDialog = true },
             onEnterPictureInPicture = enterPictureInPicture,
             onToggleMute = viewModel::toggleMute,
@@ -855,6 +873,18 @@ fun PlayerScreen(
                 selectedSpeed = playbackSpeed,
                 onDismiss = { showSpeedSelection = false },
                 onSelectSpeed = viewModel::setPlaybackSpeed
+            )
+            PlayerEpisodeSelectionDialog(
+                visible = showEpisodePicker,
+                seriesTitle = currentSeries?.name ?: playbackTitle.ifBlank { title },
+                seasons = currentSeries?.seasons.orEmpty(),
+                currentEpisodeId = currentEpisode?.id ?: internalChannelId,
+                currentSeasonNumber = currentEpisode?.seasonNumber ?: seasonNumber,
+                onDismiss = { showEpisodePicker = false },
+                onSelectEpisode = { episode ->
+                    showEpisodePicker = false
+                    viewModel.playEpisode(episode)
+                }
             )
         }
 
@@ -1059,6 +1089,8 @@ private fun PlayerControlsOverlayHost(
     onOpenAudioTracks: () -> Unit,
     onOpenVideoTracks: () -> Unit,
     onOpenPlaybackSpeed: () -> Unit,
+    showEpisodesAction: Boolean,
+    onOpenEpisodes: () -> Unit,
     onOpenSplitScreen: () -> Unit,
     onEnterPictureInPicture: () -> Unit,
     onToggleMute: () -> Unit,
@@ -1111,6 +1143,8 @@ private fun PlayerControlsOverlayHost(
         onOpenAudioTracks = onOpenAudioTracks,
         onOpenVideoTracks = onOpenVideoTracks,
         onOpenPlaybackSpeed = onOpenPlaybackSpeed,
+        showEpisodesAction = showEpisodesAction,
+        onOpenEpisodes = onOpenEpisodes,
         onOpenSplitScreen = onOpenSplitScreen,
         onEnterPictureInPicture = onEnterPictureInPicture,
         onToggleMute = onToggleMute,
