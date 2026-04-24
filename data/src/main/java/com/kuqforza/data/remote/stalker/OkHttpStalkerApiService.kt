@@ -69,6 +69,7 @@ class OkHttpStalkerApiService @Inject constructor(
 
             val session = StalkerSession(loadUrl = loadUrl, portalReferer = referer, token = token)
 
+            if (profile.getProfileEnabled) {
             // get_profile #1: SN only, device_id/device_id2/signature EMPTY
             val profileQuery1 = buildProfileQuery(profile).toMutableMap()
             profileQuery1["device_id"] = ""
@@ -114,6 +115,17 @@ class OkHttpStalkerApiService @Inject constructor(
             }
 
             return Result.success(session to infoPayload.toProviderProfile())
+            } else {
+                // Skip get_profile - just get account info
+                val infoResult2 = runCatching {
+                    requestJson(
+                        url = loadUrl, profile = profile, referer = referer, token = token,
+                        query = mapOf("type" to "account_info", "action" to "get_main_info", "JsHttpRequest" to "1-xml")
+                    )
+                }
+                val info2 = infoResult2.getOrElse { error -> lastError = error; continue }
+                return Result.success(session to info2.toProviderProfile())
+            }
         }
 
         return Result.error(
@@ -901,7 +913,8 @@ internal fun buildStalkerDeviceProfile(
     macAddress: String,
     deviceProfile: String,
     timezone: String,
-    locale: String
+    locale: String,
+    getProfileEnabled: Boolean = true
 ): StalkerDeviceProfile {
     val normalizedProfile = deviceProfile.ifBlank { "MAG250" }
     val normalizedTimezone = timezone.ifBlank { java.util.TimeZone.getDefault().id }
@@ -924,7 +937,8 @@ internal fun buildStalkerDeviceProfile(
         deviceId2 = deviceId2,
         signature = signature,
         userAgent = "Dalvik/2.1.0 (Linux; U; Android 14; sdk_gphone64_x86_64",
-        xUserAgent = "Model: MAG250; Link: Ethernet,WiFi"
+        xUserAgent = "Model: MAG250; Link: Ethernet,WiFi",
+        getProfileEnabled = getProfileEnabled
     )
 }
 

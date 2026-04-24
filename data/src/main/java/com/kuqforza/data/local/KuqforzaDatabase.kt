@@ -45,7 +45,7 @@ import com.kuqforza.data.local.entity.*
         ProgramReminderEntity::class,
         RecordingStorageEntity::class
     ],
-    version = 40,
+    version = 41,
     exportSchema = true   // ← was false; schema JSON now tracked in version control
 )
 @TypeConverters(RoomEnumConverters::class)

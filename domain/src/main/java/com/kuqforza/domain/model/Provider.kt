@@ -13,6 +13,7 @@ data class Provider(
     val stalkerDeviceProfile: String = "",
     val stalkerDeviceTimezone: String = "",
     val stalkerDeviceLocale: String = "",
+    val stalkerGetProfile: Boolean = true,
     val isActive: Boolean = true,
     val maxConnections: Int = 1,
     val expirationDate: Long? = null,

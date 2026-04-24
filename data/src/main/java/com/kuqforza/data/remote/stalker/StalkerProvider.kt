@@ -34,7 +34,8 @@ class StalkerProvider(
     private val macAddress: String,
     private val deviceProfile: String,
     private val timezone: String,
-    private val locale: String
+    private val locale: String,
+    private val getProfileEnabled: Boolean = true
 ) : IptvProvider {
 
     private data class CategorySeed(
@@ -327,7 +328,8 @@ class StalkerProvider(
             macAddress = normalizedMacAddress(),
             deviceProfile = normalizedDeviceProfile(),
             timezone = normalizedTimezone(),
-            locale = normalizedLocale()
+            locale = normalizedLocale(),
+            getProfileEnabled = getProfileEnabled
         )
     }
 
