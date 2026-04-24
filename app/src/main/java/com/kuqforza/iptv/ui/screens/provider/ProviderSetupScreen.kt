@@ -532,6 +532,15 @@ private fun ProviderFormContent(
                             imeAction = ImeAction.Next
                         )
                     )
+                    var getProfileOn by remember { mutableStateOf(true) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Send get_profile", style = MaterialTheme.typography.bodyMedium)
+                        Switch(checked = getProfileOn, onCheckedChange = { getProfileOn = it })
+                    }
                     AdvancedProviderOptionsSection(
                         sourceType = sourceType,
                         uiState = uiState,
