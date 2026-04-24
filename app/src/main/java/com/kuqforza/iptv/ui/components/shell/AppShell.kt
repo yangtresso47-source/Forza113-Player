@@ -1,5 +1,7 @@
 package com.kuqforza.iptv.ui.components.shell
 
+import androidx.compose.ui.text.font.FontWeight
+
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
