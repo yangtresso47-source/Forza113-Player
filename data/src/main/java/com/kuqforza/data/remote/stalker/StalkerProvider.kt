@@ -365,6 +365,9 @@ class StalkerProvider(
     }
 
     private fun shouldBypassCreateLink(kind: StalkerStreamKind, directUrl: String): Boolean {
+        // VOD and Series always need create_link to get a valid stream URL
+        if (kind == StalkerStreamKind.MOVIE || kind == StalkerStreamKind.EPISODE) return false
+
         val parsed = runCatching { URI(directUrl) }.getOrNull() ?: return false
         val host = parsed.host?.trim()?.lowercase(Locale.ROOT).orEmpty()
         if (host.isBlank()) return false
