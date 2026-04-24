@@ -424,11 +424,13 @@ class OkHttpStalkerApiService @Inject constructor(
         val canRetryAlternateEndpoint = !token.isNullOrBlank()
         val request = Request.Builder()
             .url(buildUrl(url, query))
-            .header("User-Agent", profile.userAgent)
+            .header("User-Agent", if (token.isNullOrBlank()) "Dalvik/2.1.0 (Linux; U; Android 14)" else profile.userAgent)
             .header("X-User-Agent", profile.xUserAgent)
             .header("Referer", referer)
-            .header("Accept", "*/*")
-            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}")
+            .header("Accept", "application/json,application/javascript,text/javascript,text/html,*/*;q=0.8")
+            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${if (token.isNullOrBlank()) "Europe/London" else profile.timezone}")
+            .header("Cache-Control", "no-store, no-cache, must-revalidate")
+            .header("Pragma", "no-cache")
             .apply {
                 token?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
             }
@@ -549,11 +551,11 @@ class OkHttpStalkerApiService @Inject constructor(
             "auth_second_step" to "1",
             "hw_version" to "1.7-BD-00",
             "not_valid_token" to "0",
-            "metrics" to "{}",
-            "hw_version_2" to profile.deviceProfile,
+            "metrics" to """{"mac":"${profile.macAddress}","sn":"${profile.serialNumber}","model":"${profile.deviceProfile}","type":"STB","uid":"${profile.deviceId}","random":""}""",
+            "hw_version_2" to stalkerDigest(profile.macAddress).lowercase(Locale.ROOT).take(40),
             "timestamp" to timestamp,
             "api_signature" to "262",
-            "prehash" to "0"
+            "prehash" to MessageDigest.getInstance("MD5").digest(profile.serialNumber.toByteArray(Charsets.UTF_8)).joinToString("") { "%02X".format(it.toInt() and 0xFF) }.lowercase(Locale.ROOT)
         )
     }
 
@@ -875,11 +877,14 @@ internal fun buildStalkerDeviceProfile(
     val normalizedTimezone = timezone.ifBlank { java.util.TimeZone.getDefault().id }
     val normalizedLocale = locale.ifBlank { Locale.getDefault().language.ifBlank { "en" } }
     val normalizedMac = macAddress.uppercase(Locale.ROOT)
-    val serialSeed = normalizedMac.replace(":", "")
-    val serialNumber = serialSeed.takeLast(13).padStart(13, '0')
-    val deviceId = stalkerDigest("device:$normalizedProfile:$normalizedMac")
-    val deviceId2 = stalkerDigest("device2:$normalizedProfile:$normalizedMac")
-    val signature = stalkerDigest("signature:$normalizedProfile:$normalizedMac:$normalizedTimezone")
+    // Premium-compatible: SN = MD5(MAC), deviceId = SHA256(MAC), etc.
+    val md5 = MessageDigest.getInstance("MD5")
+        .digest(normalizedMac.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02X".format(it.toInt() and 0xFF) }
+    val serialNumber = md5.take(13)
+    val deviceId = stalkerDigest(normalizedMac)
+    val deviceId2 = stalkerDigest(serialNumber)
+    val signature = stalkerDigest(serialNumber + normalizedMac)
     return StalkerDeviceProfile(
         portalUrl = portalUrl,
         macAddress = normalizedMac,
@@ -897,6 +902,11 @@ internal fun buildStalkerDeviceProfile(
 
 private fun stalkerDigest(seed: String): String =
     MessageDigest.getInstance("SHA-256")
+        .digest(seed.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> "%02X".format(byte.toInt() and 0xFF) }
+
+private fun md5Digest(seed: String): String =
+    MessageDigest.getInstance("MD5")
         .digest(seed.toByteArray(Charsets.UTF_8))
         .joinToString("") { byte -> "%02X".format(byte.toInt() and 0xFF) }
 
