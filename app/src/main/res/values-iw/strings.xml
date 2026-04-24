@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Kuqforza</string>
+    <string name="app_name">Kuqforza IPTV Premium</string>
     <string name="nav_home">בית</string>
     <string name="nav_live_tv">טלוויזיה בשידור חי</string>
     <string name="nav_movies">סרטים</string>
@@ -698,7 +698,7 @@
     <string name="a11y_catch_up_available">השג זמין</string>
     <string name="a11y_now_playing">עכשיו משחק %1$s</string>
     <string name="a11y_channel_with_number">ערוץ %1$d, %2$s</string>
-    <string name="setup_title_kuqforza">Kuqforza</string>
+    <string name="setup_title_kuqforza">Kuqforza IPTV Premium</string>
     <string name="setup_provider_title">הוסף ספק</string>
     <string name="setup_edit_provider">ערוך ספק</string>
     <string name="setup_update_desc">עדכן את פרטי ספק ה-IPTV שלך</string>
