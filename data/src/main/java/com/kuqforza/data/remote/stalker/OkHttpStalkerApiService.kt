@@ -68,6 +68,8 @@ class OkHttpStalkerApiService @Inject constructor(
                 }
 
             val session = StalkerSession(loadUrl = loadUrl, portalReferer = referer, token = token)
+
+            // First get_profile (SN registration)
             val profileResult = runCatching {
                 requestJson(
                     url = loadUrl,
@@ -80,6 +82,27 @@ class OkHttpStalkerApiService @Inject constructor(
             val profilePayload = profileResult.getOrElse { error ->
                 lastError = error
                 continue
+            }
+
+            // Second get_profile with auth_second_step (required by premium servers)
+            runCatching {
+                requestJson(
+                    url = loadUrl,
+                    profile = profile,
+                    referer = referer,
+                    token = token,
+                    query = mapOf(
+                        "type" to "stb",
+                        "action" to "get_profile",
+                        "JsHttpRequest" to "1-xml",
+                        "auth_second_step" to "1",
+                        "device_id" to profile.deviceId,
+                        "device_id2" to profile.deviceId2,
+                        "signature" to profile.signature,
+                        "sn" to profile.serialNumber,
+                        "hw_version_2" to profile.deviceId2.lowercase(java.util.Locale.ROOT).take(40)
+                    )
+                )
             }
 
             return Result.success(session to profilePayload.toProviderProfile())
