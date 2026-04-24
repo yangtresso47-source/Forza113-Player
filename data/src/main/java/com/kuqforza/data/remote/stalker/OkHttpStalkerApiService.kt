@@ -68,21 +68,52 @@ class OkHttpStalkerApiService @Inject constructor(
                 }
 
             val session = StalkerSession(loadUrl = loadUrl, portalReferer = referer, token = token)
-            val profileResult = runCatching {
+
+            // get_profile #1: SN only, device_id/device_id2/signature EMPTY
+            val profileQuery1 = buildProfileQuery(profile).toMutableMap()
+            profileQuery1["device_id"] = ""
+            profileQuery1["device_id2"] = ""
+            profileQuery1["signature"] = ""
+            runCatching { requestJson(url = loadUrl, profile = profile, referer = referer, token = token, query = profileQuery1) }
+
+            // get_profile #2: with device_id = device_id2 = DEVICE1, signature = SIGN
+            val profileQuery2 = buildProfileQuery(profile).toMutableMap()
+            profileQuery2["device_id"] = profile.deviceId
+            profileQuery2["device_id2"] = profile.deviceId  // Same as device_id, NOT device_id2!
+            profileQuery2["signature"] = profile.signature
+            runCatching { requestJson(url = loadUrl, profile = profile, referer = referer, token = token, query = profileQuery2) }
+
+            // get_profile #3: minimal auth_second_step
+            runCatching {
                 requestJson(
-                    url = loadUrl,
-                    profile = profile,
-                    referer = referer,
-                    token = token,
-                    query = buildProfileQuery(profile)
+                    url = loadUrl, profile = profile, referer = referer, token = token,
+                    query = mapOf(
+                        "type" to "stb",
+                        "action" to "get_profile",
+                        "auth_second_step" to "1",
+                        "hw_version_2" to "adece2bb1c34aa23affc14565c630e11f6e73ad1",
+                        "JsHttpRequest" to "1-xml"
+                    )
                 )
             }
-            val profilePayload = profileResult.getOrElse { error ->
+
+            // get_main_info for account details
+            val infoResult = runCatching {
+                requestJson(
+                    url = loadUrl, profile = profile, referer = referer, token = token,
+                    query = mapOf(
+                        "type" to "account_info",
+                        "action" to "get_main_info",
+                        "JsHttpRequest" to "1-xml"
+                    )
+                )
+            }
+            val infoPayload = infoResult.getOrElse { error ->
                 lastError = error
                 continue
             }
 
-            return Result.success(session to profilePayload.toProviderProfile())
+            return Result.success(session to infoPayload.toProviderProfile())
         }
 
         return Result.error(
@@ -428,9 +459,10 @@ class OkHttpStalkerApiService @Inject constructor(
             .header("X-User-Agent", profile.xUserAgent)
             .header("Referer", referer)
             .header("Accept", "*/*")
-            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}")
+            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}; debug=1; adid==" + MessageDigest.getInstance("SHA-1").digest(profile.macAddress.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 0xFF) })
             .apply {
                 token?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
+                // No Authorization header for handshake (QualiMac V2)
             }
             .get()
             .build()
@@ -549,11 +581,11 @@ class OkHttpStalkerApiService @Inject constructor(
             "auth_second_step" to "1",
             "hw_version" to "1.7-BD-00",
             "not_valid_token" to "0",
-            "metrics" to "{}",
-            "hw_version_2" to profile.deviceProfile,
+            "metrics" to java.net.URLEncoder.encode("{\"mac\":\"${profile.macAddress}\",\"sn\":\"${profile.serialNumber}\",\"model\":\"MAG250\",\"type\":\"STB\",\"uid\":\"${profile.deviceId}\",\"random\":\"\"}", "UTF-8"),
+            "hw_version_2" to "adece2bb1c34aa23affc14565c630e11f6e73ad1",
             "timestamp" to timestamp,
             "api_signature" to "262",
-            "prehash" to "0"
+            "prehash" to MessageDigest.getInstance("MD5").digest(profile.serialNumber.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 0xFF) }
         )
     }
 
@@ -875,11 +907,12 @@ internal fun buildStalkerDeviceProfile(
     val normalizedTimezone = timezone.ifBlank { java.util.TimeZone.getDefault().id }
     val normalizedLocale = locale.ifBlank { Locale.getDefault().language.ifBlank { "en" } }
     val normalizedMac = macAddress.uppercase(Locale.ROOT)
-    val serialSeed = normalizedMac.replace(":", "")
-    val serialNumber = serialSeed.takeLast(13).padStart(13, '0')
-    val deviceId = stalkerDigest("device:$normalizedProfile:$normalizedMac")
-    val deviceId2 = stalkerDigest("device2:$normalizedProfile:$normalizedMac")
-    val signature = stalkerDigest("signature:$normalizedProfile:$normalizedMac:$normalizedTimezone")
+    // QualiMac V2 premium protocol
+    val snFull = MessageDigest.getInstance("MD5").digest(normalizedMac.toByteArray(Charsets.UTF_8)).joinToString("") { "%02X".format(it.toInt() and 0xFF) }
+    val serialNumber = snFull.take(13)
+    val deviceId = MessageDigest.getInstance("SHA-256").digest(normalizedMac.toByteArray(Charsets.UTF_8)).joinToString("") { "%02X".format(it.toInt() and 0xFF) }
+    val deviceId2 = MessageDigest.getInstance("SHA-256").digest(serialNumber.toByteArray(Charsets.UTF_8)).joinToString("") { "%02X".format(it.toInt() and 0xFF) }
+    val signature = MessageDigest.getInstance("SHA-256").digest((serialNumber + normalizedMac).toByteArray(Charsets.UTF_8)).joinToString("") { "%02X".format(it.toInt() and 0xFF) }
     return StalkerDeviceProfile(
         portalUrl = portalUrl,
         macAddress = normalizedMac,
@@ -890,8 +923,8 @@ internal fun buildStalkerDeviceProfile(
         deviceId = deviceId,
         deviceId2 = deviceId2,
         signature = signature,
-        userAgent = "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) $normalizedProfile stbapp ver: 2 rev: 250 Safari/533.3",
-        xUserAgent = "Model: $normalizedProfile; Link: Ethernet"
+        userAgent = "Dalvik/2.1.0 (Linux; U; Android 14; sdk_gphone64_x86_64",
+        xUserAgent = "Model: MAG250; Link: Ethernet,WiFi"
     )
 }
 
