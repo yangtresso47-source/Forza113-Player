@@ -27,7 +27,7 @@ object PortalImporter {
                 val db = Room.databaseBuilder(
                     context.applicationContext,
                     KuqforzaDatabase::class.java,
-                    "kuqforza_database"
+                    "kuqforza.db"
                 ).fallbackToDestructiveMigration().build()
 
                 val dao = db.providerDao()
