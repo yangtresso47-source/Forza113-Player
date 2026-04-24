@@ -24,6 +24,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import com.kuqforza.iptv.ui.design.AppColors
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -101,7 +102,6 @@ fun ProviderSetupScreen(
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var stalkerMacAddress by rememberSaveable { mutableStateOf("") }
-    var stalkerGetProfile by rememberSaveable { mutableStateOf(true) }
     var stalkerDeviceProfile by rememberSaveable { mutableStateOf("") }
     var stalkerDeviceTimezone by rememberSaveable { mutableStateOf("") }
     var stalkerDeviceLocale by rememberSaveable { mutableStateOf("") }
@@ -533,13 +533,14 @@ private fun ProviderFormContent(
                             imeAction = ImeAction.Next
                         )
                     )
+                    var localGetProfile by rememberSaveable { mutableStateOf(true) }
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Send get_profile", style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
-                        Switch(checked = stalkerGetProfile, onCheckedChange = { stalkerGetProfile = it })
+                        Text("Send get_profile", style = MaterialTheme.typography.bodyMedium)
+                        Switch(checked = localGetProfile, onCheckedChange = { localGetProfile = it })
                     }
                     AdvancedProviderOptionsSection(
                         sourceType = sourceType,
