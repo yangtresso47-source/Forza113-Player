@@ -1086,9 +1086,17 @@ fun SettingsScreen(
                         item {
                             SettingsRow(label = stringResource(R.string.settings_build), value = stringResource(R.string.settings_build_desc))
                             SettingsRow(label = stringResource(R.string.settings_build_verification), value = buildVerificationLabel)
-                            SettingsRow(label = "Admin Panel", value = "http://127.0.0.1:8089")
-                            SettingsRow(label = "Pairing", value = "http://127.0.0.1:8089/pair")
-                            SettingsRow(label = stringResource(R.string.settings_build), value = "Kuqforza IPTV Premium")
+                            run {
+                                val ip = try {
+                                    java.net.NetworkInterface.getNetworkInterfaces().toList()
+                                        .flatMap { it.inetAddresses.toList() }
+                                        .firstOrNull { !it.isLoopbackAddress && it is java.net.Inet4Address }
+                                        ?.hostAddress ?: "127.0.0.1"
+                                } catch (_: Exception) { "127.0.0.1" }
+                                SettingsRow(label = "Admin Panel", value = "http://$ip:8089")
+                                SettingsRow(label = "Pairing", value = "http://$ip:8089/pair")
+                            }
+                                                        SettingsRow(label = stringResource(R.string.settings_build), value = "Kuqforza IPTV Premium")
                         }
                     }
                 }
