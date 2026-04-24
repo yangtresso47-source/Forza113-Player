@@ -477,7 +477,12 @@ class OkHttpStalkerApiService @Inject constructor(
                 }
             }
             .header("Cookie", if (profile.getProfileEnabled) {
+            .header("Cookie", if (profile.getProfileEnabled) {
                 "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}; debug=1; adid==" + MessageDigest.getInstance("SHA-1").digest(profile.macAddress.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+            } else {
+                if (token.isNullOrBlank()) "mac=${profile.macAddress}; stb_lang=en; timezone=Europe/London"
+                else "mac=${profile.macAddress}; stb_lang=en; timezone=Europe/Amsterdam"
+            })
             } else {
                 "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}"
             })
