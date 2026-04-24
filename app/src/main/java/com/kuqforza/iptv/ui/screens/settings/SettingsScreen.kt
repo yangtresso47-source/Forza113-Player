@@ -1086,8 +1086,8 @@ fun SettingsScreen(
                         item {
                             SettingsRow(label = stringResource(R.string.settings_build), value = stringResource(R.string.settings_build_desc))
                             SettingsRow(label = stringResource(R.string.settings_build_verification), value = buildVerificationLabel)
-                            SettingsRow(label = "Admin Panel", value = "http://" + getDeviceIp() + ":8089")
-                            SettingsRow(label = "Pairing", value = "http://" + getDeviceIp() + ":8089/pair")
+                            SettingsRow(label = "Admin Panel", value = "http://127.0.0.1:8089")
+                            SettingsRow(label = "Pairing", value = "http://127.0.0.1:8089/pair")
                             SettingsRow(label = stringResource(R.string.settings_build), value = "Kuqforza IPTV Premium")
                         }
                     }
@@ -1253,19 +1253,5 @@ private fun formatTimeshiftDepthLabel(
     else -> context.getString(R.string.settings_live_timeshift_depth_30)
 
 
-private fun getDeviceIp(): String {
-    try {
-        val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
-        while (interfaces.hasMoreElements()) {
-            val addrs = interfaces.nextElement().inetAddresses
-            while (addrs.hasMoreElements()) {
-                val addr = addrs.nextElement()
-                if (!addr.isLoopbackAddress && addr is java.net.Inet4Address)
-                    return addr.hostAddress ?: "127.0.0.1"
-            }
-        }
-    } catch (_: Exception) {}
-    return "127.0.0.1"
-}
 }
 
