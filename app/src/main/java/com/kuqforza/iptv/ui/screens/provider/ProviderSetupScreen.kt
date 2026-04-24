@@ -101,6 +101,7 @@ fun ProviderSetupScreen(
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var stalkerMacAddress by rememberSaveable { mutableStateOf("") }
+    var stalkerGetProfile by rememberSaveable { mutableStateOf(true) }
     var stalkerDeviceProfile by rememberSaveable { mutableStateOf("") }
     var stalkerDeviceTimezone by rememberSaveable { mutableStateOf("") }
     var stalkerDeviceLocale by rememberSaveable { mutableStateOf("") }
@@ -532,6 +533,14 @@ private fun ProviderFormContent(
                             imeAction = ImeAction.Next
                         )
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Send get_profile", style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary)
+                        Switch(checked = stalkerGetProfile, onCheckedChange = { stalkerGetProfile = it })
+                    }
                     AdvancedProviderOptionsSection(
                         sourceType = sourceType,
                         uiState = uiState,
