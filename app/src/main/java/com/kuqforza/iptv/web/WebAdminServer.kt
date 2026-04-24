@@ -20,6 +20,7 @@ class WebAdminServer(
 
         return when {
             uri == "/" || uri == "/admin" -> serveAdmin()
+            uri == "/pair" -> servePair()
             uri == "/api/portals" && method == Method.GET -> getPortals()
             uri == "/api/portals" && method == Method.POST -> addPortal(session)
             uri.startsWith("/api/portals/") && method == Method.DELETE -> deletePortal(uri)
@@ -92,6 +93,35 @@ class WebAdminServer(
         val r = newFixedLengthResponse(status, "application/json", json)
         r.addHeader("Access-Control-Allow-Origin", "*")
         return r
+    }
+
+    private fun getIp(): String {
+        try {
+            val ii = java.net.NetworkInterface.getNetworkInterfaces()
+            while (ii.hasMoreElements()) {
+                val aa = ii.nextElement().inetAddresses
+                while (aa.hasMoreElements()) {
+                    val a = aa.nextElement()
+                    if (!a.isLoopbackAddress && a is java.net.Inet4Address)
+                        return a.hostAddress ?: "127.0.0.1"
+                }
+            }
+        } catch (_: Exception) {}
+        return "127.0.0.1"
+    }
+
+    private fun servePair(): Response {
+        val url = "http://" + getIp() + ":8089"
+        val h = "<html><head><meta name=viewport content='width=device-width,initial-scale=1'></head>" +
+            "<body style='background:#000;color:#fff;font-family:system-ui;text-align:center;padding:40px'>" +
+            "<h1 style='font-size:42px;font-weight:900'><span style='color:#0088ff'>K</span><span style='color:#55bbff'>Q</span> KUQFORZA</h1>" +
+            "<p style='color:#5a6a82;letter-spacing:3px;font-size:12px'>IPTV PREMIUM</p>" +
+            "<div style='margin:30px auto;padding:16px 24px;background:rgba(0,136,255,.1);border:1px solid rgba(0,136,255,.2);border-radius:12px;display:inline-block'>" +
+            "<p style='font-size:24px;color:#55bbff;font-family:monospace;font-weight:700'>" + url + "</p></div>" +
+            "<p style='color:#8899b0;font-size:14px;margin:20px'>Ouvrez cette adresse sur votre telephone</p>" +
+            "<p style='color:#5a6a82;font-size:13px'>1. Meme reseau WiFi - 2. Ajoutez vos portails - 3. Regardez sur la TV</p>" +
+            "</body></html>"
+        return newFixedLengthResponse(Response.Status.OK, "text/html", h)
     }
 
     companion object {
