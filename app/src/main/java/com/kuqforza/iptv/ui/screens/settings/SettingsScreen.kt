@@ -1086,17 +1086,9 @@ fun SettingsScreen(
                         item {
                             SettingsRow(label = stringResource(R.string.settings_build), value = stringResource(R.string.settings_build_desc))
                             SettingsRow(label = stringResource(R.string.settings_build_verification), value = buildVerificationLabel)
-                            SettingsRow(label = stringResource(R.string.settings_developed_by), value = stringResource(R.string.settings_developer_name))
-                            ClickableSettingsRow(
-                                label = stringResource(R.string.settings_github),
-                                value = stringResource(R.string.settings_github_url),
-                                onClick = { uriHandler.openUri(context.getString(R.string.settings_github_url)) }
-                            )
-                            ClickableSettingsRow(
-                                label = stringResource(R.string.settings_donate),
-                                value = stringResource(R.string.settings_donate_url),
-                                onClick = { uriHandler.openUri(context.getString(R.string.settings_donate_url)) }
-                            )
+                            SettingsRow(label = "Admin Panel", value = "http://" + getDeviceIp() + ":8089")
+                            SettingsRow(label = "Pairing", value = "http://" + getDeviceIp() + ":8089/pair")
+                            SettingsRow(label = stringResource(R.string.settings_build), value = "Kuqforza IPTV Premium")
                         }
                     }
                 }
@@ -1259,5 +1251,21 @@ private fun formatTimeshiftDepthLabel(
     15 -> context.getString(R.string.settings_live_timeshift_depth_15)
     60 -> context.getString(R.string.settings_live_timeshift_depth_60)
     else -> context.getString(R.string.settings_live_timeshift_depth_30)
+
+
+private fun getDeviceIp(): String {
+    try {
+        val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+        while (interfaces.hasMoreElements()) {
+            val addrs = interfaces.nextElement().inetAddresses
+            while (addrs.hasMoreElements()) {
+                val addr = addrs.nextElement()
+                if (!addr.isLoopbackAddress && addr is java.net.Inet4Address)
+                    return addr.hostAddress ?: "127.0.0.1"
+            }
+        }
+    } catch (_: Exception) {}
+    return "127.0.0.1"
+}
 }
 
