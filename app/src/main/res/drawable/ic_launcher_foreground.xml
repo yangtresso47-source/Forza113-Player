@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@drawable/ic_launcher_vault_art"
-    android:gravity="fill"/>
-
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background circle -->
+    <path
+        android:fillColor="#0A0F18"
+        android:pathData="M54,54m-40,0a40,40 0,1,1 80,0a40,40 0,1,1 -80,0"/>
+    <!-- Blue ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#087BFF"
+        android:strokeWidth="2"
+        android:pathData="M54,54m-36,0a36,36 0,1,1 72,0a36,36 0,1,1 -72,0"/>
+    <!-- Inner diamond -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#62C1FF"
+        android:strokeWidth="1.5"
+        android:pathData="M54,30 L74,54 L54,78 L34,54 Z"/>
+    <!-- K letter -->
+    <path
+        android:fillColor="#087BFF"
+        android:pathData="M40,42 L40,66 L44,66 L44,56 L52,66 L57,66 L48,55 L56,42 L51,42 L44,53 L44,42 Z"/>
+    <!-- Q letter -->
+    <path
+        android:fillColor="#62C1FF"
+        android:pathData="M62,42 Q72,42 72,54 Q72,64 64,66 L70,70 L67,72 L60,66 Q58,66 56,64 Q52,60 52,54 Q52,42 62,42 Z M62,46 Q56,46 56,54 Q56,62 62,62 Q68,62 68,54 Q68,46 62,46 Z"/>
+</vector>

@@ -3,31 +3,31 @@ package com.kuqforza.iptv.ui.design
 import androidx.compose.ui.graphics.Color
 
 object AppColors {
-    val Canvas = Color(0xFF07111B)
-    val CanvasElevated = Color(0xFF0B1622)
-    val Surface = Color(0xFF0F1B29)
-    val SurfaceElevated = Color(0xFF162338)
-    val SurfaceEmphasis = Color(0xFF1D2E46)
-    val SurfaceAccent = Color(0xFF223754)
+    val Canvas = Color(0xFF000000)
+    val CanvasElevated = Color(0xFF050810)
+    val Surface = Color(0xFF0A0F18)
+    val SurfaceElevated = Color(0xFF101824)
+    val SurfaceEmphasis = Color(0xFF162030)
+    val SurfaceAccent = Color(0xFF1A2840)
 
-    val Brand = Color(0xFF69A8FF)
-    val BrandMuted = Color(0x335FA4FF)
-    val BrandStrong = Color(0xFF8BBCFF)
-    val Focus = Color(0xFFF4F8FF)
+    val Brand = Color(0xFF087BFF)
+    val BrandMuted = Color(0x33087BFF)
+    val BrandStrong = Color(0xFF62C1FF)
+    val Focus = Color(0xFFE8F4FF)
 
-    val TextPrimary = Color(0xFFF5F7FB)
-    val TextSecondary = Color(0xFFBBC6D8)
-    val TextTertiary = Color(0xFF7F8DA5)
-    val TextDisabled = Color(0xFF566173)
+    val TextPrimary = Color(0xFFDCE8F7)
+    val TextSecondary = Color(0xFF8998AE)
+    val TextTertiary = Color(0xFF6B7A92)
+    val TextDisabled = Color(0xFF4A5568)
 
     val Live = Color(0xFFFF5C61)
     val Success = Color(0xFF4FD39A)
-    val Warning = Color(0xFFFFC766)
-    val Info = Color(0xFF57C9FF)
+    val Warning = Color(0xFFCAA35E)
+    val Info = Color(0xFF62C1FF)
 
-    val Divider = Color(0x1AF4F8FF)
-    val Outline = Color(0x264C6D95)
+    val Divider = Color(0x1A62C1FF)
+    val Outline = Color(0x26087BFF)
 
-    val HeroTop = Color(0xCC07111B)
-    val HeroBottom = Color(0xF207111B)
+    val HeroTop = Color(0xCC000000)
+    val HeroBottom = Color(0xF2000000)
 }
