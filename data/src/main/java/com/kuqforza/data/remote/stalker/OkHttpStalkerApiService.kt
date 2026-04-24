@@ -467,11 +467,15 @@ class OkHttpStalkerApiService @Inject constructor(
         val canRetryAlternateEndpoint = !token.isNullOrBlank()
         val request = Request.Builder()
             .url(buildUrl(url, query))
-            .header("User-Agent", profile.userAgent)
+            .header("User-Agent", if (profile.getProfileEnabled) profile.userAgent else "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3")
             .header("X-User-Agent", profile.xUserAgent)
             .header("Referer", referer)
             .header("Accept", "*/*")
-            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}; debug=1; adid==" + MessageDigest.getInstance("SHA-1").digest(profile.macAddress.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 0xFF) })
+            .header("Cookie", if (profile.getProfileEnabled) {
+                "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}; debug=1; adid==" + MessageDigest.getInstance("SHA-1").digest(profile.macAddress.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+            } else {
+                "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}"
+            })
             .apply {
                 token?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
                 // No Authorization header for handshake (QualiMac V2)
