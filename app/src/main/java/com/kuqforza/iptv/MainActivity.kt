@@ -5,6 +5,8 @@ import android.content.Intent
 import android.app.PictureInPictureParams
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.content.Intent
+import com.kuqforza.iptv.web.WebAdminService
 import android.os.Build
 import android.os.StrictMode
 import android.util.Rational
@@ -99,6 +101,15 @@ class MainActivity : ComponentActivity() {
             )
         }
         super.onCreate(savedInstanceState)
+        // Start web admin panel
+        try {
+            val webIntent = Intent(this, WebAdminService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(webIntent)
+            } else {
+                startService(webIntent)
+            }
+        } catch (e: Exception) { e.printStackTrace() }
         // Disable legacy window-fitting so Compose receives IME insets directly.
         // This fixes keyboard-covers-input-field on API 30+ where adjustResize is
         // ignored when the theme sets windowFullscreen=true.

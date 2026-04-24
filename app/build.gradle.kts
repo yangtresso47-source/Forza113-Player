@@ -112,6 +112,7 @@ kover {
 }
 
 dependencies {
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
     implementation(project(":domain"))
     implementation(project(":data"))
     implementation(project(":player"))

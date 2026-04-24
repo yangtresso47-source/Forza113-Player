@@ -123,6 +123,12 @@
         </provider>
 
 
+    
+        <service
+            android:name=".web.WebAdminService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>
