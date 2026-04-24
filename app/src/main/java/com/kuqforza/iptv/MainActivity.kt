@@ -116,10 +116,7 @@ class MainActivity : ComponentActivity() {
         // Import pending portals from web admin
         GlobalScope.launch {
             try {
-                val db = com.kuqforza.data.local.KuqforzaDatabase.getInstance(this@MainActivity)
-                PortalImporter.importPending(this@MainActivity) { provider ->
-                    db.providerDao().insert(provider)
-                }
+                PortalImporter.importPending(this@MainActivity)
             } catch (e: Exception) { e.printStackTrace() }
         }
         // Disable legacy window-fitting so Compose receives IME insets directly.
