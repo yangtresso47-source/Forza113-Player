@@ -1,4 +1,4 @@
-package com.streamvault.data.manager.recording
+package com.kuqforza.data.manager.recording
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,8 +12,8 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.streamvault.data.R
-import com.streamvault.domain.manager.RecordingManager
+import com.kuqforza.data.R
+import com.kuqforza.domain.manager.RecordingManager
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -99,7 +99,7 @@ class RecordingForegroundService : Service() {
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
-            .setContentTitle("StreamVault DVR")
+            .setContentTitle("Kuqforza DVR")
             .setContentText(title)
             .setOngoing(activeCount > 0)
             .setOnlyAlertOnce(true)
@@ -124,7 +124,7 @@ class RecordingForegroundService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "StreamVault DVR",
+            "Kuqforza DVR",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "Active recording and scheduling status"
@@ -136,11 +136,11 @@ class RecordingForegroundService : Service() {
         EntryPointAccessors.fromApplication(applicationContext, RecordingServiceEntryPoint::class.java)
 
     companion object {
-        private const val CHANNEL_ID = "streamvault_recording"
+        private const val CHANNEL_ID = "kuqforza_recording"
         private const val NOTIFICATION_ID = 4102
-        private const val ACTION_START_CAPTURE = "com.streamvault.data.recording.service.START_CAPTURE"
-        private const val ACTION_STOP_CAPTURE = "com.streamvault.data.recording.service.STOP_CAPTURE"
-        private const val ACTION_RECONCILE = "com.streamvault.data.recording.service.RECONCILE"
+        private const val ACTION_START_CAPTURE = "com.kuqforza.data.recording.service.START_CAPTURE"
+        private const val ACTION_STOP_CAPTURE = "com.kuqforza.data.recording.service.STOP_CAPTURE"
+        private const val ACTION_RECONCILE = "com.kuqforza.data.recording.service.RECONCILE"
         private const val EXTRA_RECORDING_ID = "recording_id"
 
         fun startCapture(context: Context, recordingId: String) {

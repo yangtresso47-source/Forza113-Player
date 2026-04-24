@@ -1,19 +1,19 @@
-package com.streamvault.domain.manager
+package com.kuqforza.domain.manager
 
-import com.streamvault.domain.model.PlaybackHistory
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.RecordingRecurrence
+import com.kuqforza.domain.model.PlaybackHistory
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.RecordingRecurrence
 import kotlinx.coroutines.flow.Flow
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Result
 
 data class BackupData(
     val version: Int = 5,
     val checksum: String? = null,
     val preferences: Map<String, String>? = null,
     val providers: List<Provider>? = null,
-    val favorites: List<com.streamvault.domain.model.Favorite>? = null,
-    val virtualGroups: List<com.streamvault.domain.model.VirtualGroup>? = null,
+    val favorites: List<com.kuqforza.domain.model.Favorite>? = null,
+    val virtualGroups: List<com.kuqforza.domain.model.VirtualGroup>? = null,
     val playbackHistory: List<PlaybackHistory>? = null,
     val multiViewPresets: Map<String, List<Long>>? = null,
     val protectedCategories: List<ProtectedCategoryBackup>? = null,
@@ -84,7 +84,7 @@ interface BackupManager {
     /**
      * Exports the configuration to the provided URI string (SAF document URI)
      */
-    suspend fun exportConfig(uriString: String): com.streamvault.domain.model.Result<Unit>
+    suspend fun exportConfig(uriString: String): com.kuqforza.domain.model.Result<Unit>
 
     /**
      * Reads a backup and returns a preview with conflict counts before importing.

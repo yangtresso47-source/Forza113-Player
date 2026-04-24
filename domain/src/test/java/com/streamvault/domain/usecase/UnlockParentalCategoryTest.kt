@@ -1,11 +1,11 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.manager.ParentalControlManager
-import com.streamvault.domain.manager.ParentalControlSessionState
-import com.streamvault.domain.manager.ParentalControlSessionStore
-import com.streamvault.domain.manager.ParentalPinVerifier
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.manager.ParentalControlManager
+import com.kuqforza.domain.manager.ParentalControlSessionState
+import com.kuqforza.domain.manager.ParentalControlSessionStore
+import com.kuqforza.domain.manager.ParentalPinVerifier
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 

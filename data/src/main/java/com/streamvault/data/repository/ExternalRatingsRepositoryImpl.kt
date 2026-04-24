@@ -1,9 +1,9 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
-import com.streamvault.domain.model.ExternalRatings
-import com.streamvault.domain.model.ExternalRatingsLookup
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.repository.ExternalRatingsRepository
+import com.kuqforza.domain.model.ExternalRatings
+import com.kuqforza.domain.model.ExternalRatingsLookup
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.ExternalRatingsRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 

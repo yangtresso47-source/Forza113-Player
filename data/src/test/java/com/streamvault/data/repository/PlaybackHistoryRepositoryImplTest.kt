@@ -1,15 +1,15 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.EpisodeDao
-import com.streamvault.data.local.dao.MovieDao
-import com.streamvault.data.local.dao.PlaybackHistoryDao
-import com.streamvault.data.local.entity.PlaybackHistoryEntity
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.PlaybackHistory
-import com.streamvault.domain.model.PlaybackWatchedStatus
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.EpisodeDao
+import com.kuqforza.data.local.dao.MovieDao
+import com.kuqforza.data.local.dao.PlaybackHistoryDao
+import com.kuqforza.data.local.entity.PlaybackHistoryEntity
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.PlaybackHistory
+import com.kuqforza.domain.model.PlaybackWatchedStatus
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test

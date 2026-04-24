@@ -1,6 +1,6 @@
-package com.streamvault.domain.model
+package com.kuqforza.domain.model
 
-import com.streamvault.domain.util.StreamEntryUrlPolicy
+import com.kuqforza.domain.util.StreamEntryUrlPolicy
 
 data class StreamInfo(
     val url: String,

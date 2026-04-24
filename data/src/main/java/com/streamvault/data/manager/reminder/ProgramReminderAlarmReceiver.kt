@@ -1,9 +1,9 @@
-package com.streamvault.data.manager.reminder
+package com.kuqforza.data.manager.reminder
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.streamvault.data.manager.ProgramReminderManagerImpl
+import com.kuqforza.data.manager.ProgramReminderManagerImpl
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -41,7 +41,7 @@ class ProgramReminderAlarmReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_NOTIFY_REMINDER = "com.streamvault.data.reminder.action.NOTIFY"
+        const val ACTION_NOTIFY_REMINDER = "com.kuqforza.data.reminder.action.NOTIFY"
         const val EXTRA_REMINDER_ID = "reminder_id"
     }
 }

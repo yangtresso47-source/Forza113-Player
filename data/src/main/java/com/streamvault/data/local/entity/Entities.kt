@@ -1,4 +1,4 @@
-package com.streamvault.data.local.entity
+package com.kuqforza.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -6,10 +6,10 @@ import androidx.room.ForeignKey
 import androidx.room.Fts4
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.ProviderEpgSyncMode
-import com.streamvault.domain.model.ProviderStatus
-import com.streamvault.domain.model.ProviderType
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.ProviderEpgSyncMode
+import com.kuqforza.domain.model.ProviderStatus
+import com.kuqforza.domain.model.ProviderType
 
 @Entity(
     tableName = "providers",

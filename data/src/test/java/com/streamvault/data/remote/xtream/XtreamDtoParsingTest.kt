@@ -1,10 +1,10 @@
-package com.streamvault.data.remote.xtream
+package com.kuqforza.data.remote.xtream
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamSeriesItem
-import com.streamvault.data.remote.dto.XtreamStream
-import com.streamvault.data.remote.dto.XtreamVodMovieData
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamSeriesItem
+import com.kuqforza.data.remote.dto.XtreamStream
+import com.kuqforza.data.remote.dto.XtreamVodMovieData
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.Test

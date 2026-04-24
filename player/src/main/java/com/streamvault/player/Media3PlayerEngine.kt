@@ -1,4 +1,4 @@
-package com.streamvault.player
+package com.kuqforza.player
 
 import android.content.Context
 import android.os.Handler
@@ -25,33 +25,33 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.session.MediaSession
-import com.streamvault.domain.model.DecoderMode
-import com.streamvault.domain.model.StreamInfo
-import com.streamvault.domain.model.VideoFormat
-import com.streamvault.player.audio.PlayerAudioFocusController
-import com.streamvault.player.playback.DefaultDecoderPreferencePolicy
-import com.streamvault.player.playback.DefaultPlaybackCompatibilityProfile
-import com.streamvault.player.playback.PlaybackCompatibilityProfile
-import com.streamvault.player.playback.PlaybackErrorCategory
-import com.streamvault.player.playback.PlaybackLogSanitizer
-import com.streamvault.player.playback.PlaybackRetryContext
-import com.streamvault.player.playback.PlayerDataSourceFactoryProvider
-import com.streamvault.player.playback.PlayerErrorClassifier
-import com.streamvault.player.playback.PlayerMediaSourceFactory
-import com.streamvault.player.playback.PlayerRetryPolicy
-import com.streamvault.player.playback.PlayerTimeoutProfile
-import com.streamvault.player.playback.PreloadCoordinator
-import com.streamvault.player.playback.ResolvedStreamType
-import com.streamvault.player.playback.StreamTypeResolver
-import com.streamvault.player.stats.PlayerStatsCollector
-import com.streamvault.player.timeshift.DefaultLiveTimeshiftManager
-import com.streamvault.player.timeshift.LiveTimeshiftBackend
-import com.streamvault.player.timeshift.LiveTimeshiftState
-import com.streamvault.player.timeshift.LiveTimeshiftStatus
-import com.streamvault.player.timeshift.TimeshiftConfig
-import com.streamvault.player.tracks.PlayerTrackController
-import com.streamvault.player.ui.PlayerViewBinder
-import com.streamvault.player.ui.SubtitleStyleController
+import com.kuqforza.domain.model.DecoderMode
+import com.kuqforza.domain.model.StreamInfo
+import com.kuqforza.domain.model.VideoFormat
+import com.kuqforza.player.audio.PlayerAudioFocusController
+import com.kuqforza.player.playback.DefaultDecoderPreferencePolicy
+import com.kuqforza.player.playback.DefaultPlaybackCompatibilityProfile
+import com.kuqforza.player.playback.PlaybackCompatibilityProfile
+import com.kuqforza.player.playback.PlaybackErrorCategory
+import com.kuqforza.player.playback.PlaybackLogSanitizer
+import com.kuqforza.player.playback.PlaybackRetryContext
+import com.kuqforza.player.playback.PlayerDataSourceFactoryProvider
+import com.kuqforza.player.playback.PlayerErrorClassifier
+import com.kuqforza.player.playback.PlayerMediaSourceFactory
+import com.kuqforza.player.playback.PlayerRetryPolicy
+import com.kuqforza.player.playback.PlayerTimeoutProfile
+import com.kuqforza.player.playback.PreloadCoordinator
+import com.kuqforza.player.playback.ResolvedStreamType
+import com.kuqforza.player.playback.StreamTypeResolver
+import com.kuqforza.player.stats.PlayerStatsCollector
+import com.kuqforza.player.timeshift.DefaultLiveTimeshiftManager
+import com.kuqforza.player.timeshift.LiveTimeshiftBackend
+import com.kuqforza.player.timeshift.LiveTimeshiftState
+import com.kuqforza.player.timeshift.LiveTimeshiftStatus
+import com.kuqforza.player.timeshift.TimeshiftConfig
+import com.kuqforza.player.tracks.PlayerTrackController
+import com.kuqforza.player.ui.PlayerViewBinder
+import com.kuqforza.player.ui.SubtitleStyleController
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -87,7 +87,7 @@ class Media3PlayerEngine @Inject constructor(
             field = value
             audioFocusController.bypassAudioFocus = value
         }
-    var mediaSessionId: String = "streamvault-main"
+    var mediaSessionId: String = "kuqforza-main"
     var enableMediaSession: Boolean = true
         set(value) {
             if (field == value) return
@@ -930,8 +930,8 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     private fun inferSnapshotStreamType(url: String) = when {
-        url.lowercase().endsWith(".m3u8") -> com.streamvault.domain.model.StreamType.HLS
-        else -> com.streamvault.domain.model.StreamType.PROGRESSIVE
+        url.lowercase().endsWith(".m3u8") -> com.kuqforza.domain.model.StreamType.HLS
+        else -> com.kuqforza.domain.model.StreamType.PROGRESSIVE
     }
 
     private fun syncTimeshiftState(messageOverride: String? = null) {

@@ -1,4 +1,4 @@
-package com.streamvault.data.remote.dto
+package com.kuqforza.data.remote.dto
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer

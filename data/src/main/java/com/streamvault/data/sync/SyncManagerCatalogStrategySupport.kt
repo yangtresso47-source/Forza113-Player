@@ -1,15 +1,15 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
-import com.streamvault.data.local.entity.CategoryEntity
-import com.streamvault.data.util.AdultContentClassifier
-import com.streamvault.data.remote.xtream.XtreamNetworkException
-import com.streamvault.data.remote.xtream.XtreamParsingException
-import com.streamvault.data.remote.xtream.XtreamResponseTooLargeException
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.Series
-import com.streamvault.domain.model.SyncMetadata
+import com.kuqforza.data.local.entity.CategoryEntity
+import com.kuqforza.data.util.AdultContentClassifier
+import com.kuqforza.data.remote.xtream.XtreamNetworkException
+import com.kuqforza.data.remote.xtream.XtreamParsingException
+import com.kuqforza.data.remote.xtream.XtreamResponseTooLargeException
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.Series
+import com.kuqforza.domain.model.SyncMetadata
 
 internal class SyncManagerCatalogStrategySupport(
     private val shouldRememberSequentialPreference: (Throwable) -> Boolean,

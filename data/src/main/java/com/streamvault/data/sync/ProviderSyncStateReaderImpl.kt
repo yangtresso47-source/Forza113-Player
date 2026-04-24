@@ -1,7 +1,7 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
-import com.streamvault.domain.manager.ProviderSyncStateReader
-import com.streamvault.domain.model.SyncState
+import com.kuqforza.domain.manager.ProviderSyncStateReader
+import com.kuqforza.domain.model.SyncState
 import javax.inject.Inject
 import javax.inject.Singleton
 

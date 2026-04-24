@@ -1,36 +1,36 @@
-package com.streamvault.data.manager
+package com.kuqforza.data.manager
 
 import android.content.Context
 import android.net.Uri
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonWriter
-import com.streamvault.data.local.dao.EpisodeDao
-import com.streamvault.data.local.dao.FavoriteDao
-import com.streamvault.data.local.dao.MovieDao
-import com.streamvault.data.local.dao.PlaybackHistoryDao
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.dao.VirtualGroupDao
-import com.streamvault.data.local.entity.ProviderEntity
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.data.preferences.ParentalPinBackupData
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.data.security.CredentialCrypto
-import com.streamvault.domain.manager.BackupData
-import com.streamvault.domain.manager.BackupConflictStrategy
-import com.streamvault.domain.manager.BackupImportPlan
-import com.streamvault.domain.manager.BackupImportResult
-import com.streamvault.domain.manager.BackupManager
-import com.streamvault.domain.manager.BackupPreview
-import com.streamvault.domain.manager.ProtectedCategoryBackup
-import com.streamvault.domain.manager.RecordingManager
-import com.streamvault.domain.manager.ScheduledRecordingBackup
-import com.streamvault.domain.model.RecordingRecurrence
-import com.streamvault.domain.model.RecordingRequest
-import com.streamvault.domain.model.RecordingStatus
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.repository.CategoryRepository
+import com.kuqforza.data.local.dao.EpisodeDao
+import com.kuqforza.data.local.dao.FavoriteDao
+import com.kuqforza.data.local.dao.MovieDao
+import com.kuqforza.data.local.dao.PlaybackHistoryDao
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.dao.VirtualGroupDao
+import com.kuqforza.data.local.entity.ProviderEntity
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.data.preferences.ParentalPinBackupData
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.data.security.CredentialCrypto
+import com.kuqforza.domain.manager.BackupData
+import com.kuqforza.domain.manager.BackupConflictStrategy
+import com.kuqforza.domain.manager.BackupImportPlan
+import com.kuqforza.domain.manager.BackupImportResult
+import com.kuqforza.domain.manager.BackupManager
+import com.kuqforza.domain.manager.BackupPreview
+import com.kuqforza.domain.manager.ProtectedCategoryBackup
+import com.kuqforza.domain.manager.RecordingManager
+import com.kuqforza.domain.manager.ScheduledRecordingBackup
+import com.kuqforza.domain.model.RecordingRecurrence
+import com.kuqforza.domain.model.RecordingRequest
+import com.kuqforza.domain.model.RecordingStatus
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.CategoryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -61,7 +61,7 @@ class BackupManagerImpl @Inject constructor(
     private val gson: Gson
 ) : BackupManager {
 
-    override suspend fun exportConfig(uriString: String): com.streamvault.domain.model.Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun exportConfig(uriString: String): com.kuqforza.domain.model.Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val uri = Uri.parse(uriString)
             val parentalPinBackup = preferencesRepository.exportParentalPinBackup()
@@ -184,11 +184,11 @@ class BackupManagerImpl @Inject constructor(
                 OutputStreamWriter(outputStream).use { writer ->
                     writeBackupDataJson(writer, backupWithChecksum)
                 }
-            } ?: return@withContext com.streamvault.domain.model.Result.error("Failed to open output stream")
+            } ?: return@withContext com.kuqforza.domain.model.Result.error("Failed to open output stream")
 
-            com.streamvault.domain.model.Result.success(Unit)
+            com.kuqforza.domain.model.Result.success(Unit)
         } catch (e: Exception) {
-            com.streamvault.domain.model.Result.error("Failed to export backup: ${e.message}", e)
+            com.kuqforza.domain.model.Result.error("Failed to export backup: ${e.message}", e)
         }
     }
 
@@ -304,16 +304,16 @@ class BackupManagerImpl @Inject constructor(
     override suspend fun importConfig(
         uriString: String,
         plan: BackupImportPlan
-    ): com.streamvault.domain.model.Result<BackupImportResult> = withContext(Dispatchers.IO) {
+    ): com.kuqforza.domain.model.Result<BackupImportResult> = withContext(Dispatchers.IO) {
         try {
             val backupData = readBackupData(uriString)
-                ?: return@withContext com.streamvault.domain.model.Result.error("Failed to open input stream")
+                ?: return@withContext com.kuqforza.domain.model.Result.error("Failed to open input stream")
 
             if (backupData.version > 5) {
-                return@withContext com.streamvault.domain.model.Result.error("Unsupported backup version")
+                return@withContext com.kuqforza.domain.model.Result.error("Unsupported backup version")
             }
             if (!verifyChecksum(backupData)) {
-                return@withContext com.streamvault.domain.model.Result.error("Backup file is corrupted (checksum mismatch)")
+                return@withContext com.kuqforza.domain.model.Result.error("Backup file is corrupted (checksum mismatch)")
             }
 
             var storedProviders = providerDao.getAllSync()
@@ -340,7 +340,7 @@ class BackupManagerImpl @Inject constructor(
                 prefs["playerMediaSessionEnabled"]?.toBooleanStrictOrNull()
                     ?.let { preferencesRepository.setPlayerMediaSessionEnabled(it) }
                 prefs["playerDecoderMode"]?.takeIf { it.isNotBlank() }?.let { savedMode ->
-                    val decoderMode = com.streamvault.domain.model.DecoderMode.entries
+                    val decoderMode = com.kuqforza.domain.model.DecoderMode.entries
                         .firstOrNull { entry -> entry.name == savedMode }
                     if (decoderMode != null) {
                         preferencesRepository.setPlayerDecoderMode(decoderMode)
@@ -473,7 +473,7 @@ class BackupManagerImpl @Inject constructor(
                     )
                 }
                 }
-                val categoriesByProviderId = mutableMapOf<Long, List<com.streamvault.domain.model.Category>>()
+                val categoriesByProviderId = mutableMapOf<Long, List<com.kuqforza.domain.model.Category>>()
                 backupData.protectedCategories?.forEach { protectedCategory ->
                     val provider = storedProviders.findMatchingProvider(
                         serverUrl = protectedCategory.providerServerUrl,
@@ -600,14 +600,14 @@ class BackupManagerImpl @Inject constructor(
                 skippedSections += "Recording Schedules"
             }
 
-            com.streamvault.domain.model.Result.success(
+            com.kuqforza.domain.model.Result.success(
                 BackupImportResult(
                     importedSections = importedSections.distinct(),
                     skippedSections = skippedSections.distinct()
                 )
             )
         } catch (e: Exception) {
-            com.streamvault.domain.model.Result.error("Failed to import backup: ${e.message}", e)
+            com.kuqforza.domain.model.Result.error("Failed to import backup: ${e.message}", e)
         }
     }
 
@@ -697,7 +697,7 @@ class BackupManagerImpl @Inject constructor(
     }
 }
 
-private fun com.streamvault.domain.model.Provider.toSecureEntityForBackup(
+private fun com.kuqforza.domain.model.Provider.toSecureEntityForBackup(
     credentialCrypto: CredentialCrypto
 ) = copy(password = credentialCrypto.encryptIfNeeded(password)).toEntity()
 
@@ -725,10 +725,10 @@ private fun Iterable<ProviderEntity>.findMatchingProvider(
 
 private const val SHA256_PREFIX = "sha256:"
 private val MAP_STRING_STRING_TYPE: Type = object : TypeToken<Map<String, String>>() {}.type
-private val PROVIDER_LIST_TYPE: Type = object : TypeToken<List<com.streamvault.domain.model.Provider>>() {}.type
-private val FAVORITE_LIST_TYPE: Type = object : TypeToken<List<com.streamvault.domain.model.Favorite>>() {}.type
-private val VIRTUAL_GROUP_LIST_TYPE: Type = object : TypeToken<List<com.streamvault.domain.model.VirtualGroup>>() {}.type
-private val PLAYBACK_HISTORY_LIST_TYPE: Type = object : TypeToken<List<com.streamvault.domain.model.PlaybackHistory>>() {}.type
+private val PROVIDER_LIST_TYPE: Type = object : TypeToken<List<com.kuqforza.domain.model.Provider>>() {}.type
+private val FAVORITE_LIST_TYPE: Type = object : TypeToken<List<com.kuqforza.domain.model.Favorite>>() {}.type
+private val VIRTUAL_GROUP_LIST_TYPE: Type = object : TypeToken<List<com.kuqforza.domain.model.VirtualGroup>>() {}.type
+private val PLAYBACK_HISTORY_LIST_TYPE: Type = object : TypeToken<List<com.kuqforza.domain.model.PlaybackHistory>>() {}.type
 private val MULTIVIEW_PRESETS_TYPE: Type = object : TypeToken<Map<String, List<Long>>>() {}.type
 private val PROTECTED_CATEGORY_LIST_TYPE: Type = object : TypeToken<List<ProtectedCategoryBackup>>() {}.type
 private val SCHEDULED_RECORDING_LIST_TYPE: Type = object : TypeToken<List<ScheduledRecordingBackup>>() {}.type

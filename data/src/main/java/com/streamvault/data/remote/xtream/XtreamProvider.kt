@@ -1,11 +1,11 @@
-package com.streamvault.data.remote.xtream
+package com.kuqforza.data.remote.xtream
 
 import android.util.Log
-import com.streamvault.data.remote.dto.*
-import com.streamvault.data.util.AdultContentClassifier
-import com.streamvault.domain.model.*
-import com.streamvault.domain.provider.IptvProvider
-import com.streamvault.domain.util.ChannelNormalizer
+import com.kuqforza.data.remote.dto.*
+import com.kuqforza.data.util.AdultContentClassifier
+import com.kuqforza.domain.model.*
+import com.kuqforza.domain.provider.IptvProvider
+import com.kuqforza.domain.util.ChannelNormalizer
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime

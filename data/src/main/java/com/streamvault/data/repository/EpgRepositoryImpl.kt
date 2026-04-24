@@ -1,16 +1,16 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.ProgramDao
-import com.streamvault.data.local.entity.ProgramEntity
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.data.parser.XmltvParser
-import com.streamvault.data.util.rankSearchResults
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.repository.EpgRepository
-import com.streamvault.domain.repository.EpgSourceRepository
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.ProgramDao
+import com.kuqforza.data.local.entity.ProgramEntity
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.data.parser.XmltvParser
+import com.kuqforza.data.util.rankSearchResults
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.EpgRepository
+import com.kuqforza.domain.repository.EpgSourceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +35,7 @@ import java.io.InputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
-import com.streamvault.data.remote.NetworkTimeoutConfig
+import com.kuqforza.data.remote.NetworkTimeoutConfig
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton

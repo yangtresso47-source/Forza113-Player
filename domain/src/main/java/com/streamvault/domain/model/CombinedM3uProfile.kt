@@ -1,4 +1,4 @@
-package com.streamvault.domain.model
+package com.kuqforza.domain.model
 
 data class CombinedM3uProfile(
     val id: Long = 0,

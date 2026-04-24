@@ -1,10 +1,10 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
-import com.streamvault.data.remote.xtream.XtreamAuthenticationException
-import com.streamvault.data.remote.xtream.XtreamNetworkException
-import com.streamvault.data.remote.xtream.XtreamParsingException
-import com.streamvault.data.remote.xtream.XtreamRequestException
-import com.streamvault.data.remote.xtream.XtreamResponseTooLargeException
+import com.kuqforza.data.remote.xtream.XtreamAuthenticationException
+import com.kuqforza.data.remote.xtream.XtreamNetworkException
+import com.kuqforza.data.remote.xtream.XtreamParsingException
+import com.kuqforza.data.remote.xtream.XtreamRequestException
+import com.kuqforza.data.remote.xtream.XtreamResponseTooLargeException
 import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.NoRouteToHostException

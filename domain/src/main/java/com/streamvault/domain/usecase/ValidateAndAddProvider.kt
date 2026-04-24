@@ -1,10 +1,10 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
-import com.streamvault.domain.manager.ProviderSetupInputValidator
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.ProviderEpgSyncMode
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.repository.ProviderRepository
+import com.kuqforza.domain.manager.ProviderSetupInputValidator
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.ProviderEpgSyncMode
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.ProviderRepository
 import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets

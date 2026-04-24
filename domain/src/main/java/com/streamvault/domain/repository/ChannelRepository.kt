@@ -1,9 +1,9 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.StreamInfo
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.StreamInfo
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelRepository {

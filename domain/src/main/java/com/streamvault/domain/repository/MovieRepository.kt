@@ -1,11 +1,11 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.LibraryBrowseQuery
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.PagedResult
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.StreamInfo
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.LibraryBrowseQuery
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.PagedResult
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.StreamInfo
 import kotlinx.coroutines.flow.Flow
 
 interface MovieRepository {

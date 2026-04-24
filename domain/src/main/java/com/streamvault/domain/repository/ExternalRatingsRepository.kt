@@ -1,8 +1,8 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.ExternalRatings
-import com.streamvault.domain.model.ExternalRatingsLookup
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.ExternalRatings
+import com.kuqforza.domain.model.ExternalRatingsLookup
+import com.kuqforza.domain.model.Result
 
 interface ExternalRatingsRepository {
     suspend fun getRatings(lookup: ExternalRatingsLookup): Result<ExternalRatings>

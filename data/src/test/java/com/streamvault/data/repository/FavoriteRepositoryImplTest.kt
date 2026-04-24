@@ -1,12 +1,12 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.FavoriteDao
-import com.streamvault.data.local.dao.VirtualGroupDao
-import com.streamvault.data.local.entity.FavoriteEntity
-import com.streamvault.domain.model.Favorite
-import com.streamvault.domain.model.ContentType
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.FavoriteDao
+import com.kuqforza.data.local.dao.VirtualGroupDao
+import com.kuqforza.data.local.entity.FavoriteEntity
+import com.kuqforza.domain.model.Favorite
+import com.kuqforza.domain.model.ContentType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest

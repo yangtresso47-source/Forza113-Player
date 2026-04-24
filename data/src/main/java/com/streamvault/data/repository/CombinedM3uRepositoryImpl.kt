@@ -1,25 +1,25 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
-import com.streamvault.data.local.dao.CombinedM3uProfileDao
-import com.streamvault.data.local.dao.CombinedM3uProfileMemberDao
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.entity.CombinedM3uProfileEntity
-import com.streamvault.data.local.entity.CombinedM3uProfileMemberEntity
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.domain.model.ActiveLiveSource
-import com.streamvault.domain.model.ActiveLiveSourceOption
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.CombinedCategory
-import com.streamvault.domain.model.CombinedCategoryBinding
-import com.streamvault.domain.model.CombinedM3uProfile
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.ProviderType
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.repository.ChannelRepository
-import com.streamvault.domain.repository.CombinedM3uRepository
+import com.kuqforza.data.local.dao.CombinedM3uProfileDao
+import com.kuqforza.data.local.dao.CombinedM3uProfileMemberDao
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.entity.CombinedM3uProfileEntity
+import com.kuqforza.data.local.entity.CombinedM3uProfileMemberEntity
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.domain.model.ActiveLiveSource
+import com.kuqforza.domain.model.ActiveLiveSourceOption
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.CombinedCategory
+import com.kuqforza.domain.model.CombinedCategoryBinding
+import com.kuqforza.domain.model.CombinedM3uProfile
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.ProviderType
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.ChannelRepository
+import com.kuqforza.domain.repository.CombinedM3uRepository
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -267,13 +267,13 @@ class CombinedM3uRepositoryImpl @Inject constructor(
                     arrays.toList()
                         .map { it as Triple<*, *, *> }
                         .flatMap { triple ->
-                            val member = triple.first as com.streamvault.domain.model.CombinedM3uProfileMember
+                            val member = triple.first as com.kuqforza.domain.model.CombinedM3uProfileMember
                             val categories = triple.second as List<Category>
                             val hiddenCategoryIds = triple.third as Set<Long>
                             categories
                                 .filter {
                                     !it.isVirtual &&
-                                        it.id != com.streamvault.domain.repository.ChannelRepository.ALL_CHANNELS_ID &&
+                                        it.id != com.kuqforza.domain.repository.ChannelRepository.ALL_CHANNELS_ID &&
                                         it.id !in hiddenCategoryIds
                                 }
                                 .map { category ->

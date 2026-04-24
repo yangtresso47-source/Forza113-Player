@@ -1,4 +1,4 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
 import java.security.MessageDigest
 

@@ -1,33 +1,33 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import android.database.sqlite.SQLiteException
-import com.streamvault.data.local.dao.CategoryDao
-import com.streamvault.data.local.dao.ChannelDao
-import com.streamvault.data.local.dao.FavoriteDao
-import com.streamvault.data.local.entity.CategoryEntity
-import com.streamvault.data.local.entity.ChannelBrowseEntity
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.data.remote.xtream.XtreamStreamUrlResolver
-import com.streamvault.data.util.rankSearchResults
-import com.streamvault.data.util.toFtsPrefixQuery
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.ChannelNumberingMode
-import com.streamvault.domain.model.ChannelQualityOption
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.GroupedChannelLabelMode
-import com.streamvault.domain.model.LiveChannelGroupingMode
-import com.streamvault.domain.model.LiveChannelObservedQuality
-import com.streamvault.domain.model.LiveChannelVariant
-import com.streamvault.domain.model.LiveChannelVariantAttributes
-import com.streamvault.domain.model.LiveVariantPreferenceMode
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.StreamInfo
-import com.streamvault.domain.model.StreamType
-import com.streamvault.domain.repository.ChannelRepository
-import com.streamvault.domain.util.ChannelNormalizer
+import com.kuqforza.data.local.dao.CategoryDao
+import com.kuqforza.data.local.dao.ChannelDao
+import com.kuqforza.data.local.dao.FavoriteDao
+import com.kuqforza.data.local.entity.CategoryEntity
+import com.kuqforza.data.local.entity.ChannelBrowseEntity
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.data.remote.xtream.XtreamStreamUrlResolver
+import com.kuqforza.data.util.rankSearchResults
+import com.kuqforza.data.util.toFtsPrefixQuery
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.ChannelNumberingMode
+import com.kuqforza.domain.model.ChannelQualityOption
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.GroupedChannelLabelMode
+import com.kuqforza.domain.model.LiveChannelGroupingMode
+import com.kuqforza.domain.model.LiveChannelObservedQuality
+import com.kuqforza.domain.model.LiveChannelVariant
+import com.kuqforza.domain.model.LiveChannelVariantAttributes
+import com.kuqforza.domain.model.LiveVariantPreferenceMode
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.StreamInfo
+import com.kuqforza.domain.model.StreamType
+import com.kuqforza.domain.repository.ChannelRepository
+import com.kuqforza.domain.util.ChannelNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -46,7 +46,7 @@ class ChannelRepositoryImpl @Inject constructor(
     private val categoryDao: CategoryDao,
     private val favoriteDao: FavoriteDao,
     private val preferencesRepository: PreferencesRepository,
-    private val parentalControlManager: com.streamvault.domain.manager.ParentalControlManager,
+    private val parentalControlManager: com.kuqforza.domain.manager.ParentalControlManager,
     private val xtreamStreamUrlResolver: XtreamStreamUrlResolver
 ) : ChannelRepository {
     private companion object {

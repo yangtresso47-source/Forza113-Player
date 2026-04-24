@@ -1,16 +1,16 @@
-package com.streamvault.data.remote.xtream
+package com.kuqforza.data.remote.xtream
 
 import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
-import com.streamvault.data.remote.dto.XtreamAuthResponse
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamEpgResponse
-import com.streamvault.data.remote.dto.XtreamSeriesInfoResponse
-import com.streamvault.data.remote.dto.XtreamSeriesItem
-import com.streamvault.data.remote.dto.XtreamStream
-import com.streamvault.data.remote.dto.XtreamVodInfoResponse
-import com.streamvault.data.remote.NetworkTimeoutConfig
+import com.kuqforza.data.remote.dto.XtreamAuthResponse
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamEpgResponse
+import com.kuqforza.data.remote.dto.XtreamSeriesInfoResponse
+import com.kuqforza.data.remote.dto.XtreamSeriesItem
+import com.kuqforza.data.remote.dto.XtreamStream
+import com.kuqforza.data.remote.dto.XtreamVodInfoResponse
+import com.kuqforza.data.remote.NetworkTimeoutConfig
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader

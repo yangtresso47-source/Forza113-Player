@@ -1,11 +1,11 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Favorite
-import com.streamvault.domain.model.VirtualCategoryIds
-import com.streamvault.domain.model.VirtualGroup
-import com.streamvault.domain.repository.FavoriteRepository
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Favorite
+import com.kuqforza.domain.model.VirtualCategoryIds
+import com.kuqforza.domain.model.VirtualGroup
+import com.kuqforza.domain.repository.FavoriteRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine

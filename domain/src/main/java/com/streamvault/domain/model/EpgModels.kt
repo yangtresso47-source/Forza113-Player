@@ -1,4 +1,4 @@
-package com.streamvault.domain.model
+package com.kuqforza.domain.model
 
 /**
  * Represents an external EPG source (e.g. an XMLTV URL).

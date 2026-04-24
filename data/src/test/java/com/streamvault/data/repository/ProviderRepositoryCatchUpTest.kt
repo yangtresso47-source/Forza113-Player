@@ -1,4 +1,4 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test

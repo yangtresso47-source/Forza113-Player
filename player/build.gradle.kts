@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.streamvault.player"
+    namespace = "com.kuqforza.player"
     compileSdk = 36
 
     defaultConfig {

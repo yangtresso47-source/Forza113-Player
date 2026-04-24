@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">StreamVault</string>
+    <string name="app_name">Kuqforza</string>
     <string name="nav_home">Thuis</string>
     <string name="nav_live_tv">Live-tv</string>
     <string name="nav_movies">Films</string>
@@ -102,7 +102,7 @@
     <string name="dashboard_provider_no_expiry">Geen vervaldatum gemeld</string>
     <string name="dashboard_warning_title">Aanbieder heeft aandacht nodig</string>
     <string name="dashboard_warning_review">Open Providergegevens</string>
-    <string name="dashboard_update_title">StreamVault %1$s is beschikbaar</string>
+    <string name="dashboard_update_title">Kuqforza %1$s is beschikbaar</string>
     <string name="dashboard_update_available">Een nieuwere appversie is in de cache opgeslagen en klaar om te bekijken via Instellingen.</string>
     <string name="dashboard_update_install_ready">De nieuwste update is al gedownload. Open Instellingen om deze te installeren.</string>
     <string name="dashboard_update_open_settings">Updates openen</string>
@@ -400,7 +400,7 @@
     <string name="settings_about_subtitle">Versie-, build- en ondersteuningsgegevens voor deze installatie.</string>
     <string name="settings_app_version">App-versie</string>
     <string name="settings_build">Bouw</string>
-    <string name="settings_build_desc">StreamVault voor Android TV</string>
+    <string name="settings_build_desc">Kuqforza voor Android TV</string>
     <string name="settings_enabled">Ingeschakeld</string>
     <string name="settings_disabled">Uitgeschakeld</string>
     <string name="settings_developed_by">Ontwikkeld door</string>
@@ -410,7 +410,7 @@
     <string name="settings_donate">Ondersteuning op Ko-fi</string>
     <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_updates_title">Updates</string>
-    <string name="settings_updates_subtitle">Controleer GitHub Releases voor nieuwere StreamVault-versies zonder de app te verlaten.</string>
+    <string name="settings_updates_subtitle">Controleer GitHub Releases voor nieuwere Kuqforza-versies zonder de app te verlaten.</string>
     <string name="settings_update_auto_check">Automatisch op updates controleren</string>
     <string name="settings_update_latest_release">Nieuwste release</string>
     <string name="settings_update_status">Updatestatus</string>
@@ -434,8 +434,8 @@
     <string name="settings_update_status_check_failed">Laatste controle mislukt</string>
     <string name="settings_update_status_downloading">Update wordt gedownload</string>
     <string name="settings_update_status_ready_to_install">Klaar om te installeren</string>
-    <string name="settings_update_available_message">StreamVault %1$s is beschikbaar.</string>
-    <string name="settings_update_current_message">Je hebt al de nieuwste StreamVault-release.</string>
+    <string name="settings_update_available_message">Kuqforza %1$s is beschikbaar.</string>
+    <string name="settings_update_current_message">Je hebt al de nieuwste Kuqforza-release.</string>
     <string name="settings_syncing">Gegevens worden gesynchroniseerd. Even geduld a.u.b....</string>
     <string name="settings_syncing_title">Gegevens synchroniseren...</string>
     <string name="settings_syncing_subtitle">Wacht even terwijl je afspeellijst wordt geïmporteerd.</string>
@@ -698,7 +698,7 @@
     <string name="a11y_catch_up_available">Inhaalmogelijkheid beschikbaar</string>
     <string name="a11y_now_playing">Speelt nu %1$s</string>
     <string name="a11y_channel_with_number">Kanaal %1$d, %2$s</string>
-    <string name="setup_title_streamvault">StreamVault</string>
+    <string name="setup_title_kuqforza">Kuqforza</string>
     <string name="setup_provider_title">Voeg een aanbieder toe</string>
     <string name="setup_edit_provider">Aanbieder bewerken</string>
     <string name="setup_update_desc">Update de gegevens van uw IPTV-provider</string>
@@ -1165,19 +1165,19 @@
     <string name="settings_history_cleared">Kijkgeschiedenis en recente beelden gewist</string>
     <string name="settings_pin_changed">Pincode succesvol opgeslagen</string>
     <string name="home_reorder_channels">Kanalen opnieuw rangschikken</string>
-    <string name="tv_input_setup_scanning_title">StreamVault-kanalen scannen</string>
+    <string name="tv_input_setup_scanning_title">Kuqforza-kanalen scannen</string>
     <string name="tv_input_setup_success_title">Live-tv is klaar</string>
     <string name="tv_input_setup_no_provider_title">Geen IPTV-provider geconfigureerd</string>
     <string name="tv_input_setup_error_title">Automatische scan mislukt</string>
     <string name="tv_input_setup_idle_title">Live TV-integratie voorbereiden</string>
-    <string name="tv_input_setup_scanning_body">StreamVault synchroniseert uw actieve provider met Android TV Live TV.</string>
+    <string name="tv_input_setup_scanning_body">Kuqforza synchroniseert uw actieve provider met Android TV Live TV.</string>
     <string name="tv_input_setup_success_body">Je kanalen zijn succesvol gesynchroniseerd.</string>
-    <string name="tv_input_setup_no_provider_body">Voeg ten minste één IPTV-provider toe in StreamVault en kom dan hier terug om kanalen te scannen voor Android TV Live TV.</string>
+    <string name="tv_input_setup_no_provider_body">Voeg ten minste één IPTV-provider toe in Kuqforza en kom dan hier terug om kanalen te scannen voor Android TV Live TV.</string>
     <string name="tv_input_setup_error_body">De tv-invoersynchronisatie is niet voltooid.</string>
     <string name="tv_input_setup_idle_body">Wacht alstublieft.</string>
     <string name="tv_input_setup_source_format">Bron: %1$s</string>
-    <string name="tv_input_setup_open_setup">Open StreamVault-installatie</string>
+    <string name="tv_input_setup_open_setup">Open Kuqforza-installatie</string>
     <string name="tv_input_setup_try_scan_again">Probeer Automatisch scannen opnieuw</string>
     <string name="tv_input_setup_retry_scan">Probeer de automatische scan opnieuw</string>
-    <string name="tv_input_setup_success_hint">Android TV Live TV kan nu uw StreamVault-kanalen openen.</string>
+    <string name="tv_input_setup_success_hint">Android TV Live TV kan nu uw Kuqforza-kanalen openen.</string>
 </resources>

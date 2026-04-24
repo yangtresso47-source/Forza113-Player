@@ -1,4 +1,4 @@
-package com.streamvault.player
+package com.kuqforza.player
 
 import androidx.media3.ui.CaptionStyleCompat
 

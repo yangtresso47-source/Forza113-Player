@@ -1,7 +1,7 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.model.StreamInfo
+import com.kuqforza.domain.model.StreamInfo
 import org.junit.Test
 
 class PlayerTimeoutProfileTest {

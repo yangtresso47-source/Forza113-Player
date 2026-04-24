@@ -1,4 +1,4 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test

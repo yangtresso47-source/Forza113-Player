@@ -1,7 +1,7 @@
-package com.streamvault.data.remote.xtream
+package com.kuqforza.data.remote.xtream
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.remote.dto.XtreamSeriesInfoResponse
+import com.kuqforza.data.remote.dto.XtreamSeriesInfoResponse
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json

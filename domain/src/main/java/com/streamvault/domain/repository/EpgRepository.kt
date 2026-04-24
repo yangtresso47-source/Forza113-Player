@@ -1,7 +1,7 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
 interface EpgRepository {

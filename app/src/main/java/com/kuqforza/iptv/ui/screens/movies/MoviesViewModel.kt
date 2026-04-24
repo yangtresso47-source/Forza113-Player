@@ -1,0 +1,1233 @@
+package com.kuqforza.iptv.ui.screens.movies
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.iptv.ui.model.VodViewMode
+import com.kuqforza.iptv.ui.model.applyProviderCategoryDisplayPreferences
+import com.kuqforza.domain.manager.ParentalControlManager
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.CategorySortMode
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.LibraryFilterBy
+import com.kuqforza.domain.model.LibraryFilterType
+import com.kuqforza.domain.model.LibraryBrowseQuery
+import com.kuqforza.domain.model.LibrarySortBy
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.PlaybackHistory
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.FavoriteRepository
+import com.kuqforza.domain.repository.MovieRepository
+import com.kuqforza.domain.repository.PlaybackHistoryRepository
+import com.kuqforza.domain.repository.ProviderRepository
+import com.kuqforza.domain.usecase.ContinueWatchingScope
+import com.kuqforza.domain.usecase.GetContinueWatching
+import com.kuqforza.domain.usecase.GetCustomCategories
+import com.kuqforza.iptv.ui.screens.vod.createVodGroup
+import com.kuqforza.iptv.ui.screens.vod.incrementVodSelectedCategoryLoadLimit
+import com.kuqforza.iptv.ui.screens.vod.buildVodPreviewCatalog
+import com.kuqforza.iptv.ui.screens.vod.buildVodSearchCatalog
+import com.kuqforza.iptv.ui.screens.vod.loadVodDialogSelection
+import com.kuqforza.iptv.ui.screens.vod.loadVodReorderItems
+import com.kuqforza.iptv.ui.screens.vod.markVodFavorites
+import com.kuqforza.iptv.ui.screens.vod.matchesVodGroupMembership
+import com.kuqforza.iptv.ui.screens.vod.moveVodItemDown
+import com.kuqforza.iptv.ui.screens.vod.moveVodItemUp
+import com.kuqforza.iptv.ui.screens.vod.selectVodCategory
+import com.kuqforza.iptv.ui.screens.vod.saveVodReorder
+import com.kuqforza.iptv.ui.screens.vod.setVodLibraryFilterType
+import com.kuqforza.iptv.ui.screens.vod.setVodLibrarySortBy
+import com.kuqforza.iptv.ui.screens.vod.setVodSearchQuery
+import com.kuqforza.iptv.ui.screens.vod.setVodFavorite
+import com.kuqforza.iptv.ui.screens.vod.updateVodGroupMembership
+import com.kuqforza.iptv.ui.screens.vod.VodBrowseDefaults
+import com.kuqforza.iptv.util.isPlaybackComplete
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+enum class MovieLibraryLens {
+    FAVORITES,
+    CONTINUE,
+    TOP_RATED,
+    FRESH
+}
+
+@HiltViewModel
+@OptIn(ExperimentalCoroutinesApi::class)
+class MoviesViewModel @Inject constructor(
+    private val providerRepository: ProviderRepository,
+    private val movieRepository: MovieRepository,
+    private val preferencesRepository: PreferencesRepository,
+    private val playbackHistoryRepository: PlaybackHistoryRepository,
+    private val favoriteRepository: FavoriteRepository,
+    private val getContinueWatching: GetContinueWatching,
+    private val getCustomCategories: GetCustomCategories,
+    private val parentalControlManager: ParentalControlManager
+) : ViewModel() {
+    private companion object {
+        const val UNCATEGORIZED = "Uncategorized"
+        const val MIN_SEARCH_QUERY_LENGTH = 2
+        const val FAVORITE_ID_FETCH_BUFFER = 80
+    }
+
+    private val _uiState = MutableStateFlow(MoviesUiState())
+    val uiState: StateFlow<MoviesUiState> = _uiState.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    private val _selectedCategoryLoadLimit = MutableStateFlow(VodBrowseDefaults.SELECTED_CATEGORY_PAGE_SIZE)
+    private val _selectedLibraryFilterType = MutableStateFlow(LibraryFilterType.ALL)
+    private val _selectedLibrarySortBy = MutableStateFlow(LibrarySortBy.LIBRARY)
+    private val _previewBatchSize = MutableStateFlow(8)
+    private var activeProviderId: Long? = null
+
+    private data class PreviewLoadResult(
+        val snapshot: MovieCatalogSnapshot,
+        val isLoadingPreviewRows: Boolean,
+        val hasMorePreviewRows: Boolean
+    )
+
+    init {
+        viewModelScope.launch {
+            providerRepository.getProviders().collectLatest { providers ->
+                _uiState.update {
+                    it.copy(
+                        hasProviders = providers.isNotEmpty(),
+                        isLoading = if (providers.isEmpty()) false else it.isLoading
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            providerRepository.getActiveProvider().collectLatest { provider ->
+                activeProviderId = provider?.id
+                _uiState.update {
+                    it.copy(
+                        hasActiveProvider = provider != null,
+                        isLoading = if (provider == null) false else it.isLoading,
+                        isLoadingSelectedCategory = if (provider == null) false else it.isLoadingSelectedCategory,
+                        isLoadingPreviewRows = if (provider == null) false else it.isLoadingPreviewRows
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            try {
+            providerRepository.getActiveProvider()
+                .filterNotNull()
+                .flatMapLatest { provider ->
+                    activeProviderId = provider.id
+                    combine(
+                        favoriteRepository.getAllFavorites(provider.id, ContentType.MOVIE),
+                        getCustomCategories(provider.id, ContentType.MOVIE),
+                        movieRepository.getCategories(provider.id),
+                        movieRepository.getCategoryItemCounts(provider.id),
+                        movieRepository.getLibraryCount(provider.id),
+                        preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.MOVIE),
+                        preferencesRepository.getCategorySortMode(provider.id, ContentType.MOVIE)
+                    ) { values ->
+                        val allFavorites = values[0] as List<com.kuqforza.domain.model.Favorite>
+                        val customCategories = values[1] as List<Category>
+                        val providerCategories = values[2] as List<Category>
+                        val providerCategoryCounts = values[3] as Map<Long, Int>
+                        val libraryCount = values[4] as Int
+                        val hiddenCategoryIds = values[5] as Set<Long>
+                        val sortMode = values[6] as CategorySortMode
+                        val visibleProviderCategories = applyProviderCategoryDisplayPreferences(
+                            categories = providerCategories,
+                            hiddenCategoryIds = hiddenCategoryIds,
+                            sortMode = sortMode
+                        )
+                        MovieCatalogDependencies(
+                            allFavorites = allFavorites,
+                            customCategories = customCategories,
+                            providerCategories = visibleProviderCategories,
+                            providerCategoryCounts = providerCategoryCounts,
+                            libraryCount = libraryCount,
+                            hiddenCategoryIds = hiddenCategoryIds,
+                            categorySortMode = sortMode
+                        )
+                    }.combine(_searchQuery) { dependencies, query ->
+                        MovieCatalogParams(
+                            providerId = provider.id,
+                            allFavorites = dependencies.allFavorites,
+                            customCategories = dependencies.customCategories,
+                            providerCategories = dependencies.providerCategories,
+                            providerCategoryCounts = dependencies.providerCategoryCounts,
+                            libraryCount = dependencies.libraryCount,
+                            hiddenCategoryIds = dependencies.hiddenCategoryIds,
+                            categorySortMode = dependencies.categorySortMode,
+                            query = query.trim()
+                        )
+                    }
+                }
+                .flatMapLatest { params ->
+                    _previewBatchSize.flatMapLatest { batchSize ->
+                        if (params.query.isBlank()) {
+                            val categoryIds = params.providerCategories.take(batchSize).map { it.id }
+                            if (categoryIds.isEmpty()) {
+                                flow {
+                                    emit(PreviewLoadResult(buildPreviewCatalog(params, emptyMap()), false, false))
+                                }
+                            } else {
+                                movieRepository.getCategoryPreviewRows(
+                                    providerId = params.providerId,
+                                    categoryIds = categoryIds,
+                                    limitPerCategory = VodBrowseDefaults.PREVIEW_ROW_LIMIT
+                                ).map { providerPreviews ->
+                                    val isLoading = categoryIds.all { id -> providerPreviews[id].isNullOrEmpty() }
+                                    val hasMore = params.providerCategories.size > batchSize
+                                    PreviewLoadResult(buildPreviewCatalog(params, providerPreviews), isLoading, hasMore)
+                                }
+                            }
+                        } else if (params.query.length < MIN_SEARCH_QUERY_LENGTH) {
+                            flow {
+                                emit(PreviewLoadResult(
+                                    buildSearchCatalog(
+                                        movies = emptyList(),
+                                        allFavorites = params.allFavorites,
+                                        customCategories = params.customCategories,
+                                        providerCategories = params.providerCategories,
+                                        hiddenCategoryIds = params.hiddenCategoryIds
+                                    ).copy(libraryCount = 0),
+                                    false, false
+                                ))
+                            }
+                        } else {
+                            flow {
+                                val searchResults = movieRepository.searchMovies(params.providerId, params.query).first()
+                                emit(PreviewLoadResult(
+                                    buildSearchCatalog(
+                                        movies = searchResults,
+                                        allFavorites = params.allFavorites,
+                                        customCategories = params.customCategories,
+                                        providerCategories = params.providerCategories,
+                                        hiddenCategoryIds = params.hiddenCategoryIds
+                                    ).copy(libraryCount = searchResults.size),
+                                    false, false
+                                ))
+                            }
+                        }
+                    }
+                }
+                .collect { result ->
+                    val snapshot = result.snapshot
+                    val isReordering = _uiState.value.isReorderMode
+                    val currentSelected = _uiState.value.selectedCategory
+                    val preserveSelectedCategory = currentSelected != null && _searchQuery.value.isNotBlank()
+                    val resolvedSelected = currentSelected?.takeIf { selected ->
+                        preserveSelectedCategory ||
+                            selected == _uiState.value.fullLibraryCategoryName ||
+                            selected in snapshot.categoryNames
+                    }
+                    _uiState.update {
+                        it.copy(
+                            moviesByCategory = snapshot.grouped,
+                            categoryNames = snapshot.categoryNames,
+                            categoryCounts = snapshot.categoryCounts,
+                            libraryCount = snapshot.libraryCount,
+                            providerCategories = snapshot.providerCategories,
+                            selectedCategory = resolvedSelected,
+                            selectedCategoryItems = if (resolvedSelected == null) emptyList() else it.selectedCategoryItems,
+                            selectedCategoryLoadedCount = if (resolvedSelected == null) 0 else it.selectedCategoryLoadedCount,
+                            selectedCategoryTotalCount = if (resolvedSelected == null) 0 else it.selectedCategoryTotalCount,
+                            canLoadMoreSelectedCategory = if (resolvedSelected == null) false else it.canLoadMoreSelectedCategory,
+                            filteredMovies = if (isReordering) it.filteredMovies else emptyList(),
+                            isLoading = false,
+                            isLoadingPreviewRows = result.isLoadingPreviewRows,
+                            hasMorePreviewRows = result.hasMorePreviewRows,
+                            errorMessage = null
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load movies") }
+            }
+        }
+
+        viewModelScope.launch {
+            preferencesRepository.vodViewMode.collectLatest { mode ->
+                _uiState.update { it.copy(vodViewMode = VodViewMode.fromStorage(mode)) }
+            }
+        }
+
+        viewModelScope.launch {
+            providerRepository.getActiveProvider()
+                .filterNotNull()
+                .flatMapLatest { provider ->
+                    combine(
+                        favoriteRepository.getAllFavorites(provider.id, ContentType.MOVIE),
+                        getCustomCategories(provider.id, ContentType.MOVIE),
+                        movieRepository.getCategories(provider.id),
+                        preferencesRepository.getHiddenCategoryIds(provider.id, ContentType.MOVIE),
+                        preferencesRepository.getCategorySortMode(provider.id, ContentType.MOVIE)
+                    ) { values ->
+                        val allFavorites = values[0] as List<com.kuqforza.domain.model.Favorite>
+                        val customCategories = values[1] as List<Category>
+                        val providerCategories = values[2] as List<Category>
+                        val hiddenCategoryIds = values[3] as Set<Long>
+                        val sortMode = values[4] as CategorySortMode
+                        MovieCategorySelectionDependencies(
+                            allFavorites = allFavorites,
+                            customCategories = customCategories,
+                            providerCategories = applyProviderCategoryDisplayPreferences(
+                                categories = providerCategories,
+                                hiddenCategoryIds = hiddenCategoryIds,
+                                sortMode = sortMode
+                            ),
+                            hiddenCategoryIds = hiddenCategoryIds
+                        )
+                    }.combine(
+                        combine(
+                            _uiState.map { it.selectedCategory }.distinctUntilChanged(),
+                            _selectedCategoryLoadLimit,
+                            _searchQuery,
+                            _selectedLibraryFilterType,
+                            _selectedLibrarySortBy
+                        ) { selectedCategory, loadLimit, query, filterType, sortBy ->
+                            SelectedMovieBrowseSelection(
+                                selectedCategory = selectedCategory,
+                                loadLimit = loadLimit,
+                                query = query.trim(),
+                                filterType = filterType,
+                                sortBy = sortBy
+                            )
+                        }
+                    ) { dependencies, selection ->
+                        SelectedMovieCategoryRequest(
+                            providerId = provider.id,
+                            selectedCategory = selection.selectedCategory,
+                            loadLimit = selection.loadLimit,
+                            query = selection.query,
+                            filterType = selection.filterType,
+                            sortBy = selection.sortBy,
+                            allFavorites = dependencies.allFavorites,
+                            customCategories = dependencies.customCategories,
+                            providerCategories = dependencies.providerCategories,
+                            hiddenCategoryIds = dependencies.hiddenCategoryIds
+                        )
+                    }
+                }
+                .flatMapLatest { request ->
+                    flow {
+                        emit(loadSelectedCategoryItems(request))
+                    }
+                }
+                .collect { snapshot ->
+                    _uiState.update {
+                        it.copy(
+                            selectedCategoryItems = snapshot.items,
+                            selectedCategoryLoadedCount = snapshot.loadedCount,
+                            selectedCategoryTotalCount = snapshot.totalCount,
+                            canLoadMoreSelectedCategory = snapshot.canLoadMore,
+                            isLoadingSelectedCategory = false
+                        )
+                    }
+                }
+        }
+
+        viewModelScope.launch {
+            providerRepository.getActiveProvider()
+                .filterNotNull()
+                .collectLatest { provider ->
+                    launch {
+                        getContinueWatching(
+                            providerId = provider.id,
+                            limit = 20,
+                            scope = ContinueWatchingScope.MOVIES
+                        )
+                            .collect { history ->
+                                _uiState.update {
+                                    it.copy(continueWatching = history)
+                                }
+                            }
+                    }
+                }
+        }
+
+        viewModelScope.launch {
+            providerRepository.getActiveProvider()
+                .filterNotNull()
+                .flatMapLatest { provider ->
+                    combine(
+                        favoriteRepository.getAllFavorites(provider.id, ContentType.MOVIE),
+                        playbackHistoryRepository.getRecentlyWatchedByProvider(provider.id, limit = 24),
+                        movieRepository.getTopRatedPreview(provider.id, VodBrowseDefaults.PREVIEW_ROW_LIMIT),
+                        movieRepository.getFreshPreview(provider.id, VodBrowseDefaults.PREVIEW_ROW_LIMIT)
+                    ) { allFavorites, history, topRated, fresh ->
+                        MovieLibraryLensDependencies(
+                            providerId = provider.id,
+                            allFavorites = allFavorites,
+                            history = history,
+                            topRated = topRated,
+                            fresh = fresh
+                        )
+                    }
+                }
+                .collectLatest { dependencies ->
+                    val globalFavoriteIds = dependencies.allFavorites
+                        .asSequence()
+                        .filter { it.groupId == null }
+                        .map { it.contentId }
+                        .toSet()
+                    val favoriteIds = dependencies.allFavorites
+                        .asSequence()
+                        .filter { it.groupId == null }
+                        .sortedBy { it.position }
+                        .map { it.contentId }
+                        .take(VodBrowseDefaults.PREVIEW_ROW_LIMIT)
+                        .toList()
+                    val continueIds = dependencies.history
+                        .asSequence()
+                        .filter { it.contentType == ContentType.MOVIE }
+                        .sortedByDescending { it.lastWatchedAt }
+                        .distinctBy { it.contentId }
+                        .map { it.contentId }
+                        .take(VodBrowseDefaults.PREVIEW_ROW_LIMIT)
+                        .toList()
+
+                    val favoritePreview = if (favoriteIds.isEmpty()) {
+                        emptyList()
+                    } else {
+                        movieRepository.getMoviesByIds(favoriteIds).first().orderByIds(favoriteIds)
+                    }.let { movies ->
+                        markVodFavorites(movies, globalFavoriteIds, Movie::id) { movie, isFavorite ->
+                            movie.copy(isFavorite = isFavorite)
+                        }
+                    }
+                    val continuePreview = if (continueIds.isEmpty()) {
+                        emptyList()
+                    } else {
+                        movieRepository.getMoviesByIds(continueIds).first().orderByIds(continueIds)
+                    }.let { movies ->
+                        markVodFavorites(movies, globalFavoriteIds, Movie::id) { movie, isFavorite ->
+                            movie.copy(isFavorite = isFavorite)
+                        }
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            libraryLensRows = mapOf(
+                                MovieLibraryLens.FAVORITES to favoritePreview,
+                                MovieLibraryLens.CONTINUE to continuePreview,
+                                MovieLibraryLens.TOP_RATED to markVodFavorites(dependencies.topRated, globalFavoriteIds, Movie::id) { movie, isFavorite ->
+                                    movie.copy(isFavorite = isFavorite)
+                                },
+                                MovieLibraryLens.FRESH to markVodFavorites(dependencies.fresh, globalFavoriteIds, Movie::id) { movie, isFavorite ->
+                                    movie.copy(isFavorite = isFavorite)
+                                }
+                            ).filterValues { rows -> rows.isNotEmpty() }
+                        )
+                    }
+                }
+        }
+
+        viewModelScope.launch {
+            preferencesRepository.parentalControlLevel.collect { level ->
+                _uiState.update { it.copy(parentalControlLevel = level) }
+            }
+        }
+
+        viewModelScope.launch {
+            providerRepository.getActiveProvider()
+                .filterNotNull()
+                .flatMapLatest { provider ->
+                    parentalControlManager.unlockedCategoriesForProvider(provider.id)
+                }
+                .collectLatest { unlockedIds ->
+                    _uiState.update { it.copy(unlockedCategoryIds = unlockedIds) }
+                }
+        }
+
+        viewModelScope.launch {
+            providerRepository.getActiveProvider()
+                .filterNotNull()
+                .flatMapLatest { provider -> getCustomCategories(provider.id, ContentType.MOVIE) }
+                .collect { categories ->
+                    _uiState.update { it.copy(categories = categories) }
+                }
+        }
+    }
+
+    fun selectCategory(categoryName: String?) {
+        _previewBatchSize.value = 8
+        activeProviderId?.let { providerId ->
+            parentalControlManager.retainUnlockedCategory(
+                providerId = providerId,
+                categoryId = resolveProviderCategoryId(categoryName)
+            )
+        }
+        selectVodCategory(
+            categoryName = categoryName,
+            selectedCategoryLoadLimit = _selectedCategoryLoadLimit,
+            selectedLibraryFilterType = _selectedLibraryFilterType,
+            selectedLibrarySortBy = _selectedLibrarySortBy,
+            uiState = _uiState
+        ) { selectedCategory, filterType, sortBy, isLoadingSelectedCategory ->
+            copy(
+                selectedCategory = selectedCategory,
+                selectedLibraryFilterType = filterType,
+                selectedLibrarySortBy = sortBy,
+                selectedCategoryItems = emptyList(),
+                selectedCategoryLoadedCount = 0,
+                selectedCategoryTotalCount = 0,
+                canLoadMoreSelectedCategory = false,
+                isLoadingSelectedCategory = isLoadingSelectedCategory
+            )
+        }
+    }
+
+    fun selectFullLibraryBrowse() {
+        selectCategory(VodBrowseDefaults.FULL_LIBRARY_CATEGORY)
+    }
+
+    fun loadMoreSelectedCategory() {
+        incrementVodSelectedCategoryLoadLimit(
+            canLoadMore = _uiState.value.canLoadMoreSelectedCategory,
+            selectedCategoryLoadLimit = _selectedCategoryLoadLimit
+        )
+    }
+
+    fun loadMorePreviewRows() {
+        if (_uiState.value.hasMorePreviewRows && !_uiState.value.isLoadingPreviewRows) {
+            _previewBatchSize.update { it + 8 }
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _previewBatchSize.value = 8
+        setVodSearchQuery(query, _searchQuery, _uiState) { updatedQuery ->
+            copy(searchQuery = updatedQuery)
+        }
+    }
+
+    fun setSelectedLibraryFilterType(filterType: LibraryFilterType) {
+        setVodLibraryFilterType(
+            filterType = filterType,
+            selectedLibraryFilterType = _selectedLibraryFilterType,
+            selectedCategoryLoadLimit = _selectedCategoryLoadLimit,
+            uiState = _uiState,
+            hasSelectedCategory = { it.selectedCategory != null }
+        ) { updatedFilterType, isLoadingSelectedCategory ->
+            copy(
+                selectedLibraryFilterType = updatedFilterType,
+                selectedCategoryItems = emptyList(),
+                selectedCategoryLoadedCount = 0,
+                selectedCategoryTotalCount = 0,
+                canLoadMoreSelectedCategory = false,
+                isLoadingSelectedCategory = isLoadingSelectedCategory
+            )
+        }
+    }
+
+    fun setSelectedLibrarySortBy(sortBy: LibrarySortBy) {
+        setVodLibrarySortBy(
+            sortBy = sortBy,
+            selectedLibrarySortBy = _selectedLibrarySortBy,
+            selectedCategoryLoadLimit = _selectedCategoryLoadLimit,
+            uiState = _uiState,
+            hasSelectedCategory = { it.selectedCategory != null }
+        ) { updatedSortBy, isLoadingSelectedCategory ->
+            copy(
+                selectedLibrarySortBy = updatedSortBy,
+                selectedCategoryItems = emptyList(),
+                selectedCategoryLoadedCount = 0,
+                selectedCategoryTotalCount = 0,
+                canLoadMoreSelectedCategory = false,
+                isLoadingSelectedCategory = isLoadingSelectedCategory
+            )
+        }
+    }
+
+    suspend fun verifyPin(pin: String): Boolean {
+        return preferencesRepository.verifyParentalPin(pin)
+    }
+
+    fun unlockCategory(category: Category) {
+        viewModelScope.launch {
+            val activeProviderId = providerRepository.getActiveProvider().first()?.id ?: return@launch
+            parentalControlManager.unlockCategory(activeProviderId, kotlin.math.abs(category.id))
+            if (_uiState.value.selectedCategory != category.name) {
+                selectCategory(category.name)
+            }
+        }
+    }
+
+    fun onShowDialog(movie: Movie) {
+        viewModelScope.launch {
+            val dialogSelection = loadVodDialogSelection(
+                item = movie,
+                providerId = movie.providerId,
+                itemId = movie.id,
+                contentType = ContentType.MOVIE,
+                favoriteRepository = favoriteRepository,
+                copyWithFavorite = { currentMovie, isFavorite ->
+                    currentMovie.copy(isFavorite = isFavorite)
+                }
+            )
+            _uiState.update {
+                it.copy(
+                    showDialog = true,
+                    selectedMovieForDialog = dialogSelection.selectedItem,
+                    dialogGroupMemberships = dialogSelection.groupMemberships
+                )
+            }
+        }
+    }
+
+    fun onDismissDialog() {
+        _uiState.update { it.copy(showDialog = false, selectedMovieForDialog = null) }
+    }
+
+    fun addFavorite(movie: Movie) {
+        viewModelScope.launch {
+            setVodFavorite(movie.providerId, movie.id, ContentType.MOVIE, true, favoriteRepository)
+            _uiState.update { it.copy(selectedMovieForDialog = movie.copy(isFavorite = true)) }
+        }
+    }
+
+    fun removeFavorite(movie: Movie) {
+        viewModelScope.launch {
+            setVodFavorite(movie.providerId, movie.id, ContentType.MOVIE, false, favoriteRepository)
+            _uiState.update { it.copy(selectedMovieForDialog = movie.copy(isFavorite = false)) }
+        }
+    }
+
+    fun addToGroup(movie: Movie, group: Category) {
+        viewModelScope.launch {
+            val memberships = updateVodGroupMembership(
+                providerId = movie.providerId,
+                itemId = movie.id,
+                groupId = group.id,
+                contentType = ContentType.MOVIE,
+                shouldBeMember = true,
+                favoriteRepository = favoriteRepository
+            )
+            _uiState.update { it.copy(dialogGroupMemberships = memberships) }
+        }
+    }
+
+    fun removeFromGroup(movie: Movie, group: Category) {
+        viewModelScope.launch {
+            val memberships = updateVodGroupMembership(
+                providerId = movie.providerId,
+                itemId = movie.id,
+                groupId = group.id,
+                contentType = ContentType.MOVIE,
+                shouldBeMember = false,
+                favoriteRepository = favoriteRepository
+            )
+            _uiState.update { it.copy(dialogGroupMemberships = memberships) }
+        }
+    }
+
+    fun createCustomGroup(name: String) {
+        val normalizedName = name.trim()
+        val validationError = validateGroupName(normalizedName)
+        if (validationError != null) {
+            _uiState.update { it.copy(userMessage = validationError) }
+            return
+        }
+
+        viewModelScope.launch {
+            val providerId = activeProviderId ?: return@launch
+            when (val result = createVodGroup(providerId, normalizedName, ContentType.MOVIE, favoriteRepository)) {
+                is Result.Success -> {
+                    val selectedMovie = _uiState.value.selectedMovieForDialog
+                    val memberships = if (selectedMovie != null) {
+                        updateVodGroupMembership(
+                            providerId = selectedMovie.providerId,
+                            itemId = selectedMovie.id,
+                            groupId = result.data.id,
+                            contentType = ContentType.MOVIE,
+                            shouldBeMember = true,
+                            favoriteRepository = favoriteRepository
+                        )
+                    } else {
+                        _uiState.value.dialogGroupMemberships
+                    }
+                    _uiState.update {
+                        it.copy(
+                            dialogGroupMemberships = memberships,
+                            userMessage = if (selectedMovie != null) {
+                                "Created group $normalizedName and added ${selectedMovie.name}"
+                            } else {
+                                "Created group $normalizedName"
+                            }
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update { it.copy(userMessage = result.message) }
+                }
+                Result.Loading -> Unit
+            }
+        }
+    }
+
+    fun showCategoryOptions(categoryName: String) {
+        val matchedCategory = _uiState.value.categories.find { it.name == categoryName }
+            ?: _uiState.value.providerCategories.find { it.name == categoryName }
+            ?: if (categoryName == VodBrowseDefaults.FAVORITES_CATEGORY) {
+                Category(
+                    id = VodBrowseDefaults.FAVORITES_SENTINEL_ID,
+                    name = VodBrowseDefaults.FAVORITES_CATEGORY,
+                    type = ContentType.MOVIE,
+                    isVirtual = true
+                )
+            } else {
+                null
+            }
+
+        if (matchedCategory != null) {
+            _uiState.update { it.copy(selectedCategoryForOptions = matchedCategory) }
+        }
+    }
+
+    fun dismissCategoryOptions() {
+        _uiState.update { it.copy(selectedCategoryForOptions = null) }
+    }
+
+    private fun resolveProviderCategoryId(categoryName: String?): Long? =
+        _uiState.value.providerCategories
+            .firstOrNull { it.name == categoryName && !it.isVirtual && it.id > 0L }
+            ?.id
+
+    fun hideCategory(category: Category) {
+        if (category.isVirtual) return
+        viewModelScope.launch {
+            val providerId = providerRepository.getActiveProvider().first()?.id ?: return@launch
+            preferencesRepository.setCategoryHidden(
+                providerId = providerId,
+                type = ContentType.MOVIE,
+                categoryId = category.id,
+                hidden = true
+            )
+            if (_uiState.value.selectedCategory == category.name) {
+                selectCategory(null)
+            } else {
+                dismissCategoryOptions()
+            }
+            _uiState.update { it.copy(userMessage = "Hidden category ${category.name}") }
+        }
+    }
+
+    fun requestRenameGroup(category: Category) {
+        if (!category.isVirtual || category.id == VodBrowseDefaults.FAVORITES_SENTINEL_ID) return
+        _uiState.update {
+            it.copy(
+                selectedCategoryForOptions = null,
+                showRenameGroupDialog = true,
+                groupToRename = category,
+                renameGroupError = null
+            )
+        }
+    }
+
+    fun cancelRenameGroup() {
+        _uiState.update {
+            it.copy(
+                showRenameGroupDialog = false,
+                groupToRename = null,
+                renameGroupError = null
+            )
+        }
+    }
+
+    fun confirmRenameGroup(name: String) {
+        val category = _uiState.value.groupToRename ?: return
+        val normalizedName = name.trim()
+        val validationError = validateGroupName(normalizedName, currentGroupId = category.id)
+        if (validationError != null) {
+            _uiState.update { it.copy(renameGroupError = validationError) }
+            return
+        }
+
+        viewModelScope.launch {
+            favoriteRepository.renameGroup(-category.id, normalizedName)
+            _uiState.update {
+                it.copy(
+                    showRenameGroupDialog = false,
+                    groupToRename = null,
+                    renameGroupError = null,
+                    userMessage = "Renamed group to $normalizedName"
+                )
+            }
+        }
+    }
+
+    fun requestDeleteGroup(category: Category) {
+        if (!category.isVirtual || category.id == VodBrowseDefaults.FAVORITES_SENTINEL_ID) return
+        _uiState.update {
+            it.copy(
+                selectedCategoryForOptions = null,
+                showDeleteGroupDialog = true,
+                groupToDelete = category
+            )
+        }
+    }
+
+    fun cancelDeleteGroup() {
+        _uiState.update { it.copy(showDeleteGroupDialog = false, groupToDelete = null) }
+    }
+
+    fun confirmDeleteGroup() {
+        val category = _uiState.value.groupToDelete ?: return
+        viewModelScope.launch {
+            favoriteRepository.deleteGroup(-category.id)
+            _uiState.update {
+                it.copy(
+                    showDeleteGroupDialog = false,
+                    groupToDelete = null,
+                    userMessage = "Deleted group ${category.name}"
+                )
+            }
+        }
+    }
+
+    fun userMessageShown() {
+        _uiState.update { it.copy(userMessage = null) }
+    }
+
+    fun enterCategoryReorderMode(category: Category) {
+        dismissCategoryOptions()
+        viewModelScope.launch {
+            val moviesInView = loadReorderMovies(category)
+            _uiState.update {
+                it.copy(
+                    isReorderMode = true,
+                    reorderCategory = category,
+                    filteredMovies = moviesInView
+                )
+            }
+        }
+    }
+
+    fun exitCategoryReorderMode() {
+        _uiState.update {
+            it.copy(
+                isReorderMode = false,
+                reorderCategory = null,
+                filteredMovies = emptyList()
+            )
+        }
+    }
+
+    fun moveItemUp(movie: Movie) {
+        val reordered = moveVodItemUp(_uiState.value.filteredMovies, movie)
+        if (reordered !== _uiState.value.filteredMovies) {
+            _uiState.update { it.copy(filteredMovies = reordered) }
+        }
+    }
+
+    fun moveItemDown(movie: Movie) {
+        val reordered = moveVodItemDown(_uiState.value.filteredMovies, movie)
+        if (reordered !== _uiState.value.filteredMovies) {
+            _uiState.update { it.copy(filteredMovies = reordered) }
+        }
+    }
+
+    fun saveReorder() {
+        val state = _uiState.value
+        val category = state.reorderCategory ?: return
+        val currentList = state.filteredMovies
+
+        exitCategoryReorderMode()
+
+        viewModelScope.launch {
+            try {
+                saveVodReorder(
+                    providerId = activeProviderId ?: return@launch,
+                    category = category,
+                    currentItems = currentList,
+                    contentType = ContentType.MOVIE,
+                    favoriteRepository = favoriteRepository,
+                    itemId = Movie::id
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private suspend fun loadReorderMovies(category: Category): List<Movie> {
+        return loadVodReorderItems(
+            providerId = activeProviderId ?: return emptyList(),
+            category = category,
+            contentType = ContentType.MOVIE,
+            favoriteRepository = favoriteRepository,
+            loadByIds = { ids -> movieRepository.getMoviesByIds(ids).first() },
+            itemId = Movie::id
+        )
+    }
+
+    private suspend fun buildPreviewCatalog(
+        params: MovieCatalogParams,
+        providerPreviews: Map<Long?, List<Movie>>
+    ): MovieCatalogSnapshot {
+        val snapshot = buildVodPreviewCatalog(
+            allFavorites = params.allFavorites,
+            customCategories = params.customCategories,
+            providerCategories = params.providerCategories,
+            providerCategoryCounts = params.providerCategoryCounts,
+            libraryCount = params.libraryCount,
+            hiddenProviderCategoryIds = params.hiddenCategoryIds,
+            loadItemsByIds = { ids -> movieRepository.getMoviesByIds(ids).first() },
+            providerPreviews = providerPreviews,
+            itemId = Movie::id,
+            itemCategoryId = Movie::categoryId,
+            copyWithFavorite = { movie, isFavorite -> movie.copy(isFavorite = isFavorite) }
+        )
+        return MovieCatalogSnapshot(
+            grouped = snapshot.grouped,
+            categoryNames = snapshot.categoryNames,
+            categoryCounts = snapshot.categoryCounts,
+            libraryCount = snapshot.libraryCount,
+            providerCategories = params.providerCategories
+        )
+    }
+
+    private fun buildSearchCatalog(
+        movies: List<Movie>,
+        allFavorites: List<com.kuqforza.domain.model.Favorite>,
+        customCategories: List<Category>,
+        providerCategories: List<Category>,
+        hiddenCategoryIds: Set<Long>
+    ): MovieCatalogSnapshot {
+        val snapshot = buildVodSearchCatalog(
+            items = movies,
+            allFavorites = allFavorites,
+            customCategories = customCategories,
+            providerCategories = providerCategories,
+            hiddenProviderCategoryIds = hiddenCategoryIds,
+            itemId = Movie::id,
+            itemCategoryId = Movie::categoryId,
+            itemCategoryName = Movie::categoryName,
+            copyWithFavorite = { movie, isFavorite -> movie.copy(isFavorite = isFavorite) },
+            uncategorizedName = UNCATEGORIZED
+        )
+        return MovieCatalogSnapshot(
+            grouped = snapshot.grouped,
+            categoryNames = snapshot.categoryNames,
+            categoryCounts = snapshot.categoryCounts,
+            libraryCount = snapshot.libraryCount,
+            providerCategories = providerCategories
+        )
+    }
+
+    private suspend fun loadSelectedCategoryItems(
+        request: SelectedMovieCategoryRequest
+    ): SelectedMovieCategorySnapshot {
+        if (request.selectedCategory.isNullOrBlank()) {
+            return SelectedMovieCategorySnapshot()
+        }
+        if (request.query.isNotBlank() && request.query.length < MIN_SEARCH_QUERY_LENGTH) {
+            return SelectedMovieCategorySnapshot()
+        }
+
+        val globalFavoriteIds = request.allFavorites
+            .asSequence()
+            .filter { it.groupId == null }
+            .map { it.contentId }
+            .toSet()
+
+        val (selectedItems, totalCount) = when (request.selectedCategory) {
+            VodBrowseDefaults.FULL_LIBRARY_CATEGORY -> {
+                val result = movieRepository
+                    .browseMovies(
+                        LibraryBrowseQuery(
+                            providerId = request.providerId,
+                            sortBy = request.sortBy,
+                            filterBy = LibraryFilterBy(type = request.filterType),
+                            searchQuery = request.query,
+                            limit = request.loadLimit,
+                            offset = 0
+                        )
+                    )
+                    .first()
+                result.items.filterNot { movie -> movie.categoryId in request.hiddenCategoryIds } to result.totalCount
+            }
+            VodBrowseDefaults.FAVORITES_CATEGORY -> {
+                val ids = request.allFavorites
+                    .asSequence()
+                    .filter { it.groupId == null }
+                    .sortedBy { it.position }
+                    .map { it.contentId }
+                    .toList()
+                val fetchIds = if (request.query.isBlank() && request.filterType == LibraryFilterType.ALL && request.sortBy == LibrarySortBy.LIBRARY) {
+                    ids.take(request.loadLimit + FAVORITE_ID_FETCH_BUFFER)
+                } else {
+                    ids
+                }
+                val items = if (ids.isEmpty()) {
+                    emptyList()
+                } else {
+                    movieRepository.getMoviesByIds(fetchIds).first()
+                        .filterNot { movie -> movie.categoryId in request.hiddenCategoryIds }
+                        .orderByIds(fetchIds)
+                }
+                val filteredItems = applyLocalBrowseToMovies(
+                    items,
+                    request.filterType,
+                    request.sortBy,
+                    request.query
+                )
+                filteredItems.take(request.loadLimit) to if (fetchIds === ids) filteredItems.size else ids.size
+            }
+            else -> {
+                val customCategory = request.customCategories.firstOrNull { it.name == request.selectedCategory }
+                if (customCategory != null) {
+                    val ids = request.allFavorites
+                        .asSequence()
+                        .filter { matchesVodGroupMembership(it.groupId, customCategory.id) }
+                        .sortedBy { it.position }
+                        .map { it.contentId }
+                        .toList()
+                    val fetchIds = if (request.query.isBlank() && request.filterType == LibraryFilterType.ALL && request.sortBy == LibrarySortBy.LIBRARY) {
+                        ids.take(request.loadLimit + FAVORITE_ID_FETCH_BUFFER)
+                    } else {
+                        ids
+                    }
+                    val items = if (ids.isEmpty()) {
+                        emptyList()
+                    } else {
+                        movieRepository.getMoviesByIds(fetchIds).first()
+                            .filterNot { movie -> movie.categoryId in request.hiddenCategoryIds }
+                            .orderByIds(fetchIds)
+                    }
+                    val filteredItems = applyLocalBrowseToMovies(
+                        items,
+                        request.filterType,
+                        request.sortBy,
+                        request.query
+                    )
+                    filteredItems.take(request.loadLimit) to if (fetchIds === ids) filteredItems.size else ids.size
+                } else {
+                    val providerCategory = request.providerCategories.firstOrNull { it.name == request.selectedCategory }
+                    if (providerCategory != null) {
+                        val result = movieRepository
+                            .browseMovies(
+                                LibraryBrowseQuery(
+                                    providerId = request.providerId,
+                                    categoryId = providerCategory.id,
+                                    sortBy = request.sortBy,
+                                    filterBy = LibraryFilterBy(type = request.filterType),
+                                    searchQuery = request.query,
+                                    limit = request.loadLimit,
+                                    offset = 0
+                                )
+                            )
+                            .first()
+                        result.items to result.totalCount
+                    } else {
+                        emptyList<Movie>() to 0
+                    }
+                }
+            }
+        }
+
+        val enrichedItems = markVodFavorites(selectedItems, globalFavoriteIds, Movie::id) { movie, isFavorite ->
+            movie.copy(isFavorite = isFavorite)
+        }
+        return SelectedMovieCategorySnapshot(
+            items = enrichedItems,
+            loadedCount = enrichedItems.size,
+            totalCount = totalCount,
+            canLoadMore = totalCount > enrichedItems.size
+        )
+    }
+
+    private fun validateGroupName(name: String, currentGroupId: Long? = null): String? {
+        if (name.isBlank()) return "Enter a group name"
+        if (name.equals("favorites", ignoreCase = true)) return "Favorites is reserved"
+
+        val duplicate = _uiState.value.categories.any { category ->
+            category.id != currentGroupId && category.name.equals(name, ignoreCase = true)
+        }
+        return if (duplicate) "A movie group with that name already exists" else null
+    }
+
+    private fun List<Movie>.orderByIds(ids: List<Long>): List<Movie> {
+        val movieMap = associateBy { it.id }
+        return ids.mapNotNull { movieMap[it] }
+    }
+
+    private fun applyLocalBrowseToMovies(
+        items: List<Movie>,
+        filterType: LibraryFilterType,
+        sortBy: LibrarySortBy,
+        query: String
+    ): List<Movie> {
+        val normalizedQuery = query.trim().lowercase()
+        val searched = if (normalizedQuery.isBlank()) {
+            items
+        } else {
+            items.filter { movie ->
+                movie.name.contains(normalizedQuery, ignoreCase = true) ||
+                    (movie.plot?.contains(normalizedQuery, ignoreCase = true) == true) ||
+                    (movie.genre?.contains(normalizedQuery, ignoreCase = true) == true)
+            }
+        }
+        val filtered = when (filterType) {
+            LibraryFilterType.ALL -> searched
+            LibraryFilterType.FAVORITES -> searched.filter { it.isFavorite }
+            LibraryFilterType.IN_PROGRESS -> searched.filter { movie ->
+                movie.watchProgress > 0L && !isPlaybackComplete(
+                    movie.watchProgress,
+                    movie.durationSeconds.takeIf { it > 0 }?.times(1000L) ?: 0L
+                )
+            }
+            LibraryFilterType.UNWATCHED -> searched.filter { it.watchProgress <= 0L }
+            LibraryFilterType.RECENTLY_UPDATED -> searched.sortedByDescending(::movieReleaseScore)
+            LibraryFilterType.TOP_RATED -> searched.filter { it.rating > 0f }
+        }
+        return when (sortBy) {
+            LibrarySortBy.LIBRARY -> filtered
+            LibrarySortBy.TITLE -> filtered.sortedBy { it.name.lowercase() }
+            LibrarySortBy.RELEASE -> filtered.sortedByDescending(::movieReleaseScore)
+            LibrarySortBy.UPDATED -> filtered.sortedByDescending(::movieReleaseScore)
+            LibrarySortBy.RATING -> filtered.sortedByDescending { it.rating }
+            LibrarySortBy.WATCH_COUNT -> filtered.sortedByDescending { it.lastWatchedAt }
+        }
+    }
+
+    private fun movieReleaseScore(movie: Movie): Long {
+        return movie.releaseDate
+            ?.filter { it.isDigit() }
+            ?.take(8)
+            ?.toLongOrNull()
+            ?: movie.year?.toLongOrNull()
+            ?: 0L
+    }
+}
+
+private data class MovieCatalogParams(
+    val providerId: Long,
+    val allFavorites: List<com.kuqforza.domain.model.Favorite>,
+    val customCategories: List<Category>,
+    val providerCategories: List<Category>,
+    val providerCategoryCounts: Map<Long, Int>,
+    val libraryCount: Int,
+    val hiddenCategoryIds: Set<Long>,
+    val categorySortMode: CategorySortMode,
+    val query: String
+)
+
+private data class MovieCatalogDependencies(
+    val allFavorites: List<com.kuqforza.domain.model.Favorite>,
+    val customCategories: List<Category>,
+    val providerCategories: List<Category>,
+    val providerCategoryCounts: Map<Long, Int>,
+    val libraryCount: Int,
+    val hiddenCategoryIds: Set<Long>,
+    val categorySortMode: CategorySortMode
+)
+
+private data class MovieCatalogSnapshot(
+    val grouped: Map<String, List<Movie>>,
+    val categoryNames: List<String>,
+    val categoryCounts: Map<String, Int>,
+    val libraryCount: Int,
+    val providerCategories: List<Category>
+)
+
+private data class MovieLibraryLensDependencies(
+    val providerId: Long,
+    val allFavorites: List<com.kuqforza.domain.model.Favorite>,
+    val history: List<PlaybackHistory>,
+    val topRated: List<Movie>,
+    val fresh: List<Movie>
+)
+
+private data class MovieCategorySelectionDependencies(
+    val allFavorites: List<com.kuqforza.domain.model.Favorite>,
+    val customCategories: List<Category>,
+    val providerCategories: List<Category>,
+    val hiddenCategoryIds: Set<Long>
+)
+
+private data class SelectedMovieCategoryRequest(
+    val providerId: Long,
+    val selectedCategory: String?,
+    val loadLimit: Int,
+    val query: String,
+    val filterType: LibraryFilterType,
+    val sortBy: LibrarySortBy,
+    val allFavorites: List<com.kuqforza.domain.model.Favorite>,
+    val customCategories: List<Category>,
+    val providerCategories: List<Category>,
+    val hiddenCategoryIds: Set<Long>
+)
+
+private data class SelectedMovieBrowseSelection(
+    val selectedCategory: String?,
+    val loadLimit: Int,
+    val query: String,
+    val filterType: LibraryFilterType,
+    val sortBy: LibrarySortBy
+)
+
+private data class SelectedMovieCategorySnapshot(
+    val items: List<Movie> = emptyList(),
+    val loadedCount: Int = 0,
+    val totalCount: Int = 0,
+    val canLoadMore: Boolean = false
+)
+
+data class MoviesUiState(
+    val moviesByCategory: Map<String, List<Movie>> = emptyMap(),
+    val categoryNames: List<String> = emptyList(),
+    val categoryCounts: Map<String, Int> = emptyMap(),
+    val libraryCount: Int = 0,
+    val favoriteCategoryName: String = "\u2605 Favorites",
+    val fullLibraryCategoryName: String = "__full_library__",
+    val libraryLensRows: Map<MovieLibraryLens, List<Movie>> = emptyMap(),
+    val selectedCategory: String? = null,
+    val selectedCategoryItems: List<Movie> = emptyList(),
+    val selectedCategoryLoadedCount: Int = 0,
+    val selectedCategoryTotalCount: Int = 0,
+    val canLoadMoreSelectedCategory: Boolean = false,
+    val isLoadingSelectedCategory: Boolean = false,
+    val searchQuery: String = "",
+    val selectedLibraryFilterType: LibraryFilterType = LibraryFilterType.ALL,
+    val selectedLibrarySortBy: LibrarySortBy = LibrarySortBy.LIBRARY,
+    val vodViewMode: VodViewMode = VodViewMode.MODERN,
+    val continueWatching: List<PlaybackHistory> = emptyList(),
+    val hasProviders: Boolean = false,
+    val hasActiveProvider: Boolean = false,
+    val isLoading: Boolean = true,
+    val isLoadingPreviewRows: Boolean = false,
+    val hasMorePreviewRows: Boolean = false,
+    val parentalControlLevel: Int = 0,
+    val unlockedCategoryIds: Set<Long> = emptySet(),
+    val showDialog: Boolean = false,
+    val selectedMovieForDialog: Movie? = null,
+    val categories: List<Category> = emptyList(),
+    val providerCategories: List<Category> = emptyList(),
+    val dialogGroupMemberships: List<Long> = emptyList(),
+    val userMessage: String? = null,
+    val selectedCategoryForOptions: Category? = null,
+    val showRenameGroupDialog: Boolean = false,
+    val groupToRename: Category? = null,
+    val renameGroupError: String? = null,
+    val showDeleteGroupDialog: Boolean = false,
+    val groupToDelete: Category? = null,
+    val isReorderMode: Boolean = false,
+    val reorderCategory: Category? = null,
+    val filteredMovies: List<Movie> = emptyList(),
+    val errorMessage: String? = null
+)

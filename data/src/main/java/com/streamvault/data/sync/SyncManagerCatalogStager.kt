@@ -1,12 +1,12 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.local.entity.MovieEntity
-import com.streamvault.data.local.entity.SeriesEntity
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.Series
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.local.entity.MovieEntity
+import com.kuqforza.data.local.entity.SeriesEntity
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.Series
 
 internal class SyncManagerCatalogStager(
     private val syncCatalogStore: SyncCatalogStore,

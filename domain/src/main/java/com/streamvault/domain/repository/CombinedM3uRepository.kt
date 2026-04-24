@@ -1,13 +1,13 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.ActiveLiveSource
-import com.streamvault.domain.model.ActiveLiveSourceOption
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.CombinedCategory
-import com.streamvault.domain.model.CombinedM3uProfile
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.ActiveLiveSource
+import com.kuqforza.domain.model.ActiveLiveSourceOption
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.CombinedCategory
+import com.kuqforza.domain.model.CombinedM3uProfile
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
 interface CombinedM3uRepository {

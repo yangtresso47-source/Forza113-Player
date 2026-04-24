@@ -1,10 +1,10 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
-import com.streamvault.data.local.dao.SyncMetadataDao
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.domain.model.SyncMetadata
-import com.streamvault.domain.repository.SyncMetadataRepository
+import com.kuqforza.data.local.dao.SyncMetadataDao
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.domain.model.SyncMetadata
+import com.kuqforza.domain.repository.SyncMetadataRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

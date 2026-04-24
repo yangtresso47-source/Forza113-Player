@@ -1,4 +1,4 @@
-package com.streamvault.data.manager
+package com.kuqforza.data.manager
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -6,43 +6,43 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.dao.RecordingRunDao
-import com.streamvault.data.local.dao.RecordingScheduleDao
-import com.streamvault.data.local.dao.RecordingStorageDao
-import com.streamvault.data.local.entity.RecordingRunEntity
-import com.streamvault.data.local.entity.RecordingScheduleEntity
-import com.streamvault.data.local.entity.RecordingStorageEntity
-import com.streamvault.data.manager.recording.CaptureProgress
-import com.streamvault.data.manager.recording.HlsLiveCaptureEngine
-import com.streamvault.data.manager.recording.RecordingAlarmScheduler
-import com.streamvault.data.manager.recording.RecordingForegroundService
-import com.streamvault.data.manager.recording.RecordingOutputTarget
-import com.streamvault.data.manager.recording.RecordingSourceResolver
-import com.streamvault.data.manager.recording.ResolvedRecordingSource
-import com.streamvault.data.manager.recording.TsPassThroughCaptureEngine
-import com.streamvault.data.manager.recording.UnsupportedRecordingException
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.data.manager.recording.asPersistenceValues
-import com.streamvault.data.manager.recording.createOutputTarget
-import com.streamvault.data.manager.recording.deleteOutputTarget
-import com.streamvault.data.manager.recording.headersFromJson
-import com.streamvault.data.manager.recording.headersToJson
-import com.streamvault.data.manager.recording.inferFailureCategory
-import com.streamvault.data.manager.recording.resolveStorageDetails
-import com.streamvault.data.manager.recording.sanitizeRecordingFileName
-import com.streamvault.data.manager.recording.toEntity
-import com.streamvault.data.manager.recording.toDomain
-import com.streamvault.domain.manager.RecordingManager
-import com.streamvault.domain.model.RecordingFailureCategory
-import com.streamvault.domain.model.RecordingItem
-import com.streamvault.domain.model.RecordingRecurrence
-import com.streamvault.domain.model.RecordingRequest
-import com.streamvault.domain.model.RecordingSourceType
-import com.streamvault.domain.model.RecordingStatus
-import com.streamvault.domain.model.RecordingStorageConfig
-import com.streamvault.domain.model.RecordingStorageState
-import com.streamvault.domain.model.Result
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.dao.RecordingRunDao
+import com.kuqforza.data.local.dao.RecordingScheduleDao
+import com.kuqforza.data.local.dao.RecordingStorageDao
+import com.kuqforza.data.local.entity.RecordingRunEntity
+import com.kuqforza.data.local.entity.RecordingScheduleEntity
+import com.kuqforza.data.local.entity.RecordingStorageEntity
+import com.kuqforza.data.manager.recording.CaptureProgress
+import com.kuqforza.data.manager.recording.HlsLiveCaptureEngine
+import com.kuqforza.data.manager.recording.RecordingAlarmScheduler
+import com.kuqforza.data.manager.recording.RecordingForegroundService
+import com.kuqforza.data.manager.recording.RecordingOutputTarget
+import com.kuqforza.data.manager.recording.RecordingSourceResolver
+import com.kuqforza.data.manager.recording.ResolvedRecordingSource
+import com.kuqforza.data.manager.recording.TsPassThroughCaptureEngine
+import com.kuqforza.data.manager.recording.UnsupportedRecordingException
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.data.manager.recording.asPersistenceValues
+import com.kuqforza.data.manager.recording.createOutputTarget
+import com.kuqforza.data.manager.recording.deleteOutputTarget
+import com.kuqforza.data.manager.recording.headersFromJson
+import com.kuqforza.data.manager.recording.headersToJson
+import com.kuqforza.data.manager.recording.inferFailureCategory
+import com.kuqforza.data.manager.recording.resolveStorageDetails
+import com.kuqforza.data.manager.recording.sanitizeRecordingFileName
+import com.kuqforza.data.manager.recording.toEntity
+import com.kuqforza.data.manager.recording.toDomain
+import com.kuqforza.domain.manager.RecordingManager
+import com.kuqforza.domain.model.RecordingFailureCategory
+import com.kuqforza.domain.model.RecordingItem
+import com.kuqforza.domain.model.RecordingRecurrence
+import com.kuqforza.domain.model.RecordingRequest
+import com.kuqforza.domain.model.RecordingSourceType
+import com.kuqforza.domain.model.RecordingStatus
+import com.kuqforza.domain.model.RecordingStorageConfig
+import com.kuqforza.domain.model.RecordingStorageState
+import com.kuqforza.domain.model.Result
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileInputStream
@@ -67,7 +67,7 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "RecordingManager"
 private const val MIN_FREE_SPACE_BYTES = 512L * 1024L * 1024L // 512 MB
-private const val FAILURE_NOTIFICATION_CHANNEL_ID = "streamvault_recording_failure"
+private const val FAILURE_NOTIFICATION_CHANNEL_ID = "kuqforza_recording_failure"
 private const val FAILURE_NOTIFICATION_ID_BASE = 5000
 
 @Singleton

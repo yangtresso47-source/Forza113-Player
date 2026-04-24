@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">StreamVault</string>
+    <string name="app_name">Kuqforza</string>
     <string name="nav_home">Ana sayfa</string>
     <string name="nav_live_tv">Canlı TV</string>
     <string name="nav_movies">Filmler</string>
@@ -102,7 +102,7 @@
     <string name="dashboard_provider_no_expiry">Son kullanma tarihi bildirilmedi</string>
     <string name="dashboard_warning_title">Sağlayıcıya Dikkat Gerekli</string>
     <string name="dashboard_warning_review">Sağlayıcı Ayrıntılarını Aç</string>
-    <string name="dashboard_update_title">StreamVault %1$s kullanılabilir</string>
+    <string name="dashboard_update_title">Kuqforza %1$s kullanılabilir</string>
     <string name="dashboard_update_available">Daha yeni bir uygulama sürümü önbelleğe alındı ve Ayarlar\'dan incelemeye hazır.</string>
     <string name="dashboard_update_install_ready">En son güncelleme zaten indirildi. Yüklemek için Ayarlar\'ı açın.</string>
     <string name="dashboard_update_open_settings">Güncellemeleri Aç</string>
@@ -400,7 +400,7 @@
     <string name="settings_about_subtitle">Bu kurulum için sürüm, derleme ve destek bilgileri.</string>
     <string name="settings_app_version">Uygulama Sürümü</string>
     <string name="settings_build">Yapı</string>
-    <string name="settings_build_desc">Android TV için StreamVault</string>
+    <string name="settings_build_desc">Android TV için Kuqforza</string>
     <string name="settings_enabled">Etkin</string>
     <string name="settings_disabled">Devre Dışı</string>
     <string name="settings_developed_by">Geliştiren</string>
@@ -410,7 +410,7 @@
     <string name="settings_donate">Ko-fi üzerinden destek olun</string>
     <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_updates_title">Güncellemeler</string>
-    <string name="settings_updates_subtitle">Uygulamadan çıkmadan yeni StreamVault sürümleri için GitHub Releases\'i kontrol edin.</string>
+    <string name="settings_updates_subtitle">Uygulamadan çıkmadan yeni Kuqforza sürümleri için GitHub Releases\'i kontrol edin.</string>
     <string name="settings_update_auto_check">Güncellemeleri otomatik kontrol et</string>
     <string name="settings_update_latest_release">En son sürüm</string>
     <string name="settings_update_status">Güncelleme durumu</string>
@@ -434,8 +434,8 @@
     <string name="settings_update_status_check_failed">Son kontrol başarısız oldu</string>
     <string name="settings_update_status_downloading">Güncelleme indiriliyor</string>
     <string name="settings_update_status_ready_to_install">Kuruluma hazır</string>
-    <string name="settings_update_available_message">StreamVault %1$s kullanılabilir.</string>
-    <string name="settings_update_current_message">StreamVault\'un en son sürümüne zaten sahipsiniz.</string>
+    <string name="settings_update_available_message">Kuqforza %1$s kullanılabilir.</string>
+    <string name="settings_update_current_message">Kuqforza\'un en son sürümüne zaten sahipsiniz.</string>
     <string name="settings_syncing">Veriler eşitleniyor, lütfen bekleyin...</string>
     <string name="settings_syncing_title">Veriler senkronize ediliyor...</string>
     <string name="settings_syncing_subtitle">Çalma listeniz içe aktarılırken lütfen bekleyin.</string>
@@ -698,7 +698,7 @@
     <string name="a11y_catch_up_available">Yakalama mevcut</string>
     <string name="a11y_now_playing">%1$s oynatılıyor</string>
     <string name="a11y_channel_with_number">Kanal %1$d, %2$s</string>
-    <string name="setup_title_streamvault">StreamVault</string>
+    <string name="setup_title_kuqforza">Kuqforza</string>
     <string name="setup_provider_title">Sağlayıcı ekle</string>
     <string name="setup_edit_provider">Sağlayıcıyı düzenle</string>
     <string name="setup_update_desc">IPTV sağlayıcı bilgilerinizi güncelleyin</string>
@@ -1165,19 +1165,19 @@
     <string name="settings_history_cleared">İzleme geçmişi ve son öğeler temizlendi</string>
     <string name="settings_pin_changed">PIN başarıyla kaydedildi</string>
     <string name="home_reorder_channels">Kanalları Yeniden Sırala</string>
-    <string name="tv_input_setup_scanning_title">StreamVault kanallarını tarama</string>
+    <string name="tv_input_setup_scanning_title">Kuqforza kanallarını tarama</string>
     <string name="tv_input_setup_success_title">Canlı TV hazır</string>
     <string name="tv_input_setup_no_provider_title">Yapılandırılmış IPTV sağlayıcısı yok</string>
     <string name="tv_input_setup_error_title">Otomatik tarama başarısız oldu</string>
     <string name="tv_input_setup_idle_title">Canlı TV entegrasyonunun hazırlanması</string>
-    <string name="tv_input_setup_scanning_body">StreamVault, aktif sağlayıcınızı Android TV Live TV ile senkronize ediyor.</string>
+    <string name="tv_input_setup_scanning_body">Kuqforza, aktif sağlayıcınızı Android TV Live TV ile senkronize ediyor.</string>
     <string name="tv_input_setup_success_body">Kanallarınız başarıyla senkronize edildi.</string>
-    <string name="tv_input_setup_no_provider_body">StreamVault\'ta en az bir IPTV sağlayıcısı ekleyin, ardından kanalları Android TV Live TV\'ye taramak için buraya geri dönün.</string>
+    <string name="tv_input_setup_no_provider_body">Kuqforza\'ta en az bir IPTV sağlayıcısı ekleyin, ardından kanalları Android TV Live TV\'ye taramak için buraya geri dönün.</string>
     <string name="tv_input_setup_error_body">TV girişi senkronizasyonu tamamlanmadı.</string>
     <string name="tv_input_setup_idle_body">Lütfen bekleyin.</string>
     <string name="tv_input_setup_source_format">Kaynak: %1$s</string>
-    <string name="tv_input_setup_open_setup">StreamVault Kurulumunu Aç</string>
+    <string name="tv_input_setup_open_setup">Kuqforza Kurulumunu Aç</string>
     <string name="tv_input_setup_try_scan_again">Otomatik Taramayı Tekrar Deneyin</string>
     <string name="tv_input_setup_retry_scan">Otomatik Taramayı Yeniden Dene</string>
-    <string name="tv_input_setup_success_hint">Android TV Live TV artık StreamVault kanallarınızı açabilir.</string>
+    <string name="tv_input_setup_success_hint">Android TV Live TV artık Kuqforza kanallarınızı açabilir.</string>
 </resources>

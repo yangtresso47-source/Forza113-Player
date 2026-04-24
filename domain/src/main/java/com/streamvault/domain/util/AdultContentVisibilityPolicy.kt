@@ -1,4 +1,4 @@
-package com.streamvault.domain.util
+package com.kuqforza.domain.util
 
 /**
  * Central policy for adult/protected content visibility across all surfaces.

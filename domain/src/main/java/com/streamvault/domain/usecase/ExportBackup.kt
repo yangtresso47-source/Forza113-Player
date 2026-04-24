@@ -1,7 +1,7 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
-import com.streamvault.domain.manager.BackupManager
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.manager.BackupManager
+import com.kuqforza.domain.model.Result
 import javax.inject.Inject
 
 data class ExportBackupCommand(

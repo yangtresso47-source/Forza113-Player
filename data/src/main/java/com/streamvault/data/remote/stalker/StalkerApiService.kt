@@ -1,6 +1,6 @@
-package com.streamvault.data.remote.stalker
+package com.kuqforza.data.remote.stalker
 
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Result
 
 data class StalkerDeviceProfile(
     val portalUrl: String,

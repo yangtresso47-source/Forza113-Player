@@ -1,10 +1,10 @@
-package com.streamvault.player.stats
+package com.kuqforza.player.stats
 
 import androidx.media3.common.Format
 import androidx.media3.exoplayer.ExoPlayer
-import com.streamvault.domain.model.VideoFormat
-import com.streamvault.player.PlaybackState
-import com.streamvault.player.PlayerStats
+import com.kuqforza.domain.model.VideoFormat
+import com.kuqforza.player.PlaybackState
+import com.kuqforza.player.PlayerStats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

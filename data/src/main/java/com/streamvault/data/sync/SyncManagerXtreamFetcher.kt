@@ -1,16 +1,16 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import android.util.Log
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamSeriesItem
-import com.streamvault.data.remote.dto.XtreamStream
-import com.streamvault.data.remote.xtream.XtreamApiService
-import com.streamvault.data.remote.xtream.XtreamProvider
-import com.streamvault.data.remote.xtream.XtreamUrlFactory
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.Series
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamSeriesItem
+import com.kuqforza.data.remote.dto.XtreamStream
+import com.kuqforza.data.remote.xtream.XtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamProvider
+import com.kuqforza.data.remote.xtream.XtreamUrlFactory
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.Series
 import kotlin.system.measureTimeMillis
 
 private const val XTREAM_FETCHER_TAG = "SyncManager"

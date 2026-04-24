@@ -1,11 +1,11 @@
-package com.streamvault.data.manager
+package com.kuqforza.data.manager
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.dao.ProgramReminderDao
-import com.streamvault.data.local.entity.ProgramReminderEntity
-import com.streamvault.data.manager.reminder.ProgramReminderAlarmScheduler
-import com.streamvault.data.manager.reminder.ProgramReminderNotifier
-import com.streamvault.domain.model.Program
+import com.kuqforza.data.local.dao.ProgramReminderDao
+import com.kuqforza.data.local.entity.ProgramReminderEntity
+import com.kuqforza.data.manager.reminder.ProgramReminderAlarmScheduler
+import com.kuqforza.data.manager.reminder.ProgramReminderNotifier
+import com.kuqforza.domain.model.Program
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.mockito.kotlin.argumentCaptor
@@ -46,7 +46,7 @@ class ProgramReminderManagerImplTest {
             program = program
         )
 
-        assertThat(result).isInstanceOf(com.streamvault.domain.model.Result.Success::class.java)
+        assertThat(result).isInstanceOf(com.kuqforza.domain.model.Result.Success::class.java)
         verify(dao).insert(org.mockito.kotlin.any())
         verify(alarmScheduler).schedule(eq(42L), org.mockito.kotlin.any())
     }

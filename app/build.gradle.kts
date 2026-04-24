@@ -41,17 +41,17 @@ fun computeOfficialSigningCertSha256(): String {
 val officialSigningCertSha256 = computeOfficialSigningCertSha256()
 
 android {
-    namespace = "com.streamvault.app"
+    namespace = "com.kuqforza.iptv"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.streamvault.app"
+        applicationId = "com.kuqforza.iptv"
         minSdk = 28
         targetSdk = 36
         versionCode = 9
         versionName = "1.0.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "OFFICIAL_APPLICATION_ID", "\"com.streamvault.app\"")
+        buildConfigField("String", "OFFICIAL_APPLICATION_ID", "\"com.kuqforza.iptv\"")
         buildConfigField("String", "OFFICIAL_SIGNING_CERT_SHA256", "\"$officialSigningCertSha256\"")
     }
 

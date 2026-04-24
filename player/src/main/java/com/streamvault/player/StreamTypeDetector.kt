@@ -1,8 +1,8 @@
-package com.streamvault.player
+package com.kuqforza.player
 
-import com.streamvault.domain.model.StreamType
-import com.streamvault.player.playback.ResolvedStreamType
-import com.streamvault.player.playback.StreamTypeResolver
+import com.kuqforza.domain.model.StreamType
+import com.kuqforza.player.playback.ResolvedStreamType
+import com.kuqforza.player.playback.StreamTypeResolver
 
 @Deprecated("Use StreamTypeResolver")
 object StreamTypeDetector {

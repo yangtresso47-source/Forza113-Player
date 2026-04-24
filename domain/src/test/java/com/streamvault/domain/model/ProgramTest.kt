@@ -1,4 +1,4 @@
-package com.streamvault.domain.model
+package com.kuqforza.domain.model
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test

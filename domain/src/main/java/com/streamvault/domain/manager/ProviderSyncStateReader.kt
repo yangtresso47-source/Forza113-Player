@@ -1,6 +1,6 @@
-package com.streamvault.domain.manager
+package com.kuqforza.domain.manager
 
-import com.streamvault.domain.model.SyncState
+import com.kuqforza.domain.model.SyncState
 
 interface ProviderSyncStateReader {
     fun currentSyncState(providerId: Long): SyncState

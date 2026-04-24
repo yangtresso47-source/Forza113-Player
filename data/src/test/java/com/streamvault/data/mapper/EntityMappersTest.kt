@@ -1,17 +1,17 @@
-package com.streamvault.data.mapper
+package com.kuqforza.data.mapper
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.local.entity.PlaybackHistoryEntity
-import com.streamvault.data.local.entity.ProviderEntity
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.ChannelQualityOption
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.PlaybackWatchedStatus
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.ProviderStatus
-import com.streamvault.domain.model.ProviderType
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.local.entity.PlaybackHistoryEntity
+import com.kuqforza.data.local.entity.ProviderEntity
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.ChannelQualityOption
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.PlaybackWatchedStatus
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.ProviderStatus
+import com.kuqforza.domain.model.ProviderType
 import org.junit.Test
 
 /**

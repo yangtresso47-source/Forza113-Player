@@ -1,6 +1,6 @@
-package com.streamvault.domain.util
+package com.kuqforza.domain.util
 
-import com.streamvault.domain.model.LiveChannelVariantAttributes
+import com.kuqforza.domain.model.LiveChannelVariantAttributes
 import java.text.Normalizer
 import java.util.Locale
 

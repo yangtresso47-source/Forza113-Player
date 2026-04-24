@@ -1,4 +1,4 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
@@ -11,7 +11,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.streamvault.data.local.dao.ProviderDao
+import com.kuqforza.data.local.dao.ProviderDao
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -44,7 +44,7 @@ class ProviderSyncWorker(
             var sawRetryableFailure = false
             providers.forEach { provider ->
                 when (val result = entryPoint.syncManager().sync(provider.id, force = false)) {
-                    is com.streamvault.domain.model.Result.Error -> {
+                    is com.kuqforza.domain.model.Result.Error -> {
                         Log.w(TAG, "Provider sync worker failed for provider ${provider.id}: ${result.message}")
                         if (shouldRetry(result.exception)) {
                             sawRetryableFailure = true

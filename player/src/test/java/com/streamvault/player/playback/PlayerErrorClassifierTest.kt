@@ -1,4 +1,4 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
 import com.google.common.truth.Truth.assertThat
 import androidx.media3.exoplayer.source.BehindLiveWindowException

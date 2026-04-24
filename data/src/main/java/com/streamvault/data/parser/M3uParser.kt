@@ -1,8 +1,8 @@
-package com.streamvault.data.parser
+package com.kuqforza.data.parser
 
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.util.ChannelNormalizer
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.util.ChannelNormalizer
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader

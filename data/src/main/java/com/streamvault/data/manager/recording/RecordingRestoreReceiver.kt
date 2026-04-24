@@ -1,4 +1,4 @@
-package com.streamvault.data.manager.recording
+package com.kuqforza.data.manager.recording
 
 import android.content.BroadcastReceiver
 import android.content.Context

@@ -1,12 +1,12 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.ChannelEpgMapping
-import com.streamvault.domain.model.EpgOverrideCandidate
-import com.streamvault.domain.model.EpgResolutionSummary
-import com.streamvault.domain.model.EpgSource
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.ProviderEpgSourceAssignment
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.ChannelEpgMapping
+import com.kuqforza.domain.model.EpgOverrideCandidate
+import com.kuqforza.domain.model.EpgResolutionSummary
+import com.kuqforza.domain.model.EpgSource
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.ProviderEpgSourceAssignment
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
 interface EpgSourceRepository {

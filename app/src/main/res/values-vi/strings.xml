@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">StreamVault</string>
+    <string name="app_name">Kuqforza</string>
     <string name="nav_home">Trang chủ</string>
     <string name="nav_live_tv">TV trực tiếp</string>
     <string name="nav_movies">Phim</string>
@@ -102,7 +102,7 @@
     <string name="dashboard_provider_no_expiry">Không có thông tin hết hạn</string>
     <string name="dashboard_warning_title">Nhà cung cấp cần chú ý</string>
     <string name="dashboard_warning_review">Mở chi tiết nhà cung cấp</string>
-    <string name="dashboard_update_title">StreamVault %1$s đã có sẵn</string>
+    <string name="dashboard_update_title">Kuqforza %1$s đã có sẵn</string>
     <string name="dashboard_update_available">Một bản phát hành mới hơn đã được lưu sẵn và có thể xem lại trong Cài đặt.</string>
     <string name="dashboard_update_install_ready">Bản cập nhật mới nhất đã được tải xuống. Mở Cài đặt để cài đặt.</string>
     <string name="dashboard_update_open_settings">Mở cập nhật</string>
@@ -400,7 +400,7 @@
     <string name="settings_about_subtitle">Thông tin phiên bản, bản dựng và hỗ trợ cho bản cài đặt này.</string>
     <string name="settings_app_version">Phiên bản ứng dụng</string>
     <string name="settings_build">Bản dựng</string>
-    <string name="settings_build_desc">StreamVault cho Android TV</string>
+    <string name="settings_build_desc">Kuqforza cho Android TV</string>
     <string name="settings_enabled">Đã bật</string>
     <string name="settings_disabled">Đã tắt</string>
     <string name="settings_developed_by">Phát triển bởi</string>
@@ -410,7 +410,7 @@
     <string name="settings_donate">Ủng hộ trên Ko-fi</string>
     <string name="settings_donate_url">https://ko-fi.com/davidona</string>
     <string name="settings_updates_title">Cập nhật</string>
-    <string name="settings_updates_subtitle">Kiểm tra các bản phát hành GitHub để có phiên bản StreamVault mới hơn mà không cần rời khỏi ứng dụng.</string>
+    <string name="settings_updates_subtitle">Kiểm tra các bản phát hành GitHub để có phiên bản Kuqforza mới hơn mà không cần rời khỏi ứng dụng.</string>
     <string name="settings_update_auto_check">Tự động kiểm tra cập nhật</string>
     <string name="settings_update_latest_release">Bản phát hành mới nhất</string>
     <string name="settings_update_status">Trạng thái cập nhật</string>
@@ -434,8 +434,8 @@
     <string name="settings_update_status_check_failed">Lần kiểm tra trước thất bại</string>
     <string name="settings_update_status_downloading">Đang tải bản cập nhật</string>
     <string name="settings_update_status_ready_to_install">Sẵn sàng cài đặt</string>
-    <string name="settings_update_available_message">StreamVault %1$s đã có sẵn.</string>
-    <string name="settings_update_current_message">Bạn đã có bản phát hành StreamVault mới nhất.</string>
+    <string name="settings_update_available_message">Kuqforza %1$s đã có sẵn.</string>
+    <string name="settings_update_current_message">Bạn đã có bản phát hành Kuqforza mới nhất.</string>
     <string name="settings_syncing">Đang đồng bộ dữ liệu, vui lòng đợi...</string>
     <string name="settings_syncing_title">Đang đồng bộ dữ liệu...</string>
     <string name="settings_syncing_subtitle">Vui lòng đợi trong khi danh sách phát của bạn được nhập.</string>
@@ -698,7 +698,7 @@
     <string name="a11y_catch_up_available">Có xem lại</string>
     <string name="a11y_now_playing">Đang phát %1$s</string>
     <string name="a11y_channel_with_number">Kênh %1$d, %2$s</string>
-    <string name="setup_title_streamvault">StreamVault</string>
+    <string name="setup_title_kuqforza">Kuqforza</string>
     <string name="setup_provider_title">Thêm nhà cung cấp</string>
     <string name="setup_edit_provider">Chỉnh sửa nhà cung cấp</string>
     <string name="setup_update_desc">Cập nhật thông tin nhà cung cấp IPTV của bạn</string>
@@ -1165,19 +1165,19 @@
     <string name="settings_history_cleared">Đã xóa lịch sử xem và mục gần đây</string>
     <string name="settings_pin_changed">Đã lưu PIN thành công</string>
     <string name="home_reorder_channels">Sắp xếp lại kênh</string>
-    <string name="tv_input_setup_scanning_title">Đang quét kênh StreamVault</string>
+    <string name="tv_input_setup_scanning_title">Đang quét kênh Kuqforza</string>
     <string name="tv_input_setup_success_title">Live TV đã sẵn sàng</string>
     <string name="tv_input_setup_no_provider_title">Chưa cấu hình nhà cung cấp IPTV</string>
     <string name="tv_input_setup_error_title">Quét tự động thất bại</string>
     <string name="tv_input_setup_idle_title">Đang chuẩn bị tích hợp Live TV</string>
-    <string name="tv_input_setup_scanning_body">StreamVault đang đồng bộ hóa nhà cung cấp đang hoạt động của bạn với Android TV Live TV.</string>
+    <string name="tv_input_setup_scanning_body">Kuqforza đang đồng bộ hóa nhà cung cấp đang hoạt động của bạn với Android TV Live TV.</string>
     <string name="tv_input_setup_success_body">Các kênh của bạn đã được đồng bộ thành công.</string>
-    <string name="tv_input_setup_no_provider_body">Thêm ít nhất một nhà cung cấp IPTV trong StreamVault, rồi quay lại đây để quét kênh vào Android TV Live TV.</string>
+    <string name="tv_input_setup_no_provider_body">Thêm ít nhất một nhà cung cấp IPTV trong Kuqforza, rồi quay lại đây để quét kênh vào Android TV Live TV.</string>
     <string name="tv_input_setup_error_body">Đồng bộ hóa đầu vào TV không hoàn tất.</string>
     <string name="tv_input_setup_idle_body">Vui lòng chờ.</string>
     <string name="tv_input_setup_source_format">Nguồn: %1$s</string>
-    <string name="tv_input_setup_open_setup">Mở cài đặt StreamVault</string>
+    <string name="tv_input_setup_open_setup">Mở cài đặt Kuqforza</string>
     <string name="tv_input_setup_try_scan_again">Thử quét tự động lại</string>
     <string name="tv_input_setup_retry_scan">Thử quét tự động lại</string>
-    <string name="tv_input_setup_success_hint">Android TV Live TV giờ có thể mở các kênh StreamVault của bạn.</string>
+    <string name="tv_input_setup_success_hint">Android TV Live TV giờ có thể mở các kênh Kuqforza của bạn.</string>
 </resources>

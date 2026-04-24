@@ -2,20 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <service
-            android:name="com.streamvault.data.manager.recording.RecordingForegroundService"
+            android:name="com.kuqforza.data.manager.recording.RecordingForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <receiver
-            android:name="com.streamvault.data.manager.recording.RecordingAlarmReceiver"
+            android:name="com.kuqforza.data.manager.recording.RecordingAlarmReceiver"
             android:exported="false" />
 
         <receiver
-            android:name="com.streamvault.data.manager.reminder.ProgramReminderAlarmReceiver"
+            android:name="com.kuqforza.data.manager.reminder.ProgramReminderAlarmReceiver"
             android:exported="false" />
 
         <receiver
-            android:name="com.streamvault.data.manager.recording.RecordingRestoreReceiver"
+            android:name="com.kuqforza.data.manager.recording.RecordingRestoreReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -26,7 +26,7 @@
         </receiver>
 
         <receiver
-            android:name="com.streamvault.data.manager.reminder.ProgramReminderRestoreReceiver"
+            android:name="com.kuqforza.data.manager.reminder.ProgramReminderRestoreReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

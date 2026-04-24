@@ -1,7 +1,7 @@
-package com.streamvault.data.remote.stalker
+package com.kuqforza.data.remote.stalker
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor

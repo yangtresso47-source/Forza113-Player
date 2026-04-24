@@ -1,35 +1,35 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import com.google.common.truth.Truth.assertThat
 import android.content.Context
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.CatalogSyncDao
-import com.streamvault.data.local.dao.CategoryDao
-import com.streamvault.data.local.dao.ChannelDao
-import com.streamvault.data.local.dao.MovieDao
-import com.streamvault.data.local.dao.ProgramDao
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.dao.SeriesDao
-import com.streamvault.data.local.dao.TmdbIdentityDao
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.local.entity.ChannelGuideSyncEntity
-import com.streamvault.data.local.entity.ProviderEntity
-import com.streamvault.data.parser.M3uParser
-import com.streamvault.data.security.CredentialCrypto
-import com.streamvault.domain.model.SyncState
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.ProviderEpgSyncMode
-import com.streamvault.domain.model.ProviderType
-import com.streamvault.domain.model.SyncMetadata
-import com.streamvault.domain.repository.EpgRepository
-import com.streamvault.domain.repository.EpgSourceRepository
-import com.streamvault.data.remote.stalker.StalkerCategoryRecord
-import com.streamvault.data.remote.stalker.StalkerItemRecord
-import com.streamvault.data.remote.stalker.StalkerProgramRecord
-import com.streamvault.data.remote.stalker.StalkerProviderProfile
-import com.streamvault.data.remote.stalker.StalkerSession
-import com.streamvault.data.remote.stalker.StalkerApiService
-import com.streamvault.data.preferences.PreferencesRepository
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.CatalogSyncDao
+import com.kuqforza.data.local.dao.CategoryDao
+import com.kuqforza.data.local.dao.ChannelDao
+import com.kuqforza.data.local.dao.MovieDao
+import com.kuqforza.data.local.dao.ProgramDao
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.dao.SeriesDao
+import com.kuqforza.data.local.dao.TmdbIdentityDao
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.local.entity.ChannelGuideSyncEntity
+import com.kuqforza.data.local.entity.ProviderEntity
+import com.kuqforza.data.parser.M3uParser
+import com.kuqforza.data.security.CredentialCrypto
+import com.kuqforza.domain.model.SyncState
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.ProviderEpgSyncMode
+import com.kuqforza.domain.model.ProviderType
+import com.kuqforza.domain.model.SyncMetadata
+import com.kuqforza.domain.repository.EpgRepository
+import com.kuqforza.domain.repository.EpgSourceRepository
+import com.kuqforza.data.remote.stalker.StalkerCategoryRecord
+import com.kuqforza.data.remote.stalker.StalkerItemRecord
+import com.kuqforza.data.remote.stalker.StalkerProgramRecord
+import com.kuqforza.data.remote.stalker.StalkerProviderProfile
+import com.kuqforza.data.remote.stalker.StalkerSession
+import com.kuqforza.data.remote.stalker.StalkerApiService
+import com.kuqforza.data.preferences.PreferencesRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -109,7 +109,7 @@ class SyncManagerTest {
         )
     }
 
-    private class FakeSyncMetadataRepository : com.streamvault.domain.repository.SyncMetadataRepository {
+    private class FakeSyncMetadataRepository : com.kuqforza.domain.repository.SyncMetadataRepository {
         private val values = mutableMapOf<Long, SyncMetadata>()
 
         override fun observeMetadata(providerId: Long): Flow<SyncMetadata?> = flowOf(values[providerId])
@@ -428,7 +428,7 @@ class SyncManagerTest {
         advanceUntilIdle()
 
         assertThat(result.isSuccess).isTrue()
-        val categoriesCaptor = argumentCaptor<List<com.streamvault.data.local.entity.CategoryImportStageEntity>>()
+        val categoriesCaptor = argumentCaptor<List<com.kuqforza.data.local.entity.CategoryImportStageEntity>>()
         verify(catalogSyncDao, atLeastOnce()).insertCategoryStages(categoriesCaptor.capture())
         val movieCategories = categoriesCaptor.allValues.flatten().filter { it.type.name == "MOVIE" }
         assertThat(movieCategories).hasSize(1)
@@ -493,7 +493,7 @@ class SyncManagerTest {
         assertThat(result.isSuccess).isTrue()
         val metadata = syncMetadataRepo.getMetadata(1L)
         assertThat(metadata?.lastMovieSync ?: 0L).isGreaterThan(0L)
-        assertThat(metadata?.movieSyncMode).isEqualTo(com.streamvault.domain.model.VodSyncMode.LAZY_BY_CATEGORY)
+        assertThat(metadata?.movieSyncMode).isEqualTo(com.kuqforza.domain.model.VodSyncMode.LAZY_BY_CATEGORY)
         assertThat(xtreamBackend.requestedActions).contains("get_vod_categories")
         assertThat(xtreamBackend.requestedActions).doesNotContain("get_vod_streams")
     }
@@ -544,7 +544,7 @@ class SyncManagerTest {
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
         val metadata = syncMetadataRepo.getMetadata(1L)
-        assertThat(metadata?.movieSyncMode).isEqualTo(com.streamvault.domain.model.VodSyncMode.LAZY_BY_CATEGORY)
+        assertThat(metadata?.movieSyncMode).isEqualTo(com.kuqforza.domain.model.VodSyncMode.LAZY_BY_CATEGORY)
         assertThat(metadata?.movieCount).isEqualTo(0)
         assertThat(metadata?.seriesCount).isEqualTo(0)
         verify(stalkerApiService).getVodCategories(any(), any())
@@ -598,9 +598,9 @@ class SyncManagerTest {
         val result = manager.sync(providerId = 1L, force = false)
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
-        val categoryStagesCaptor = argumentCaptor<List<com.streamvault.data.local.entity.CategoryImportStageEntity>>()
+        val categoryStagesCaptor = argumentCaptor<List<com.kuqforza.data.local.entity.CategoryImportStageEntity>>()
         verify(catalogSyncDao, atLeastOnce()).insertCategoryStages(categoryStagesCaptor.capture())
-        assertThat(categoryStagesCaptor.allValues.flatten().any { it.type == com.streamvault.domain.model.ContentType.LIVE && it.name == "News" }).isTrue()
+        assertThat(categoryStagesCaptor.allValues.flatten().any { it.type == com.kuqforza.domain.model.ContentType.LIVE && it.name == "News" }).isTrue()
         verify(stalkerApiService).getLiveCategories(any(), any())
         verify(stalkerApiService).getLiveStreams(any(), any(), anyOrNull())
     }
@@ -710,7 +710,7 @@ class SyncManagerTest {
         val result = manager.sync(providerId = 1L, force = true)
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
-        val insertedProgramsCaptor = argumentCaptor<List<com.streamvault.data.local.entity.ProgramEntity>>()
+        val insertedProgramsCaptor = argumentCaptor<List<com.kuqforza.data.local.entity.ProgramEntity>>()
         verify(programDao).insertAll(insertedProgramsCaptor.capture())
         assertThat(insertedProgramsCaptor.firstValue).hasSize(1)
         assertThat(insertedProgramsCaptor.firstValue.first().channelId).isEqualTo("100")
@@ -788,7 +788,7 @@ class SyncManagerTest {
         val result = manager.sync(providerId = 1L, force = true)
 
         assertThat(result).isInstanceOf(Result.Success::class.java)
-        val insertedProgramsCaptor = argumentCaptor<List<com.streamvault.data.local.entity.ProgramEntity>>()
+        val insertedProgramsCaptor = argumentCaptor<List<com.kuqforza.data.local.entity.ProgramEntity>>()
         verify(programDao, atLeast(2)).insertAll(insertedProgramsCaptor.capture())
         assertThat(insertedProgramsCaptor.allValues.flatten()).hasSize(505)
     }
@@ -1145,7 +1145,7 @@ class SyncManagerTest {
         assertThat(result.isSuccess).isTrue()
         val state = mgr.currentSyncState(1L)
         assertThat(state).isInstanceOf(SyncState.Success::class.java)
-        val insertedChannels = argumentCaptor<List<com.streamvault.data.local.entity.ChannelImportStageEntity>>()
+        val insertedChannels = argumentCaptor<List<com.kuqforza.data.local.entity.ChannelImportStageEntity>>()
         verify(catalogSyncDao, atLeastOnce()).insertChannelStages(insertedChannels.capture())
         assertThat(insertedChannels.allValues.flatten()).hasSize(1)
     }

@@ -1,55 +1,55 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import android.content.Context
 import android.util.Log
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.CatalogSyncDao
-import com.streamvault.data.local.dao.CategoryDao
-import com.streamvault.data.local.dao.ChannelDao
-import com.streamvault.data.local.dao.MovieDao
-import com.streamvault.data.local.dao.ProgramDao
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.dao.SeriesDao
-import com.streamvault.data.local.dao.TmdbIdentityDao
-import com.streamvault.data.local.entity.CategoryEntity
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.local.entity.ChannelGuideSyncEntity
-import com.streamvault.data.local.entity.MovieEntity
-import com.streamvault.data.local.entity.SeriesEntity
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.data.parser.M3uParser
-import com.streamvault.data.remote.stalker.StalkerApiService
-import com.streamvault.data.remote.stalker.StalkerProvider
-import com.streamvault.data.remote.stalker.StalkerProviderProfile
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamSeriesItem
-import com.streamvault.data.remote.dto.XtreamStream
-import com.streamvault.data.remote.xtream.OkHttpXtreamApiService
-import com.streamvault.data.remote.xtream.XtreamAuthenticationException
-import com.streamvault.data.remote.xtream.XtreamNetworkException
-import com.streamvault.data.remote.xtream.XtreamParsingException
-import com.streamvault.data.remote.xtream.XtreamRequestException
-import com.streamvault.data.remote.xtream.XtreamResponseTooLargeException
-import com.streamvault.data.remote.xtream.XtreamApiService
-import com.streamvault.data.remote.xtream.XtreamProvider
-import com.streamvault.data.remote.xtream.XtreamUrlFactory
-import com.streamvault.data.security.CredentialCrypto
-import com.streamvault.data.util.AdultContentClassifier
-import com.streamvault.data.util.UrlSecurityPolicy
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.ProviderEpgSyncMode
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.ProviderType
-import com.streamvault.domain.model.Series
-import com.streamvault.domain.model.SyncMetadata
-import com.streamvault.domain.model.SyncState
-import com.streamvault.domain.model.VodSyncMode
-import com.streamvault.domain.repository.EpgRepository
-import com.streamvault.domain.repository.EpgSourceRepository
-import com.streamvault.domain.repository.SyncMetadataRepository
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.CatalogSyncDao
+import com.kuqforza.data.local.dao.CategoryDao
+import com.kuqforza.data.local.dao.ChannelDao
+import com.kuqforza.data.local.dao.MovieDao
+import com.kuqforza.data.local.dao.ProgramDao
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.dao.SeriesDao
+import com.kuqforza.data.local.dao.TmdbIdentityDao
+import com.kuqforza.data.local.entity.CategoryEntity
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.local.entity.ChannelGuideSyncEntity
+import com.kuqforza.data.local.entity.MovieEntity
+import com.kuqforza.data.local.entity.SeriesEntity
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.data.parser.M3uParser
+import com.kuqforza.data.remote.stalker.StalkerApiService
+import com.kuqforza.data.remote.stalker.StalkerProvider
+import com.kuqforza.data.remote.stalker.StalkerProviderProfile
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamSeriesItem
+import com.kuqforza.data.remote.dto.XtreamStream
+import com.kuqforza.data.remote.xtream.OkHttpXtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamAuthenticationException
+import com.kuqforza.data.remote.xtream.XtreamNetworkException
+import com.kuqforza.data.remote.xtream.XtreamParsingException
+import com.kuqforza.data.remote.xtream.XtreamRequestException
+import com.kuqforza.data.remote.xtream.XtreamResponseTooLargeException
+import com.kuqforza.data.remote.xtream.XtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamProvider
+import com.kuqforza.data.remote.xtream.XtreamUrlFactory
+import com.kuqforza.data.security.CredentialCrypto
+import com.kuqforza.data.util.AdultContentClassifier
+import com.kuqforza.data.util.UrlSecurityPolicy
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.ProviderEpgSyncMode
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.ProviderType
+import com.kuqforza.domain.model.Series
+import com.kuqforza.domain.model.SyncMetadata
+import com.kuqforza.domain.model.SyncState
+import com.kuqforza.domain.model.VodSyncMode
+import com.kuqforza.domain.repository.EpgRepository
+import com.kuqforza.domain.repository.EpgSourceRepository
+import com.kuqforza.domain.repository.SyncMetadataRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -126,7 +126,7 @@ class SyncManager @Inject constructor(
     private val credentialCrypto: CredentialCrypto,
     private val syncMetadataRepository: SyncMetadataRepository,
     private val transactionRunner: DatabaseTransactionRunner,
-    private val preferencesRepository: com.streamvault.data.preferences.PreferencesRepository
+    private val preferencesRepository: com.kuqforza.data.preferences.PreferencesRepository
 ) {
     private val syncStateTracker = SyncStateTracker()
     private val syncErrorSanitizer = SyncErrorSanitizer()
@@ -297,9 +297,9 @@ class SyncManager @Inject constructor(
         providerId: Long,
         force: Boolean = true,
         onProgress: ((String) -> Unit)? = null
-    ): com.streamvault.domain.model.Result<Unit> = withProviderLock(providerId) lock@{
+    ): com.kuqforza.domain.model.Result<Unit> = withProviderLock(providerId) lock@{
         val providerEntity = providerDao.getById(providerId)
-            ?: return@lock com.streamvault.domain.model.Result.error("Provider $providerId not found")
+            ?: return@lock com.kuqforza.domain.model.Result.error("Provider $providerId not found")
 
         val provider = providerEntity
             .copy(password = credentialCrypto.decryptIfNeeded(providerEntity.password))
@@ -327,7 +327,7 @@ class SyncManager @Inject constructor(
                     SyncState.Partial("EPG sync completed with warnings", warnings)
                 }
             )
-            com.streamvault.domain.model.Result.success(Unit)
+            com.kuqforza.domain.model.Result.success(Unit)
         } catch (e: CancellationException) {
             resetState(providerId)
             throw e
@@ -336,7 +336,7 @@ class SyncManager @Inject constructor(
             Log.e(TAG, "EPG sync failed for provider $providerId: ${syncErrorSanitizer.throwableMessage(e)}")
             updateSyncStatusMetadata(providerId = providerId, status = "ERROR")
             publishSyncState(providerId, SyncState.Error(safeMessage, e))
-            com.streamvault.domain.model.Result.error(safeMessage, e)
+            com.kuqforza.domain.model.Result.error(safeMessage, e)
         }
     }
 
@@ -349,9 +349,9 @@ class SyncManager @Inject constructor(
         movieFastSyncOverride: Boolean? = null,
         epgSyncModeOverride: ProviderEpgSyncMode? = null,
         onProgress: ((String) -> Unit)? = null
-    ): com.streamvault.domain.model.Result<Unit> = withProviderLock(providerId) lock@{
+    ): com.kuqforza.domain.model.Result<Unit> = withProviderLock(providerId) lock@{
         val providerEntity = providerDao.getById(providerId)
-            ?: return@lock com.streamvault.domain.model.Result.error("Provider $providerId not found")
+            ?: return@lock com.kuqforza.domain.model.Result.error("Provider $providerId not found")
 
         val provider = providerEntity
             .copy(password = credentialCrypto.decryptIfNeeded(providerEntity.password))
@@ -382,7 +382,7 @@ class SyncManager @Inject constructor(
             } else {
                 SyncState.Success()
             })
-            com.streamvault.domain.model.Result.success(Unit)
+            com.kuqforza.domain.model.Result.success(Unit)
         } catch (e: CancellationException) {
             resetState(providerId)
             throw e
@@ -391,7 +391,7 @@ class SyncManager @Inject constructor(
             Log.e(TAG, "Sync failed for provider $providerId: ${syncErrorSanitizer.throwableMessage(e)}")
             updateSyncStatusMetadata(providerId = providerId, status = "ERROR")
             publishSyncState(providerId, SyncState.Error(safeMessage, e))
-            com.streamvault.domain.model.Result.error(safeMessage, e)
+            com.kuqforza.domain.model.Result.error(safeMessage, e)
         }
     }
 
@@ -404,9 +404,9 @@ class SyncManager @Inject constructor(
         section: SyncRepairSection,
         movieFastSyncOverride: Boolean? = null,
         onProgress: ((String) -> Unit)? = null
-    ): com.streamvault.domain.model.Result<Unit> = withProviderLock(providerId) lock@{
+    ): com.kuqforza.domain.model.Result<Unit> = withProviderLock(providerId) lock@{
         val providerEntity = providerDao.getById(providerId)
-            ?: return@lock com.streamvault.domain.model.Result.error("Provider $providerId not found")
+            ?: return@lock com.kuqforza.domain.model.Result.error("Provider $providerId not found")
 
         val provider = providerEntity
             .copy(password = credentialCrypto.decryptIfNeeded(providerEntity.password))
@@ -428,7 +428,7 @@ class SyncManager @Inject constructor(
             }
             updateSyncStatusMetadata(providerId = providerId, status = "SUCCESS")
             publishSyncState(providerId, SyncState.Success())
-            com.streamvault.domain.model.Result.success(Unit)
+            com.kuqforza.domain.model.Result.success(Unit)
         } catch (e: CancellationException) {
             resetState(providerId)
             throw e
@@ -437,7 +437,7 @@ class SyncManager @Inject constructor(
             Log.e(TAG, "Section retry failed for provider $providerId [$section]: ${syncErrorSanitizer.throwableMessage(e)}")
             updateSyncStatusMetadata(providerId = providerId, status = "ERROR")
             publishSyncState(providerId, SyncState.Error(safeMessage, e))
-            com.streamvault.domain.model.Result.error(safeMessage, e)
+            com.kuqforza.domain.model.Result.error(safeMessage, e)
         }
     }
 
@@ -1206,7 +1206,7 @@ class SyncManager @Inject constructor(
             }
         }
         val failedChannels = mutableListOf<String>()
-        val insertBuffer = ArrayList<com.streamvault.data.local.entity.ProgramEntity>(STALKER_GUIDE_PROGRAM_BATCH_SIZE)
+        val insertBuffer = ArrayList<com.kuqforza.data.local.entity.ProgramEntity>(STALKER_GUIDE_PROGRAM_BATCH_SIZE)
         var replacedExistingGuide = false
         val bulkCoveredChannelKeys = linkedSetOf<String>()
 
@@ -2227,7 +2227,7 @@ class SyncManager @Inject constructor(
 
     private suspend fun loadStalkerChannelsByCategory(
         api: StalkerProvider,
-        categories: List<com.streamvault.domain.model.Category>,
+        categories: List<com.kuqforza.domain.model.Category>,
         onProgress: ((String) -> Unit)?
     ): List<Channel> {
         progress(api.providerId, onProgress, "Loading live channels...")
@@ -2259,21 +2259,21 @@ class SyncManager @Inject constructor(
         onProgress: ((String) -> Unit)?
     ): StalkerLiveCatalogResult {
         return when (val categoriesResult = api.getLiveCategories()) {
-            is com.streamvault.domain.model.Result.Success -> {
+            is com.kuqforza.domain.model.Result.Success -> {
                 val channels = loadStalkerChannelsByCategory(api, categoriesResult.data, onProgress)
                 StalkerLiveCatalogResult(
                     categories = categoriesResult.data.map { it.toEntity(provider.id) },
                     channels = channels
                 )
             }
-            is com.streamvault.domain.model.Result.Error -> {
+            is com.kuqforza.domain.model.Result.Error -> {
                 Log.w(
                     TAG,
                     "Stalker live categories failed for provider ${provider.id}; trying bulk live fallback: ${categoriesResult.message}",
                     categoriesResult.exception
                 )
                 when (val bulkResult = api.getLiveStreams(null)) {
-                    is com.streamvault.domain.model.Result.Success -> {
+                    is com.kuqforza.domain.model.Result.Success -> {
                         val channels = bulkResult.data.distinctBy { it.streamId }
                         if (channels.isEmpty()) {
                             throw IllegalStateException(
@@ -2287,7 +2287,7 @@ class SyncManager @Inject constructor(
                             warnings = listOf("Live categories failed; recovered using bulk live channels.")
                         )
                     }
-                    is com.streamvault.domain.model.Result.Error -> {
+                    is com.kuqforza.domain.model.Result.Error -> {
                         val profileDiagnostic = stalkerCatalogAccessDiagnostic(
                             api = api,
                             primaryMessage = categoriesResult.message,
@@ -2308,10 +2308,10 @@ class SyncManager @Inject constructor(
                             bulkResult.exception ?: categoriesResult.exception
                         )
                     }
-                    is com.streamvault.domain.model.Result.Loading -> throw IllegalStateException("Unexpected loading state")
+                    is com.kuqforza.domain.model.Result.Loading -> throw IllegalStateException("Unexpected loading state")
                 }
             }
-            is com.streamvault.domain.model.Result.Loading -> throw IllegalStateException("Unexpected loading state")
+            is com.kuqforza.domain.model.Result.Loading -> throw IllegalStateException("Unexpected loading state")
         }
     }
 
@@ -2324,7 +2324,7 @@ class SyncManager @Inject constructor(
             return null
         }
         val profile = when (val profileResult = api.getAccountProfile()) {
-            is com.streamvault.domain.model.Result.Success -> profileResult.data
+            is com.kuqforza.domain.model.Result.Success -> profileResult.data
             else -> return null
         }
         if (!profile.hasLikelyMissingCatalogAccess()) {
@@ -2364,7 +2364,7 @@ class SyncManager @Inject constructor(
 
     private suspend fun loadStalkerMoviesByCategory(
         api: StalkerProvider,
-        categories: List<com.streamvault.domain.model.Category>,
+        categories: List<com.kuqforza.domain.model.Category>,
         onProgress: ((String) -> Unit)?
     ): List<Movie> {
         if (categories.isEmpty()) {
@@ -2378,7 +2378,7 @@ class SyncManager @Inject constructor(
 
     private suspend fun loadStalkerSeriesByCategory(
         api: StalkerProvider,
-        categories: List<com.streamvault.domain.model.Category>,
+        categories: List<com.kuqforza.domain.model.Category>,
         onProgress: ((String) -> Unit)?
     ): List<Series> {
         if (categories.isEmpty()) {
@@ -2390,11 +2390,11 @@ class SyncManager @Inject constructor(
         }.distinctBy { it.seriesId }
     }
 
-    private fun <T> requireResult(result: com.streamvault.domain.model.Result<T>, fallbackMessage: String): T {
+    private fun <T> requireResult(result: com.kuqforza.domain.model.Result<T>, fallbackMessage: String): T {
         return when (result) {
-            is com.streamvault.domain.model.Result.Success -> result.data
-            is com.streamvault.domain.model.Result.Error -> throw IllegalStateException(result.message.ifBlank { fallbackMessage }, result.exception)
-            is com.streamvault.domain.model.Result.Loading -> throw IllegalStateException("Unexpected loading state")
+            is com.kuqforza.domain.model.Result.Success -> result.data
+            is com.kuqforza.domain.model.Result.Error -> throw IllegalStateException(result.message.ifBlank { fallbackMessage }, result.exception)
+            is com.kuqforza.domain.model.Result.Loading -> throw IllegalStateException("Unexpected loading state")
         }
     }
 

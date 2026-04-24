@@ -1,6 +1,6 @@
-package com.streamvault.domain.provider
+package com.kuqforza.domain.provider
 
-import com.streamvault.domain.model.*
+import com.kuqforza.domain.model.*
 
 /**
  * Shared interface for all IPTV providers (Xtream Codes, M3U, etc.).

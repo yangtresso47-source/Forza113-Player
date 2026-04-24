@@ -1,4 +1,4 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
 import androidx.media3.common.ParserException
 import androidx.media3.common.PlaybackException

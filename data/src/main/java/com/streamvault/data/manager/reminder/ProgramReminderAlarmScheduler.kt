@@ -1,4 +1,4 @@
-package com.streamvault.data.manager.reminder
+package com.kuqforza.data.manager.reminder
 
 import android.app.AlarmManager
 import android.app.PendingIntent

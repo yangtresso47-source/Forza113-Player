@@ -1,9 +1,9 @@
-package com.streamvault.data.mapper
+package com.kuqforza.data.mapper
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.streamvault.data.local.entity.*
-import com.streamvault.domain.model.*
+import com.kuqforza.data.local.entity.*
+import com.kuqforza.domain.model.*
 
 private val qualityOptionsGson = Gson()
 private val channelQualityOptionsType = object : TypeToken<List<ChannelQualityOption>>() {}.type
@@ -363,7 +363,7 @@ fun Episode.toEntity() = EpisodeEntity(
 
 // ── Category ───────────────────────────────────────────────────────
 
-fun CategoryEntity.toDomain() = com.streamvault.domain.model.Category(
+fun CategoryEntity.toDomain() = com.kuqforza.domain.model.Category(
     id = categoryId,
     roomId = id,
     name = name,
@@ -373,7 +373,7 @@ fun CategoryEntity.toDomain() = com.streamvault.domain.model.Category(
     isUserProtected = isUserProtected
 )
 
-fun com.streamvault.domain.model.Category.toEntity(providerId: Long) = CategoryEntity(
+fun com.kuqforza.domain.model.Category.toEntity(providerId: Long) = CategoryEntity(
     categoryId = id,
     name = name,
     parentId = parentId,
@@ -552,8 +552,8 @@ fun SyncMetadataEntity.toDomain() = SyncMetadata(
     seriesCount = seriesCount,
     epgCount = epgCount,
     lastSyncStatus = lastSyncStatus,
-    movieSyncMode = runCatching { com.streamvault.domain.model.VodSyncMode.valueOf(movieSyncMode) }
-        .getOrDefault(com.streamvault.domain.model.VodSyncMode.UNKNOWN),
+    movieSyncMode = runCatching { com.kuqforza.domain.model.VodSyncMode.valueOf(movieSyncMode) }
+        .getOrDefault(com.kuqforza.domain.model.VodSyncMode.UNKNOWN),
     movieWarningsCount = movieWarningsCount,
     movieCatalogStale = movieCatalogStale,
     liveAvoidFullUntil = liveAvoidFullUntil,
@@ -640,7 +640,7 @@ private fun String?.toPlaybackWatchedStatus(): PlaybackWatchedStatus =
 
 // ── EPG Source ─────────────────────────────────────────────────────
 
-fun EpgSourceEntity.toDomain() = com.streamvault.domain.model.EpgSource(
+fun EpgSourceEntity.toDomain() = com.kuqforza.domain.model.EpgSource(
     id = id,
     name = name,
     url = url,
@@ -655,7 +655,7 @@ fun EpgSourceEntity.toDomain() = com.streamvault.domain.model.EpgSource(
     lastModifiedHeader = lastModifiedHeader
 )
 
-fun com.streamvault.domain.model.EpgSource.toEntity() = EpgSourceEntity(
+fun com.kuqforza.domain.model.EpgSource.toEntity() = EpgSourceEntity(
     id = id,
     name = name,
     url = url,
@@ -672,8 +672,8 @@ fun com.streamvault.domain.model.EpgSource.toEntity() = EpgSourceEntity(
 
 // ── Provider EPG Source Assignment ─────────────────────────────────
 
-fun com.streamvault.data.local.dao.ProviderEpgSourceWithDetails.toDomain() =
-    com.streamvault.domain.model.ProviderEpgSourceAssignment(
+fun com.kuqforza.data.local.dao.ProviderEpgSourceWithDetails.toDomain() =
+    com.kuqforza.domain.model.ProviderEpgSourceAssignment(
         id = id,
         providerId = providerId,
         epgSourceId = epgSourceId,
@@ -683,7 +683,7 @@ fun com.streamvault.data.local.dao.ProviderEpgSourceWithDetails.toDomain() =
         epgSourceUrl = epgSourceUrl
     )
 
-fun com.streamvault.domain.model.ProviderEpgSourceAssignment.toEntity() = ProviderEpgSourceEntity(
+fun com.kuqforza.domain.model.ProviderEpgSourceAssignment.toEntity() = ProviderEpgSourceEntity(
     id = id,
     providerId = providerId,
     epgSourceId = epgSourceId,
@@ -693,7 +693,7 @@ fun com.streamvault.domain.model.ProviderEpgSourceAssignment.toEntity() = Provid
 
 // ── EPG Channel ────────────────────────────────────────────────────
 
-fun EpgChannelEntity.toDomain() = com.streamvault.domain.model.EpgChannelInfo(
+fun EpgChannelEntity.toDomain() = com.kuqforza.domain.model.EpgChannelInfo(
     id = id,
     epgSourceId = epgSourceId,
     xmltvChannelId = xmltvChannelId,
@@ -723,16 +723,16 @@ fun EpgProgrammeEntity.toDomainProgram(providerId: Long = 0L) = Program(
 
 // ── Channel EPG Mapping ────────────────────────────────────────────
 
-fun ChannelEpgMappingEntity.toDomain() = com.streamvault.domain.model.ChannelEpgMapping(
+fun ChannelEpgMappingEntity.toDomain() = com.kuqforza.domain.model.ChannelEpgMapping(
     id = id,
     providerChannelId = providerChannelId,
     providerId = providerId,
-    sourceType = runCatching { com.streamvault.domain.model.EpgSourceType.valueOf(sourceType) }
-        .getOrDefault(com.streamvault.domain.model.EpgSourceType.NONE),
+    sourceType = runCatching { com.kuqforza.domain.model.EpgSourceType.valueOf(sourceType) }
+        .getOrDefault(com.kuqforza.domain.model.EpgSourceType.NONE),
     epgSourceId = epgSourceId,
     xmltvChannelId = xmltvChannelId,
     matchType = matchType?.let {
-        runCatching { com.streamvault.domain.model.EpgMatchType.valueOf(it) }.getOrNull()
+        runCatching { com.kuqforza.domain.model.EpgMatchType.valueOf(it) }.getOrNull()
     },
     confidence = confidence,
     matchedAt = matchedAt,
@@ -742,7 +742,7 @@ fun ChannelEpgMappingEntity.toDomain() = com.streamvault.domain.model.ChannelEpg
     updatedAt = updatedAt
 )
 
-fun com.streamvault.domain.model.ChannelEpgMapping.toEntity() = ChannelEpgMappingEntity(
+fun com.kuqforza.domain.model.ChannelEpgMapping.toEntity() = ChannelEpgMappingEntity(
     id = id,
     providerChannelId = providerChannelId,
     providerId = providerId,

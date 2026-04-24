@@ -1,11 +1,11 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.manager.BackupConflictStrategy
-import com.streamvault.domain.manager.BackupImportPlan
-import com.streamvault.domain.manager.BackupImportResult
-import com.streamvault.domain.manager.BackupPreview
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.manager.BackupConflictStrategy
+import com.kuqforza.domain.manager.BackupImportPlan
+import com.kuqforza.domain.manager.BackupImportResult
+import com.kuqforza.domain.manager.BackupPreview
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -100,7 +100,7 @@ private class FakeImportBackupManager(
         )
     ),
     private val importResult: Result<BackupImportResult> = Result.success(BackupImportResult())
-) : com.streamvault.domain.manager.BackupManager {
+) : com.kuqforza.domain.manager.BackupManager {
     var lastInspectUri: String? = null
     var lastImportCall: Pair<String, BackupImportPlan>? = null
 

@@ -1,7 +1,7 @@
-package com.streamvault.data.local.dao
+package com.kuqforza.data.local.dao
 
 import androidx.room.*
-import com.streamvault.data.local.entity.*
+import com.kuqforza.data.local.entity.*
 import kotlinx.coroutines.flow.Flow
 
 data class RemoteIdMapping(

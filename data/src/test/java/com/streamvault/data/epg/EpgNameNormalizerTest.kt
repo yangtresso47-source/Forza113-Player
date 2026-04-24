@@ -1,4 +1,4 @@
-package com.streamvault.data.epg
+package com.kuqforza.data.epg
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test

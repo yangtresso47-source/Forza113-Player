@@ -1,4 +1,4 @@
-package com.streamvault.data.remote.stalker
+package com.kuqforza.data.remote.stalker
 
 import java.net.URI
 import java.net.URLDecoder

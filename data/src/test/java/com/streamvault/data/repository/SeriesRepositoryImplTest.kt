@@ -1,32 +1,32 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import android.database.sqlite.SQLiteException
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.dao.CategoryDao
-import com.streamvault.data.local.dao.EpisodeDao
-import com.streamvault.data.local.dao.FavoriteDao
-import com.streamvault.data.local.dao.PlaybackHistoryDao
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.dao.SeriesDao
-import com.streamvault.data.local.dao.SeriesCategoryHydrationDao
-import com.streamvault.data.local.entity.SeriesEntity
-import com.streamvault.data.local.entity.ProviderEntity
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.data.remote.stalker.StalkerCategoryRecord
-import com.streamvault.data.remote.stalker.StalkerItemRecord
-import com.streamvault.data.remote.stalker.StalkerProviderProfile
-import com.streamvault.data.remote.stalker.StalkerSession
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamSeriesItem
-import com.streamvault.data.remote.stalker.StalkerApiService
-import com.streamvault.data.remote.xtream.XtreamParsingException
-import com.streamvault.data.remote.xtream.XtreamApiService
-import com.streamvault.data.remote.xtream.XtreamStreamUrlResolver
-import com.streamvault.data.security.CredentialCrypto
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.ProviderStatus
-import com.streamvault.domain.model.ProviderType
-import com.streamvault.domain.model.Result
+import com.kuqforza.data.local.dao.CategoryDao
+import com.kuqforza.data.local.dao.EpisodeDao
+import com.kuqforza.data.local.dao.FavoriteDao
+import com.kuqforza.data.local.dao.PlaybackHistoryDao
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.dao.SeriesDao
+import com.kuqforza.data.local.dao.SeriesCategoryHydrationDao
+import com.kuqforza.data.local.entity.SeriesEntity
+import com.kuqforza.data.local.entity.ProviderEntity
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.data.remote.stalker.StalkerCategoryRecord
+import com.kuqforza.data.remote.stalker.StalkerItemRecord
+import com.kuqforza.data.remote.stalker.StalkerProviderProfile
+import com.kuqforza.data.remote.stalker.StalkerSession
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamSeriesItem
+import com.kuqforza.data.remote.stalker.StalkerApiService
+import com.kuqforza.data.remote.xtream.XtreamParsingException
+import com.kuqforza.data.remote.xtream.XtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamStreamUrlResolver
+import com.kuqforza.data.security.CredentialCrypto
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.ProviderStatus
+import com.kuqforza.domain.model.ProviderType
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -181,7 +181,7 @@ class SeriesRepositoryImplTest {
         repository.getSeriesByCategory(7L, 77L).first()
 
         verify(seriesDao, never()).replaceCategory(eq(7L), eq(77L), any())
-        val hydrationCaptor = argumentCaptor<com.streamvault.data.local.entity.SeriesCategoryHydrationEntity>()
+        val hydrationCaptor = argumentCaptor<com.kuqforza.data.local.entity.SeriesCategoryHydrationEntity>()
         verify(seriesCategoryHydrationDao).upsert(hydrationCaptor.capture())
         assertThat(hydrationCaptor.firstValue.lastStatus).isEqualTo("EMPTY_RETRY")
         assertThat(hydrationCaptor.firstValue.itemCount).isEqualTo(0)
@@ -215,8 +215,8 @@ class SeriesRepositoryImplTest {
 
         val result = repository.getSeriesDetails(7L, 301L)
 
-        assertThat(result).isInstanceOf(com.streamvault.domain.model.Result.Success::class.java)
-        val series = (result as com.streamvault.domain.model.Result.Success).data
+        assertThat(result).isInstanceOf(com.kuqforza.domain.model.Result.Success::class.java)
+        val series = (result as com.kuqforza.domain.model.Result.Success).data
         assertThat(series.id).isEqualTo(15L)
         assertThat(series.seriesId).isEqualTo(301L)
     }
@@ -251,8 +251,8 @@ class SeriesRepositoryImplTest {
 
         val result = repository.getSeriesDetails(7L, 301L)
 
-        assertThat(result).isInstanceOf(com.streamvault.domain.model.Result.Success::class.java)
-        val series = (result as com.streamvault.domain.model.Result.Success).data
+        assertThat(result).isInstanceOf(com.kuqforza.domain.model.Result.Success::class.java)
+        val series = (result as com.kuqforza.domain.model.Result.Success).data
         assertThat(series.id).isEqualTo(15L)
         assertThat(series.name).isEqualTo("Stored Series")
         assertThat(series.posterUrl).isEqualTo("https://img.example.test/poster.jpg")

@@ -1,7 +1,7 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
-import com.streamvault.domain.model.StreamInfo
-import com.streamvault.domain.model.StreamType
+import com.kuqforza.domain.model.StreamInfo
+import com.kuqforza.domain.model.StreamType
 import java.net.URI
 import java.util.Locale
 

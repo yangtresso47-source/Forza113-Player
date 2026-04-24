@@ -1,4 +1,4 @@
-package com.streamvault.data.util
+package com.kuqforza.data.util
 
 object ProviderInputSanitizer {
     const val MAX_PROVIDER_NAME_LENGTH = 80

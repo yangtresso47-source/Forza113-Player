@@ -1,17 +1,17 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.LibraryBrowseQuery
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.PagedResult
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.Series
-import com.streamvault.domain.model.StreamInfo
-import com.streamvault.domain.repository.ChannelRepository
-import com.streamvault.domain.repository.MovieRepository
-import com.streamvault.domain.repository.SeriesRepository
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.LibraryBrowseQuery
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.PagedResult
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.Series
+import com.kuqforza.domain.model.StreamInfo
+import com.kuqforza.domain.repository.ChannelRepository
+import com.kuqforza.domain.repository.MovieRepository
+import com.kuqforza.domain.repository.SeriesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -179,7 +179,7 @@ private class FakeSeriesRepository(
     override fun browseSeries(query: LibraryBrowseQuery): Flow<PagedResult<Series>> = unsupported()
     override suspend fun getSeriesById(seriesId: Long): Series? = error("Not used in test")
     override suspend fun getSeriesDetails(providerId: Long, seriesId: Long): Result<Series> = error("Not used in test")
-    override suspend fun getEpisodeStreamInfo(episode: com.streamvault.domain.model.Episode): Result<StreamInfo> = error("Not used in test")
+    override suspend fun getEpisodeStreamInfo(episode: com.kuqforza.domain.model.Episode): Result<StreamInfo> = error("Not used in test")
     override suspend fun refreshSeries(providerId: Long): Result<Unit> = error("Not used in test")
     override suspend fun updateEpisodeWatchProgress(episodeId: Long, progress: Long): Result<Unit> = error("Not used in test")
 }

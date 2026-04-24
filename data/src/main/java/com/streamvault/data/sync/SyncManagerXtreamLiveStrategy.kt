@@ -1,17 +1,17 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import android.util.Log
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamStream
-import com.streamvault.data.remote.xtream.OkHttpXtreamApiService
-import com.streamvault.data.remote.xtream.XtreamApiService
-import com.streamvault.data.remote.xtream.XtreamProvider
-import com.streamvault.data.remote.xtream.XtreamUrlFactory
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.SyncMetadata
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamStream
+import com.kuqforza.data.remote.xtream.OkHttpXtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamProvider
+import com.kuqforza.data.remote.xtream.XtreamUrlFactory
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.SyncMetadata
 import kotlin.system.measureTimeMillis
 
 private const val XTREAM_LIVE_STRATEGY_TAG = "SyncManager"

@@ -1,12 +1,12 @@
-package com.streamvault.data.validation
+package com.kuqforza.data.validation
 
-import com.streamvault.data.util.ProviderInputSanitizer
-import com.streamvault.data.util.UrlSecurityPolicy
-import com.streamvault.domain.manager.ProviderSetupInputValidator
-import com.streamvault.domain.manager.ValidatedM3uProviderInput
-import com.streamvault.domain.manager.ValidatedStalkerProviderInput
-import com.streamvault.domain.manager.ValidatedXtreamProviderInput
-import com.streamvault.domain.model.Result
+import com.kuqforza.data.util.ProviderInputSanitizer
+import com.kuqforza.data.util.UrlSecurityPolicy
+import com.kuqforza.domain.manager.ProviderSetupInputValidator
+import com.kuqforza.domain.manager.ValidatedM3uProviderInput
+import com.kuqforza.domain.manager.ValidatedStalkerProviderInput
+import com.kuqforza.domain.manager.ValidatedXtreamProviderInput
+import com.kuqforza.domain.model.Result
 import javax.inject.Inject
 import javax.inject.Singleton
 

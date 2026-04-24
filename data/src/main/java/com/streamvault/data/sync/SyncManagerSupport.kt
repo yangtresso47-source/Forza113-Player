@@ -1,13 +1,13 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
-import com.streamvault.data.local.entity.CategoryEntity
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.parser.M3uParser
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.util.AdultContentClassifier
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.VodSyncMode
+import com.kuqforza.data.local.entity.CategoryEntity
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.parser.M3uParser
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.util.AdultContentClassifier
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.VodSyncMode
 import java.io.InputStream
 import java.security.MessageDigest
 

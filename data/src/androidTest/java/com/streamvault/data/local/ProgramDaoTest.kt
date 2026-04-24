@@ -1,11 +1,11 @@
-package com.streamvault.data.local
+package com.kuqforza.data.local
 
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.streamvault.data.local.dao.ProgramDao
-import com.streamvault.data.local.entity.ProgramEntity
+import com.kuqforza.data.local.dao.ProgramDao
+import com.kuqforza.data.local.entity.ProgramEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -17,14 +17,14 @@ import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class ProgramDaoTest {
-    private lateinit var db: StreamVaultDatabase
+    private lateinit var db: KuqforzaDatabase
     private lateinit var programDao: ProgramDao
 
     @Before
     fun createDb() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(
-            context, StreamVaultDatabase::class.java
+            context, KuqforzaDatabase::class.java
         ).build()
         programDao = db.programDao()
     }

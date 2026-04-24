@@ -1,8 +1,8 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.Category
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Category
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
 interface CategoryRepository {

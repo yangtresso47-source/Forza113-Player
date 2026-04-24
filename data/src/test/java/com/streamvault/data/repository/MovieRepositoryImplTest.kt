@@ -1,38 +1,38 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import android.database.sqlite.SQLiteException
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.dao.CategoryDao
-import com.streamvault.data.local.dao.FavoriteDao
-import com.streamvault.data.local.dao.MovieCategoryHydrationDao
-import com.streamvault.data.local.dao.MovieDao
-import com.streamvault.data.local.dao.PlaybackHistoryDao
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.entity.FavoriteEntity
-import com.streamvault.data.local.entity.MovieBrowseEntity
-import com.streamvault.data.local.entity.MovieEntity
-import com.streamvault.data.local.entity.PlaybackHistoryLiteEntity
-import com.streamvault.data.local.entity.ProviderEntity
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.data.remote.stalker.StalkerDeviceProfile
-import com.streamvault.data.remote.stalker.StalkerProviderProfile
-import com.streamvault.data.remote.stalker.StalkerSession
-import com.streamvault.data.remote.stalker.StalkerCategoryRecord
-import com.streamvault.data.remote.stalker.StalkerItemRecord
-import com.streamvault.data.remote.dto.XtreamCategory
-import com.streamvault.data.remote.dto.XtreamStream
-import com.streamvault.data.remote.stalker.StalkerApiService
-import com.streamvault.data.remote.xtream.XtreamApiService
-import com.streamvault.data.remote.xtream.XtreamStreamUrlResolver
-import com.streamvault.data.security.CredentialCrypto
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.ProviderStatus
-import com.streamvault.domain.model.ProviderType
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.SyncMetadata
-import com.streamvault.domain.model.VodSyncMode
-import com.streamvault.domain.repository.SyncMetadataRepository
+import com.kuqforza.data.local.dao.CategoryDao
+import com.kuqforza.data.local.dao.FavoriteDao
+import com.kuqforza.data.local.dao.MovieCategoryHydrationDao
+import com.kuqforza.data.local.dao.MovieDao
+import com.kuqforza.data.local.dao.PlaybackHistoryDao
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.entity.FavoriteEntity
+import com.kuqforza.data.local.entity.MovieBrowseEntity
+import com.kuqforza.data.local.entity.MovieEntity
+import com.kuqforza.data.local.entity.PlaybackHistoryLiteEntity
+import com.kuqforza.data.local.entity.ProviderEntity
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.data.remote.stalker.StalkerDeviceProfile
+import com.kuqforza.data.remote.stalker.StalkerProviderProfile
+import com.kuqforza.data.remote.stalker.StalkerSession
+import com.kuqforza.data.remote.stalker.StalkerCategoryRecord
+import com.kuqforza.data.remote.stalker.StalkerItemRecord
+import com.kuqforza.data.remote.dto.XtreamCategory
+import com.kuqforza.data.remote.dto.XtreamStream
+import com.kuqforza.data.remote.stalker.StalkerApiService
+import com.kuqforza.data.remote.xtream.XtreamApiService
+import com.kuqforza.data.remote.xtream.XtreamStreamUrlResolver
+import com.kuqforza.data.security.CredentialCrypto
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.ProviderStatus
+import com.kuqforza.domain.model.ProviderType
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.SyncMetadata
+import com.kuqforza.domain.model.VodSyncMode
+import com.kuqforza.domain.repository.SyncMetadataRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -237,7 +237,7 @@ class MovieRepositoryImplTest {
         repository.getMoviesByCategory(7L, 42L).first()
 
         verify(movieDao, never()).replaceCategory(eq(7L), eq(42L), any())
-        val hydrationCaptor = argumentCaptor<com.streamvault.data.local.entity.MovieCategoryHydrationEntity>()
+        val hydrationCaptor = argumentCaptor<com.kuqforza.data.local.entity.MovieCategoryHydrationEntity>()
         verify(movieCategoryHydrationDao).upsert(hydrationCaptor.capture())
         assertThat(hydrationCaptor.firstValue.lastStatus).isEqualTo("EMPTY_RETRY")
         assertThat(hydrationCaptor.firstValue.itemCount).isEqualTo(0)

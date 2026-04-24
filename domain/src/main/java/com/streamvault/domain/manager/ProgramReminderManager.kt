@@ -1,8 +1,8 @@
-package com.streamvault.domain.manager
+package com.kuqforza.domain.manager
 
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.ProgramReminder
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.ProgramReminder
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
 interface ProgramReminderManager {

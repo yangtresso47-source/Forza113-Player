@@ -1,13 +1,13 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.FavoriteDao
-import com.streamvault.data.local.dao.VirtualGroupDao
-import com.streamvault.data.local.entity.CategoryCount
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.domain.model.*
-import com.streamvault.domain.repository.FavoriteRepository
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.FavoriteDao
+import com.kuqforza.data.local.dao.VirtualGroupDao
+import com.kuqforza.data.local.entity.CategoryCount
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.domain.model.*
+import com.kuqforza.domain.repository.FavoriteRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -118,7 +118,7 @@ class FavoriteRepositoryImpl @Inject constructor(
 
     override suspend fun createGroup(providerId: Long, name: String, iconEmoji: String?, contentType: ContentType): Result<VirtualGroup> = try {
         val id = virtualGroupDao.insert(
-            com.streamvault.data.local.entity.VirtualGroupEntity(
+            com.kuqforza.data.local.entity.VirtualGroupEntity(
                 providerId = providerId,
                 name = name,
                 iconEmoji = iconEmoji,

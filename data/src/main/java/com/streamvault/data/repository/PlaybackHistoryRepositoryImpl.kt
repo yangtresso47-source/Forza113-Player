@@ -1,18 +1,18 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.EpisodeDao
-import com.streamvault.data.local.dao.MovieDao
-import com.streamvault.data.local.dao.PlaybackHistoryDao
-import com.streamvault.data.mapper.toDomain
-import com.streamvault.data.mapper.toEntity
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.PlaybackHistory
-import com.streamvault.domain.model.PlaybackWatchedStatus
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.repository.PlaybackHistoryRepository
-import com.streamvault.domain.util.DEFAULT_PLAYBACK_COMPLETION_THRESHOLD
-import com.streamvault.domain.util.isPlaybackComplete
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.EpisodeDao
+import com.kuqforza.data.local.dao.MovieDao
+import com.kuqforza.data.local.dao.PlaybackHistoryDao
+import com.kuqforza.data.mapper.toDomain
+import com.kuqforza.data.mapper.toEntity
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.PlaybackHistory
+import com.kuqforza.domain.model.PlaybackWatchedStatus
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.repository.PlaybackHistoryRepository
+import com.kuqforza.domain.util.DEFAULT_PLAYBACK_COMPLETION_THRESHOLD
+import com.kuqforza.domain.util.isPlaybackComplete
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.streamvault.data.preferences.PreferencesRepository
-import com.streamvault.data.remote.xtream.XtreamUrlFactory
+import com.kuqforza.data.preferences.PreferencesRepository
+import com.kuqforza.data.remote.xtream.XtreamUrlFactory
 
 @Singleton
 class PlaybackHistoryRepositoryImpl @Inject constructor(

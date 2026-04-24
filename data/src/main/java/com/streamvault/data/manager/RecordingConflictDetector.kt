@@ -1,9 +1,9 @@
-package com.streamvault.data.manager
+package com.kuqforza.data.manager
 
-import com.streamvault.data.local.entity.RecordingRunEntity
-import com.streamvault.domain.model.RecordingItem
-import com.streamvault.domain.model.RecordingFailureCategory
-import com.streamvault.domain.model.RecordingStatus
+import com.kuqforza.data.local.entity.RecordingRunEntity
+import com.kuqforza.domain.model.RecordingItem
+import com.kuqforza.domain.model.RecordingFailureCategory
+import com.kuqforza.domain.model.RecordingStatus
 
 internal fun Iterable<RecordingItem>.findRecordingConflict(
     candidateStartMs: Long,
@@ -43,7 +43,7 @@ internal fun RecordingRunEntity.toConflictFailure(
         status = RecordingStatus.FAILED,
         scheduledStartMs = conflictStartMs,
         scheduledEndMs = conflictEndMs,
-        sourceType = com.streamvault.domain.model.RecordingSourceType.UNKNOWN,
+        sourceType = com.kuqforza.domain.model.RecordingSourceType.UNKNOWN,
         resolvedUrl = null,
         headersJson = "{}",
         userAgent = null,

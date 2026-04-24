@@ -1,8 +1,8 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
-import com.streamvault.domain.manager.ParentalControlManager
-import com.streamvault.domain.manager.ParentalPinVerifier
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.manager.ParentalControlManager
+import com.kuqforza.domain.manager.ParentalPinVerifier
+import com.kuqforza.domain.model.Result
 import javax.inject.Inject
 
 data class UnlockParentalCategoryCommand(

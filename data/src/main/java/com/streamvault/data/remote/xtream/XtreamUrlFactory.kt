@@ -1,6 +1,6 @@
-package com.streamvault.data.remote.xtream
+package com.kuqforza.data.remote.xtream
 
-import com.streamvault.domain.model.ContentType
+import com.kuqforza.domain.model.ContentType
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder

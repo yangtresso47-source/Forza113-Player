@@ -1,9 +1,9 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.model.DrmInfo
-import com.streamvault.domain.model.DrmScheme
-import com.streamvault.domain.model.StreamInfo
+import com.kuqforza.domain.model.DrmInfo
+import com.kuqforza.domain.model.DrmScheme
+import com.kuqforza.domain.model.StreamInfo
 import java.lang.reflect.Proxy
 import androidx.media3.exoplayer.source.MediaSource
 import org.junit.Test

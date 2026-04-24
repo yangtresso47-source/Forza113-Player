@@ -1,4 +1,4 @@
-package com.streamvault.player
+package com.kuqforza.player
 
 data class PlayerTrack(
     val id: String,

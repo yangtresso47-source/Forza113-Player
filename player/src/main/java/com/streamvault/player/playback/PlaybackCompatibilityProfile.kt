@@ -1,4 +1,4 @@
-package com.streamvault.player.playback
+package com.kuqforza.player.playback
 
 import android.os.Build
 import java.util.Locale

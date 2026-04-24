@@ -1,4 +1,4 @@
-package com.streamvault.domain.model
+package com.kuqforza.domain.model
 
 /**
  * Represents every stage of a provider sync operation.

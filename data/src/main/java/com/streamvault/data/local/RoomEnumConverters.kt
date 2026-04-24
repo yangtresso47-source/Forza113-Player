@@ -1,10 +1,10 @@
-package com.streamvault.data.local
+package com.kuqforza.data.local
 
 import androidx.room.TypeConverter
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.ProviderEpgSyncMode
-import com.streamvault.domain.model.ProviderStatus
-import com.streamvault.domain.model.ProviderType
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.ProviderEpgSyncMode
+import com.kuqforza.domain.model.ProviderStatus
+import com.kuqforza.domain.model.ProviderType
 
 class RoomEnumConverters {
     @TypeConverter

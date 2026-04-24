@@ -1,14 +1,14 @@
-package com.streamvault.data.local.entity
+package com.kuqforza.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.streamvault.domain.model.RecordingFailureCategory
-import com.streamvault.domain.model.RecordingRecurrence
-import com.streamvault.domain.model.RecordingSourceType
-import com.streamvault.domain.model.RecordingStatus
+import com.kuqforza.domain.model.RecordingFailureCategory
+import com.kuqforza.domain.model.RecordingRecurrence
+import com.kuqforza.domain.model.RecordingSourceType
+import com.kuqforza.domain.model.RecordingStatus
 
 @Entity(
     tableName = "recording_schedules",

@@ -1,12 +1,12 @@
-package com.streamvault.data.manager
+package com.kuqforza.data.manager
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.entity.RecordingRunEntity
-import com.streamvault.domain.model.RecordingFailureCategory
-import com.streamvault.domain.model.RecordingRecurrence
-import com.streamvault.domain.model.RecordingSourceType
-import com.streamvault.domain.model.RecordingItem
-import com.streamvault.domain.model.RecordingStatus
+import com.kuqforza.data.local.entity.RecordingRunEntity
+import com.kuqforza.domain.model.RecordingFailureCategory
+import com.kuqforza.domain.model.RecordingRecurrence
+import com.kuqforza.domain.model.RecordingSourceType
+import com.kuqforza.domain.model.RecordingItem
+import com.kuqforza.domain.model.RecordingStatus
 import org.junit.Test
 
 class RecordingConflictDetectorTest {

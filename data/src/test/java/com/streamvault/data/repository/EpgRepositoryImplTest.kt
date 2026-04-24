@@ -1,12 +1,12 @@
-package com.streamvault.data.repository
+package com.kuqforza.data.repository
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.data.local.DatabaseTransactionRunner
-import com.streamvault.data.local.dao.ProgramDao
-import com.streamvault.data.local.entity.ProgramBrowseEntity
-import com.streamvault.data.local.entity.ProgramEntity
-import com.streamvault.data.parser.XmltvParser
-import com.streamvault.domain.model.Program
+import com.kuqforza.data.local.DatabaseTransactionRunner
+import com.kuqforza.data.local.dao.ProgramDao
+import com.kuqforza.data.local.entity.ProgramBrowseEntity
+import com.kuqforza.data.local.entity.ProgramEntity
+import com.kuqforza.data.parser.XmltvParser
+import com.kuqforza.domain.model.Program
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -34,7 +34,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
-import com.streamvault.domain.repository.EpgSourceRepository
+import com.kuqforza.domain.repository.EpgSourceRepository
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.ByteArrayOutputStream

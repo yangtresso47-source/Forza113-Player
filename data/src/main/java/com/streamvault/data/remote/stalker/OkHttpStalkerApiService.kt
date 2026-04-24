@@ -1,7 +1,7 @@
-package com.streamvault.data.remote.stalker
+package com.kuqforza.data.remote.stalker
 
 import android.util.Log
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Result
 import java.io.IOException
 import java.net.URI
 import java.net.URLEncoder

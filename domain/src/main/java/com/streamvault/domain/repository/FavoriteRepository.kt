@@ -1,9 +1,9 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Favorite
-import com.streamvault.domain.model.Result
-import com.streamvault.domain.model.VirtualGroup
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Favorite
+import com.kuqforza.domain.model.Result
+import com.kuqforza.domain.model.VirtualGroup
 import kotlinx.coroutines.flow.Flow
 
 interface FavoriteRepository {

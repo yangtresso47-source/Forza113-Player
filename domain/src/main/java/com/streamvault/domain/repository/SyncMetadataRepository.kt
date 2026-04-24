@@ -1,6 +1,6 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.SyncMetadata
+import com.kuqforza.domain.model.SyncMetadata
 import kotlinx.coroutines.flow.Flow
 
 interface SyncMetadataRepository {

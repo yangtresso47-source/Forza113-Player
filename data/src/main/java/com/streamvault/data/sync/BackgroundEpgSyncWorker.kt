@@ -1,4 +1,4 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
@@ -42,8 +42,8 @@ class BackgroundEpgSyncWorker(
                 BackgroundEpgSyncWorkerEntryPoint::class.java
             )
             when (val result = entryPoint.syncManager().syncEpg(providerId, force = true)) {
-                is com.streamvault.domain.model.Result.Success -> Result.success()
-                is com.streamvault.domain.model.Result.Error -> {
+                is com.kuqforza.domain.model.Result.Success -> Result.success()
+                is com.kuqforza.domain.model.Result.Error -> {
                     if (result.message.contains("not found", ignoreCase = true)) {
                         Result.success()
                     } else if (shouldRetry(result.exception)) {
@@ -52,7 +52,7 @@ class BackgroundEpgSyncWorker(
                         Result.failure()
                     }
                 }
-                com.streamvault.domain.model.Result.Loading -> Result.retry()
+                com.kuqforza.domain.model.Result.Loading -> Result.retry()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Background EPG work failed for provider $providerId", e)

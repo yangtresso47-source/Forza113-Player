@@ -1,12 +1,12 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.Movie
-import com.streamvault.domain.model.Series
-import com.streamvault.domain.repository.ChannelRepository
-import com.streamvault.domain.repository.MovieRepository
-import com.streamvault.domain.repository.SeriesRepository
-import com.streamvault.domain.util.shouldRethrowDomainFlowFailure
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.Movie
+import com.kuqforza.domain.model.Series
+import com.kuqforza.domain.repository.ChannelRepository
+import com.kuqforza.domain.repository.MovieRepository
+import com.kuqforza.domain.repository.SeriesRepository
+import com.kuqforza.domain.util.shouldRethrowDomainFlowFailure
 import java.util.logging.Level
 import java.util.logging.Logger
 import javax.inject.Inject

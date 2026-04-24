@@ -1,4 +1,4 @@
-package com.streamvault.domain.manager
+package com.kuqforza.domain.manager
 
 data class ParentalControlSessionState(
     val unlockedCategoryIdsByProvider: Map<Long, Set<Long>> = emptyMap()

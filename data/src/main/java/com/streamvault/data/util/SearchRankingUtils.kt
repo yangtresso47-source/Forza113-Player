@@ -1,4 +1,4 @@
-package com.streamvault.data.util
+package com.kuqforza.data.util
 
 import java.util.Locale
 

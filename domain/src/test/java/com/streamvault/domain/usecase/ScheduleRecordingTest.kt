@@ -1,15 +1,15 @@
-package com.streamvault.domain.usecase
+package com.kuqforza.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
-import com.streamvault.domain.manager.RecordingManager
-import com.streamvault.domain.model.Channel
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.RecordingItem
-import com.streamvault.domain.model.RecordingRecurrence
-import com.streamvault.domain.model.RecordingRequest
-import com.streamvault.domain.model.RecordingStorageState
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.manager.RecordingManager
+import com.kuqforza.domain.model.Channel
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.RecordingItem
+import com.kuqforza.domain.model.RecordingRecurrence
+import com.kuqforza.domain.model.RecordingRequest
+import com.kuqforza.domain.model.RecordingStorageState
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest

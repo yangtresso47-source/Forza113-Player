@@ -1,15 +1,15 @@
-package com.streamvault.data.remote.xtream
+package com.kuqforza.data.remote.xtream
 
-import com.streamvault.data.local.dao.ProviderDao
-import com.streamvault.data.local.entity.ProviderEntity
-import com.streamvault.data.remote.stalker.StalkerProvider
-import com.streamvault.data.remote.stalker.StalkerApiService
-import com.streamvault.data.remote.stalker.StalkerStreamKind
-import com.streamvault.data.remote.stalker.StalkerUrlFactory
-import com.streamvault.data.security.CredentialCrypto
-import com.streamvault.data.util.UrlSecurityPolicy
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.ProviderType
+import com.kuqforza.data.local.dao.ProviderDao
+import com.kuqforza.data.local.entity.ProviderEntity
+import com.kuqforza.data.remote.stalker.StalkerProvider
+import com.kuqforza.data.remote.stalker.StalkerApiService
+import com.kuqforza.data.remote.stalker.StalkerStreamKind
+import com.kuqforza.data.remote.stalker.StalkerUrlFactory
+import com.kuqforza.data.security.CredentialCrypto
+import com.kuqforza.data.util.UrlSecurityPolicy
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.ProviderType
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -129,7 +129,7 @@ class XtreamStreamUrlResolver @Inject constructor(
                 val playbackInfo = when (
                     val resolvedResult = getOrCreateStalkerProvider(resolvedProvider).resolvePlaybackInfo(token.kind, token.cmd)
                 ) {
-                    is com.streamvault.domain.model.Result.Success -> resolvedResult.data
+                    is com.kuqforza.domain.model.Result.Success -> resolvedResult.data
                     else -> return null
                 }
                 ResolvedStreamUrl(
@@ -167,7 +167,7 @@ class XtreamStreamUrlResolver @Inject constructor(
             return null
         }
         val playbackInfo = when (val resolvedResult = getOrCreateStalkerProvider(provider).resolvePlaybackInfo(kind, repairedUrl)) {
-            is com.streamvault.domain.model.Result.Success -> resolvedResult.data
+            is com.kuqforza.domain.model.Result.Success -> resolvedResult.data
             else -> return null
         }
         return ResolvedStreamUrl(

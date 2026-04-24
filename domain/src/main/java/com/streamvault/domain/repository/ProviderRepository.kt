@@ -1,9 +1,9 @@
-package com.streamvault.domain.repository
+package com.kuqforza.domain.repository
 
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.Provider
-import com.streamvault.domain.model.ProviderEpgSyncMode
-import com.streamvault.domain.model.Result
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.Provider
+import com.kuqforza.domain.model.ProviderEpgSyncMode
+import com.kuqforza.domain.model.Result
 import kotlinx.coroutines.flow.Flow
 
 data class LiveStreamProgramRequest(

@@ -1,6 +1,6 @@
-package com.streamvault.data.util
+package com.kuqforza.data.util
 
-import com.streamvault.domain.util.StreamEntryUrlPolicy
+import com.kuqforza.domain.util.StreamEntryUrlPolicy
 import java.net.URI
 import java.util.Locale
 

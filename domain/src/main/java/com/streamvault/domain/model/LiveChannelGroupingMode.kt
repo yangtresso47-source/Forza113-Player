@@ -1,4 +1,4 @@
-package com.streamvault.domain.model
+package com.kuqforza.domain.model
 
 enum class LiveChannelGroupingMode(val storageValue: String) {
     GROUPED("grouped"),

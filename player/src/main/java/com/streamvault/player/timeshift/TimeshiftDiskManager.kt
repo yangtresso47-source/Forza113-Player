@@ -1,4 +1,4 @@
-package com.streamvault.player.timeshift
+package com.kuqforza.player.timeshift
 
 import android.content.Context
 import java.io.File

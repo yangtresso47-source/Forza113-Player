@@ -1,13 +1,13 @@
-package com.streamvault.data.manager
+package com.kuqforza.data.manager
 
-import com.streamvault.data.local.dao.ProgramReminderDao
-import com.streamvault.data.local.entity.ProgramReminderEntity
-import com.streamvault.data.manager.reminder.ProgramReminderAlarmScheduler
-import com.streamvault.data.manager.reminder.ProgramReminderNotifier
-import com.streamvault.domain.manager.ProgramReminderManager
-import com.streamvault.domain.model.Program
-import com.streamvault.domain.model.ProgramReminder
-import com.streamvault.domain.model.Result
+import com.kuqforza.data.local.dao.ProgramReminderDao
+import com.kuqforza.data.local.entity.ProgramReminderEntity
+import com.kuqforza.data.manager.reminder.ProgramReminderAlarmScheduler
+import com.kuqforza.data.manager.reminder.ProgramReminderNotifier
+import com.kuqforza.domain.manager.ProgramReminderManager
+import com.kuqforza.domain.model.Program
+import com.kuqforza.domain.model.ProgramReminder
+import com.kuqforza.domain.model.Result
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow

@@ -1,12 +1,12 @@
-package com.streamvault.data.sync
+package com.kuqforza.data.sync
 
-import com.streamvault.data.local.entity.ChannelEntity
-import com.streamvault.data.local.entity.MovieEntity
-import com.streamvault.data.parser.M3uParser
-import com.streamvault.data.util.AdultContentClassifier
-import com.streamvault.data.util.UrlSecurityPolicy
-import com.streamvault.domain.model.ContentType
-import com.streamvault.domain.model.Provider
+import com.kuqforza.data.local.entity.ChannelEntity
+import com.kuqforza.data.local.entity.MovieEntity
+import com.kuqforza.data.parser.M3uParser
+import com.kuqforza.data.util.AdultContentClassifier
+import com.kuqforza.data.util.UrlSecurityPolicy
+import com.kuqforza.domain.model.ContentType
+import com.kuqforza.domain.model.Provider
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response

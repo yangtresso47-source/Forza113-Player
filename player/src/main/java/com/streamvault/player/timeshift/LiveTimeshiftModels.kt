@@ -1,4 +1,4 @@
-package com.streamvault.player.timeshift
+package com.kuqforza.player.timeshift
 
 data class TimeshiftConfig(
     val enabled: Boolean = false,
