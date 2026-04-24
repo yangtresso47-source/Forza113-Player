@@ -114,7 +114,7 @@ class WebAdminServer(
         val url = "http://" + getIp() + ":8089"
         val h = "<html><head><meta name=viewport content='width=device-width,initial-scale=1'></head>" +
             "<body style='background:#000;color:#fff;font-family:system-ui;text-align:center;padding:40px'>" +
-            "<h1 style='font-size:42px;font-weight:900'><span style='color:#0088ff'>K</span><span style='color:#55bbff'>Q</span> KUQFORZA</h1>" +
+            "<h1 style='font-size:42px;font-weight:900'><span style='color:#0088ff;font-size:52px'>K</span><span style='color:#55bbff;font-size:52px'>q</span> <span style='font-size:32px'>KUQFORZA</span><br><span style='color:#5a6a82;font-size:14px;letter-spacing:4px'>IPTV PREMIUM</span></h1>" +
             "<p style='color:#5a6a82;letter-spacing:3px;font-size:12px'>IPTV PREMIUM</p>" +
             "<div style='margin:30px auto;padding:16px 24px;background:rgba(0,136,255,.1);border:1px solid rgba(0,136,255,.2);border-radius:12px;display:inline-block'>" +
             "<p style='font-size:24px;color:#55bbff;font-family:monospace;font-weight:700'>" + url + "</p></div>" +
@@ -195,7 +195,7 @@ select{appearance:none;cursor:pointer}
 <div class="container">
 
 <div class="header">
-  <div class="logo"><span class="k">K</span><span class="q">Q</span> <span class="rest">KUQFORZA</span></div>
+  <div class="logo"><span class="k" style="font-size:36px">K</span><span class="q" style="font-size:36px">q</span> <span class="rest">KUQFORZA</span><br><span style="font-size:10px;color:#5a6a82;letter-spacing:3px">IPTV PREMIUM</span></div>
   <div class="sub">IPTV PREMIUM — ADMIN PANEL</div>
   <div style="margin-top:8px;font-size:11px;color:var(--dim)"><span class="status-dot"></span> Connecte</div>
 </div>
