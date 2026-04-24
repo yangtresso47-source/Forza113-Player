@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
@@ -266,12 +267,39 @@ private fun TopNavigationBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleSmall,
-                color = AppColors.TextPrimary,
+            // Kq branded title
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.wrapContentWidth(Alignment.Start)
-            )
+            ) {
+                Text(
+                    text = "Kq",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1).sp
+                    ),
+                    color = Color(0xFF0088FF),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column {
+                    Text(
+                        text = "KUQFORZA",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp
+                        ),
+                        color = AppColors.TextPrimary,
+                    )
+                    Text(
+                        text = "IPTV PREMIUM",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        ),
+                        color = Color(0xFF55BBFF),
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(32.dp)) // Increased spacing to prevent overlap
             Row(
                 modifier = Modifier
