@@ -53,10 +53,22 @@ class WebAdminServer(
 
         try {
             val portal = JSONObject(json)
-            val portals = loadPortals()
             portal.put("id", System.currentTimeMillis().toString())
+            portal.put("imported", false)
+
+            // Save to pending imports file
+            val portals = loadPortals()
             portals.put(portal)
             savePortals(portals)
+
+            // Also write to Room-compatible import file
+            val importFile = File(context.filesDir, "pending_imports.json")
+            val pending = try {
+                if (importFile.exists()) JSONArray(importFile.readText()) else JSONArray()
+            } catch (e: Exception) { JSONArray() }
+            pending.put(portal)
+            importFile.writeText(pending.toString(2))
+
             return jsonResponse("""{"ok":true,"id":"${portal.getString("id")}"}""")
         } catch (e: Exception) {
             return jsonResponse("""{"ok":false,"error":"${e.message}"}""", 400)

@@ -6,6 +6,9 @@ import android.app.PictureInPictureParams
 import android.content.pm.PackageManager
 import android.os.Bundle
 import com.kuqforza.iptv.web.WebAdminService
+import com.kuqforza.iptv.web.PortalImporter
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import android.os.Build
 import android.os.StrictMode
 import android.util.Rational
@@ -109,6 +112,16 @@ class MainActivity : ComponentActivity() {
                 startService(webIntent)
             }
         } catch (e: Exception) { e.printStackTrace() }
+
+        // Import pending portals from web admin
+        GlobalScope.launch {
+            try {
+                val db = com.kuqforza.data.local.KuqforzaDatabase.getInstance(this@MainActivity)
+                PortalImporter.importPending(this@MainActivity) { provider ->
+                    db.providerDao().insert(provider)
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
         // Disable legacy window-fitting so Compose receives IME insets directly.
         // This fixes keyboard-covers-input-field on API 30+ where adjustResize is
         // ignored when the theme sets windowFullscreen=true.
