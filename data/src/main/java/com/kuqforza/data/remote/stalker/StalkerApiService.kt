@@ -13,8 +13,7 @@ data class StalkerDeviceProfile(
     val deviceId2: String,
     val signature: String,
     val userAgent: String,
-    val xUserAgent: String,
-    val getProfileEnabled: Boolean = true
+    val xUserAgent: String
 )
 
 data class StalkerSession(

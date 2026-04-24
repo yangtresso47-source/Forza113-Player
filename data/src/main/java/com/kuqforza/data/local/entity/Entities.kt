@@ -29,7 +29,6 @@ data class ProviderEntity(
     @ColumnInfo(name = "stalker_device_profile") val stalkerDeviceProfile: String = "",
     @ColumnInfo(name = "stalker_device_timezone") val stalkerDeviceTimezone: String = "",
     @ColumnInfo(name = "stalker_device_locale") val stalkerDeviceLocale: String = "",
-    @ColumnInfo(name = "stalker_get_profile", defaultValue = "1") val stalkerGetProfile: Boolean = true,
     @ColumnInfo(name = "is_active") val isActive: Boolean = true,
     @ColumnInfo(name = "max_connections") val maxConnections: Int = 1,
     @ColumnInfo(name = "expiration_date") val expirationDate: Long? = null,

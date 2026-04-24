@@ -68,27 +68,21 @@ class OkHttpStalkerApiService @Inject constructor(
                 }
 
             val session = StalkerSession(loadUrl = loadUrl, portalReferer = referer, token = token)
-
-            if (profile.getProfileEnabled) {
-                // get_profile with full premium params
-                val profileResult = runCatching {
-                    requestJson(
-                        url = loadUrl,
-                        profile = profile,
-                        referer = referer,
-                        token = token,
-                        query = buildProfileQuery(profile)
-                    )
-                }
-                val profilePayload = profileResult.getOrElse { error ->
-                    lastError = error
-                    continue
-                }
-                return Result.success(session to profilePayload.toProviderProfile())
-            } else {
-                // Skip get_profile - just return empty profile
-                return Result.success(session to StalkerProviderProfile())
+            val profileResult = runCatching {
+                requestJson(
+                    url = loadUrl,
+                    profile = profile,
+                    referer = referer,
+                    token = token,
+                    query = buildProfileQuery(profile)
+                )
             }
+            val profilePayload = profileResult.getOrElse { error ->
+                lastError = error
+                continue
+            }
+
+            return Result.success(session to profilePayload.toProviderProfile())
         }
 
         return Result.error(
@@ -430,19 +424,13 @@ class OkHttpStalkerApiService @Inject constructor(
         val canRetryAlternateEndpoint = !token.isNullOrBlank()
         val request = Request.Builder()
             .url(buildUrl(url, query))
-            .header("User-Agent", if (token.isNullOrBlank()) "Dalvik/2.1.0 (Linux; U; Android 14)" else profile.userAgent)
+            .header("User-Agent", profile.userAgent)
             .header("X-User-Agent", profile.xUserAgent)
             .header("Referer", referer)
-            .header("Accept", "application/json,application/javascript,text/javascript,text/html,*/*;q=0.8")
-            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${if (token.isNullOrBlank()) "Europe/London" else profile.timezone}")
-            .header("Cache-Control", "no-store, no-cache, must-revalidate")
-            .header("Pragma", "no-cache")
+            .header("Accept", "*/*")
+            .header("Cookie", "mac=${profile.macAddress}; stb_lang=${profile.locale}; timezone=${profile.timezone}")
             .apply {
-                if (token.isNullOrBlank()) {
-                    header("Authorization", "MAC ${profile.macAddress}")
-                } else {
-                    header("Authorization", "Bearer $token")
-                }
+                token?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
             }
             .get()
             .build()
@@ -561,11 +549,11 @@ class OkHttpStalkerApiService @Inject constructor(
             "auth_second_step" to "1",
             "hw_version" to "1.7-BD-00",
             "not_valid_token" to "0",
-            "metrics" to """{"mac":"${profile.macAddress}","sn":"${profile.serialNumber}","model":"MAG250","type":"STB","uid":"${profile.deviceId}","random":""}""",
-            "hw_version_2" to sha1Hex(profile.macAddress),
+            "metrics" to "{}",
+            "hw_version_2" to profile.deviceProfile,
             "timestamp" to timestamp,
             "api_signature" to "262",
-            "prehash" to md5Hex(profile.serialNumber)
+            "prehash" to "0"
         )
     }
 
@@ -881,21 +869,17 @@ internal fun buildStalkerDeviceProfile(
     macAddress: String,
     deviceProfile: String,
     timezone: String,
-    locale: String,
-    getProfileEnabled: Boolean = true
+    locale: String
 ): StalkerDeviceProfile {
     val normalizedProfile = deviceProfile.ifBlank { "MAG250" }
     val normalizedTimezone = timezone.ifBlank { java.util.TimeZone.getDefault().id }
     val normalizedLocale = locale.ifBlank { Locale.getDefault().language.ifBlank { "en" } }
     val normalizedMac = macAddress.uppercase(Locale.ROOT)
-    // Mixproplayer-compatible premium protocol
-    val md5Full = MessageDigest.getInstance("MD5")
-        .digest(normalizedMac.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02X".format(it.toInt() and 0xFF) }
-    val serialNumber = md5Full.take(13)
-    val deviceId = sha256Hex(normalizedMac)
-    val deviceId2 = sha256Hex(serialNumber)
-    val signature = sha256Hex(serialNumber + normalizedMac)
+    val serialSeed = normalizedMac.replace(":", "")
+    val serialNumber = serialSeed.takeLast(13).padStart(13, '0')
+    val deviceId = stalkerDigest("device:$normalizedProfile:$normalizedMac")
+    val deviceId2 = stalkerDigest("device2:$normalizedProfile:$normalizedMac")
+    val signature = stalkerDigest("signature:$normalizedProfile:$normalizedMac:$normalizedTimezone")
     return StalkerDeviceProfile(
         portalUrl = portalUrl,
         macAddress = normalizedMac,
@@ -906,29 +890,15 @@ internal fun buildStalkerDeviceProfile(
         deviceId = deviceId,
         deviceId2 = deviceId2,
         signature = signature,
-        userAgent = "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-        xUserAgent = "Model: MAG250; Link: Ethernet,WiFi",
-        getProfileEnabled = getProfileEnabled
+        userAgent = "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) $normalizedProfile stbapp ver: 2 rev: 250 Safari/533.3",
+        xUserAgent = "Model: $normalizedProfile; Link: Ethernet"
     )
 }
 
-private fun stalkerDigest(seed: String): String = sha256Hex(seed)
-
-private fun sha256Hex(input: String): String =
+private fun stalkerDigest(seed: String): String =
     MessageDigest.getInstance("SHA-256")
-        .digest(input.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02X".format(it.toInt() and 0xFF) }
-
-private fun sha1Hex(input: String): String =
-    MessageDigest.getInstance("SHA-1")
-        .digest(input.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it.toInt() and 0xFF) }
-
-private fun md5Hex(input: String): String =
-    MessageDigest.getInstance("MD5")
-        .digest(input.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it.toInt() and 0xFF) }
-
+        .digest(seed.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> "%02X".format(byte.toInt() and 0xFF) }
 
 internal fun parseExpirationDate(raw: String?): Long? {
     val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
