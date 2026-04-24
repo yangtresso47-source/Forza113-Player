@@ -5,7 +5,6 @@ import android.content.Intent
 import android.app.PictureInPictureParams
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.content.Intent
 import com.kuqforza.iptv.web.WebAdminService
 import android.os.Build
 import android.os.StrictMode
