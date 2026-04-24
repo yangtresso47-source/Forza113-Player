@@ -69,43 +69,26 @@ class OkHttpStalkerApiService @Inject constructor(
 
             val session = StalkerSession(loadUrl = loadUrl, portalReferer = referer, token = token)
 
-            // First get_profile (SN registration)
-            val profileResult = runCatching {
-                requestJson(
-                    url = loadUrl,
-                    profile = profile,
-                    referer = referer,
-                    token = token,
-                    query = buildProfileQuery(profile)
-                )
-            }
-            val profilePayload = profileResult.getOrElse { error ->
-                lastError = error
-                continue
-            }
-
-            // Second get_profile with auth_second_step (required by premium servers)
-            runCatching {
-                requestJson(
-                    url = loadUrl,
-                    profile = profile,
-                    referer = referer,
-                    token = token,
-                    query = mapOf(
-                        "type" to "stb",
-                        "action" to "get_profile",
-                        "JsHttpRequest" to "1-xml",
-                        "auth_second_step" to "1",
-                        "device_id" to profile.deviceId,
-                        "device_id2" to profile.deviceId2,
-                        "signature" to profile.signature,
-                        "sn" to profile.serialNumber,
-                        "hw_version_2" to profile.deviceId2.lowercase(java.util.Locale.ROOT).take(40)
+            if (profile.getProfileEnabled) {
+                // get_profile with full premium params
+                val profileResult = runCatching {
+                    requestJson(
+                        url = loadUrl,
+                        profile = profile,
+                        referer = referer,
+                        token = token,
+                        query = buildProfileQuery(profile)
                     )
-                )
+                }
+                val profilePayload = profileResult.getOrElse { error ->
+                    lastError = error
+                    continue
+                }
+                return Result.success(session to profilePayload.toProviderProfile())
+            } else {
+                // Skip get_profile - just return empty profile
+                return Result.success(session to StalkerProviderProfile())
             }
-
-            return Result.success(session to profilePayload.toProviderProfile())
         }
 
         return Result.error(
@@ -898,7 +881,8 @@ internal fun buildStalkerDeviceProfile(
     macAddress: String,
     deviceProfile: String,
     timezone: String,
-    locale: String
+    locale: String,
+    getProfileEnabled: Boolean = true
 ): StalkerDeviceProfile {
     val normalizedProfile = deviceProfile.ifBlank { "MAG250" }
     val normalizedTimezone = timezone.ifBlank { java.util.TimeZone.getDefault().id }
@@ -923,7 +907,8 @@ internal fun buildStalkerDeviceProfile(
         deviceId2 = deviceId2,
         signature = signature,
         userAgent = "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3",
-        xUserAgent = "Model: MAG250; Link: Ethernet,WiFi"
+        xUserAgent = "Model: MAG250; Link: Ethernet,WiFi",
+        getProfileEnabled = getProfileEnabled
     )
 }
 
