@@ -4,28 +4,45 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Background circle -->
+
+    <!-- BG circle -->
     <path
-        android:fillColor="#0A0F18"
-        android:pathData="M54,54m-40,0a40,40 0,1,1 80,0a40,40 0,1,1 -80,0"/>
-    <!-- Blue ring -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#087BFF"
-        android:strokeWidth="2"
-        android:pathData="M54,54m-36,0a36,36 0,1,1 72,0a36,36 0,1,1 -72,0"/>
-    <!-- Inner diamond -->
+        android:fillColor="#000000"
+        android:pathData="M0,0h108v108H0z"/>
+
+    <!-- Outer ring glow -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#62C1FF"
+        android:strokeColor="#0088FF"
         android:strokeWidth="1.5"
-        android:pathData="M54,30 L74,54 L54,78 L34,54 Z"/>
-    <!-- K letter -->
+        android:pathData="M54,54m-44,0a44,44 0,1,1 88,0a44,44 0,1,1 -88,0"/>
+
+    <!-- Inner ring -->
     <path
-        android:fillColor="#087BFF"
-        android:pathData="M40,42 L40,66 L44,66 L44,56 L52,66 L57,66 L48,55 L56,42 L51,42 L44,53 L44,42 Z"/>
-    <!-- Q letter -->
+        android:fillColor="#00000000"
+        android:strokeColor="#55BBFF"
+        android:strokeWidth="0.8"
+        android:pathData="M54,54m-40,0a40,40 0,1,1 80,0a40,40 0,1,1 -80,0"/>
+
+    <!-- K letter - big bold -->
     <path
-        android:fillColor="#62C1FF"
-        android:pathData="M62,42 Q72,42 72,54 Q72,64 64,66 L70,70 L67,72 L60,66 Q58,66 56,64 Q52,60 52,54 Q52,42 62,42 Z M62,46 Q56,46 56,54 Q56,62 62,62 Q68,62 68,54 Q68,46 62,46 Z"/>
+        android:fillColor="#0088FF"
+        android:pathData="M26,30 L26,78 L35,78 L35,59 L51,78 L63,78 L43,55 L61,30 L50,30 L35,51 L35,30 Z"/>
+
+    <!-- Q letter - big bold outline -->
+    <path
+        android:fillColor="#55BBFF"
+        android:pathData="M67,30 L67,30
+        C80,30 88,40 88,54
+        C88,66 82,74 74,78
+        L82,86 L76,90 L67,80
+        C65,80 63,80 61,78
+        C54,74 50,66 50,54
+        C50,40 58,30 67,30 Z
+        M67,38
+        C60,38 56,44 56,54
+        C56,64 60,70 67,70
+        C74,70 78,64 78,54
+        C78,44 74,38 67,38 Z"/>
+
 </vector>
